@@ -1,0 +1,292 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentView xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:vm="clr-namespace:PAYROLLSystemApp.ViewModels"
+             xmlns:models="clr-namespace:PAYROLLSystemApp.Models"
+             xmlns:controls="clr-namespace:PAYROLLSystemApp.Views.Controls"
+             x:Class="PAYROLLSystemApp.Views.Sections.UserManagementView"
+             x:DataType="vm:UserManagementViewModel">
+
+    <Grid x:Name="RootGrid">
+
+        <Grid Padding="20">
+
+            <Border Style="{StaticResource Card}"
+                    IsVisible="{Binding IsDenied}"
+                    Padding="28"
+                    VerticalOptions="Center"
+                    HorizontalOptions="Center">
+                <VerticalStackLayout Spacing="4">
+                    <Label Style="{StaticResource SectionHeading}" Text="Access denied" HorizontalTextAlignment="Center" />
+                    <Label Style="{StaticResource Muted}" Text="You do not have permission to manage user accounts." />
+                </VerticalStackLayout>
+            </Border>
+
+            <Border Style="{StaticResource Card}" Padding="0" IsVisible="{Binding IsGranted}">
+                <Grid RowDefinitions="Auto,Auto,Auto,Auto,*">
+
+                    <!-- Toolbar -->
+                    <Grid Grid.Row="0" ColumnDefinitions="Auto,*,Auto,Auto" ColumnSpacing="8" Padding="16,12">
+                        <Border Grid.Column="0" Style="{StaticResource FieldFrame}">
+                            <Entry Text="{Binding SearchText}"
+                                   Placeholder="Search name, username, e-mail or role"
+                                   WidthRequest="270" />
+                        </Border>
+
+                        <Label Grid.Column="1"
+                               Style="{StaticResource Muted}"
+                               Text="{Binding ResultSummary}"
+                               VerticalOptions="Center"
+                               Margin="4,0,0,0" />
+
+                        <Button Grid.Column="2"
+                                Style="{StaticResource SecondaryButton}"
+                                Text="Refresh"
+                                Command="{Binding RefreshCommand}" />
+
+                        <Button Grid.Column="3"
+                                Style="{StaticResource PrimaryButton}"
+                                Text="+  New account"
+                                Command="{Binding OpenCreateCommand}" />
+                    </Grid>
+
+                    <!-- Inline result banner -->
+                    <Label Grid.Row="1"
+                           Margin="16,0,16,10"
+                           FontSize="12"
+                           TextColor="{StaticResource Success}"
+                           Text="{Binding StatusMessage}"
+                           IsVisible="{Binding HasStatus}" />
+
+                    <Label Grid.Row="1"
+                           Margin="16,0,16,10"
+                           Style="{StaticResource ErrorText}"
+                           Text="{Binding ErrorMessage}"
+                           IsVisible="{Binding HasError}" />
+
+                    <BoxView Grid.Row="2" Style="{StaticResource Divider}" />
+
+                    <!-- Column headers -->
+                    <Grid Grid.Row="3"
+                          ColumnDefinitions="2*,2.4*,1.6*,1.2*,Auto"
+                          ColumnSpacing="12"
+                          Padding="16,8"
+                          BackgroundColor="{AppThemeBinding Light={StaticResource SurfaceAltLight}, Dark={StaticResource SurfaceAltDark}}">
+                        <Label Grid.Column="0" Style="{StaticResource TableHeader}" Text="ACCOUNT" />
+                        <Label Grid.Column="1" Style="{StaticResource TableHeader}" Text="E-MAIL" />
+                        <Label Grid.Column="2" Style="{StaticResource TableHeader}" Text="ROLE" />
+                        <Label Grid.Column="3" Style="{StaticResource TableHeader}" Text="STATUS" />
+                        <Label Grid.Column="4" Style="{StaticResource TableHeader}" Text="ACTIONS" WidthRequest="196" />
+                    </Grid>
+
+                    <!-- Rows -->
+                    <CollectionView Grid.Row="4" ItemsSource="{Binding Users}" SelectionMode="None">
+                        <CollectionView.ItemTemplate>
+                            <DataTemplate x:DataType="models:User">
+                                <Grid ColumnDefinitions="2*,2.4*,1.6*,1.2*,Auto"
+                                      ColumnSpacing="12"
+                                      Padding="16,8">
+
+                                    <VerticalStackLayout Grid.Column="0" Spacing="0" VerticalOptions="Center">
+                                        <Label Text="{Binding Username}"
+                                               FontSize="12.5"
+                                               FontAttributes="Bold"
+                                               LineBreakMode="TailTruncation"
+                                               TextColor="{AppThemeBinding Light={StaticResource TextLight}, Dark={StaticResource TextDark}}" />
+                                        <Label Style="{StaticResource Faint}"
+                                               Text="{Binding FullName}"
+                                               LineBreakMode="TailTruncation" />
+                                    </VerticalStackLayout>
+
+                                    <Label Grid.Column="1"
+                                           Style="{StaticResource Muted}"
+                                           VerticalOptions="Center"
+                                           LineBreakMode="TailTruncation"
+                                           Text="{Binding Email}" />
+
+                                    <Label Grid.Column="2"
+                                           FontSize="11.5"
+                                           VerticalOptions="Center"
+                                           LineBreakMode="TailTruncation"
+                                           Text="{Binding RoleDisplayName}"
+                                           TextColor="{StaticResource Brand}" />
+
+                                    <Label Grid.Column="3"
+                                           Style="{StaticResource Muted}"
+                                           VerticalOptions="Center"
+                                           Text="{Binding StatusDisplay}" />
+
+                                    <HorizontalStackLayout Grid.Column="4"
+                                                           Spacing="6"
+                                                           WidthRequest="196"
+                                                           VerticalOptions="Center">
+                                        <Button Style="{StaticResource RowAction}"
+                                                Text="Edit"
+                                                Command="{Binding Source={RelativeSource AncestorType={x:Type vm:UserManagementViewModel}}, Path=OpenEditCommand}"
+                                                CommandParameter="{Binding .}" />
+                                        <Button Style="{StaticResource RowAction}"
+                                                Text="Reset"
+                                                Command="{Binding Source={RelativeSource AncestorType={x:Type vm:UserManagementViewModel}}, Path=OpenResetCommand}"
+                                                CommandParameter="{Binding .}" />
+                                        <Button Style="{StaticResource RowAction}"
+                                                Text="Unlock"
+                                                IsVisible="{Binding IsCurrentlyLockedOut}"
+                                                Command="{Binding Source={RelativeSource AncestorType={x:Type vm:UserManagementViewModel}}, Path=OpenUnlockCommand}"
+                                                CommandParameter="{Binding .}" />
+                                    </HorizontalStackLayout>
+
+                                    <BoxView Grid.ColumnSpan="5" VerticalOptions="End" Style="{StaticResource Divider}" />
+                                </Grid>
+                            </DataTemplate>
+                        </CollectionView.ItemTemplate>
+                    </CollectionView>
+                </Grid>
+            </Border>
+        </Grid>
+
+        <!--
+            Lifted out of this view by MainPage at load time so the scrim covers
+            the whole window, sidebar and top bar included, the way a web modal
+            does. See MainPage.ShowSectionAsync.
+        -->
+        <Grid x:Name="ModalLayer" IsVisible="{Binding IsAnyModalOpen}">
+
+        <!-- ==================== ADD ACCOUNT ==================== -->
+        <controls:ModalHost IsOpen="{Binding IsCreateOpen}"
+                            Title="New account"
+                            Subtitle="The holder must change this password at first sign-in"
+                            ModalWidth="440"
+                            PrimaryText="Create account"
+                            PrimaryCommand="{Binding SubmitCreateCommand}"
+                            SecondaryCommand="{Binding CloseCreateCommand}"
+                            DismissCommand="{Binding CloseCreateCommand}"
+                            ErrorText="{Binding ModalError}">
+            <controls:ModalHost.Body>
+                <VerticalStackLayout Spacing="12">
+                    <controls:FormEntry Label="USERNAME"
+                                        Text="{Binding CreateUsername}"
+                                        Placeholder="e.g. jdelacruz" />
+                    <controls:FormEntry Label="E-MAIL ADDRESS"
+                                        Text="{Binding CreateEmail}"
+                                        Placeholder="name@company.com" />
+                    <controls:FormEntry Label="FULL NAME"
+                                        Text="{Binding CreateFullName}"
+                                        Placeholder="Juan Dela Cruz" />
+
+                    <VerticalStackLayout Spacing="0">
+                        <Label Style="{StaticResource FieldLabel}" Text="ROLE" />
+                        <Border Style="{StaticResource FieldFrame}">
+                            <Picker ItemsSource="{Binding AvailableRoles}"
+                                    SelectedItem="{Binding CreateRole}"
+                                    ItemDisplayBinding="{Binding DisplayName, x:DataType=vm:RoleOption}" />
+                        </Border>
+                    </VerticalStackLayout>
+
+                    <VerticalStackLayout Spacing="0">
+                        <Label Style="{StaticResource FieldLabel}" Text="INITIAL PASSWORD" />
+                        <Grid ColumnDefinitions="*,Auto" ColumnSpacing="6">
+                            <Border Grid.Column="0" Style="{StaticResource FieldFrame}">
+                                <Entry Text="{Binding CreatePassword}" Placeholder="Type or generate" />
+                            </Border>
+                            <Button Grid.Column="1"
+                                    Style="{StaticResource SecondaryButton}"
+                                    Text="Generate"
+                                    Command="{Binding GeneratePasswordCommand}" />
+                        </Grid>
+                        <Label Style="{StaticResource Faint}"
+                               Margin="0,4,0,0"
+                               Text="{Binding PasswordPolicyHint}" />
+                    </VerticalStackLayout>
+                </VerticalStackLayout>
+            </controls:ModalHost.Body>
+        </controls:ModalHost>
+
+        <!-- ==================== EDIT ACCOUNT ==================== -->
+        <controls:ModalHost IsOpen="{Binding IsEditOpen}"
+                            Title="Edit account"
+                            Subtitle="{Binding EditTitle}"
+                            ModalWidth="420"
+                            PrimaryText="Save changes"
+                            PrimaryCommand="{Binding SubmitEditCommand}"
+                            SecondaryCommand="{Binding CloseEditCommand}"
+                            DismissCommand="{Binding CloseEditCommand}"
+                            ErrorText="{Binding ModalError}">
+            <controls:ModalHost.Body>
+                <VerticalStackLayout Spacing="12">
+                    <controls:FormEntry Label="FULL NAME" Text="{Binding EditFullName}" />
+
+                    <VerticalStackLayout Spacing="0">
+                        <Label Style="{StaticResource FieldLabel}" Text="ROLE" />
+                        <Border Style="{StaticResource FieldFrame}">
+                            <Picker ItemsSource="{Binding AvailableRoles}"
+                                    SelectedItem="{Binding EditRole}"
+                                    ItemDisplayBinding="{Binding DisplayName, x:DataType=vm:RoleOption}" />
+                        </Border>
+                    </VerticalStackLayout>
+
+                    <Grid ColumnDefinitions="*,Auto" Margin="0,4,0,0">
+                        <VerticalStackLayout Grid.Column="0" Spacing="1">
+                            <Label Style="{StaticResource Body}" Text="Account is active" />
+                            <Label Style="{StaticResource Faint}"
+                                   Text="Deactivating blocks sign-in but keeps the record and its history (FR-017)." />
+                        </VerticalStackLayout>
+                        <Switch Grid.Column="1"
+                                IsToggled="{Binding EditIsActive}"
+                                VerticalOptions="Center"
+                                OnColor="{StaticResource Brand}" />
+                    </Grid>
+                </VerticalStackLayout>
+            </controls:ModalHost.Body>
+        </controls:ModalHost>
+
+        <!-- ==================== CONFIRM ==================== -->
+        <controls:ModalHost IsOpen="{Binding IsConfirmOpen}"
+                            Title="{Binding ConfirmTitle}"
+                            ModalWidth="400"
+                            PrimaryText="{Binding ConfirmAction}"
+                            PrimaryCommand="{Binding SubmitConfirmCommand}"
+                            SecondaryCommand="{Binding CloseConfirmCommand}"
+                            DismissCommand="{Binding CloseConfirmCommand}"
+                            IsDestructive="{Binding IsConfirmDestructive}"
+                            ErrorText="{Binding ModalError}">
+            <controls:ModalHost.Body>
+                <Label Style="{StaticResource Body}" Text="{Binding ConfirmMessage}" />
+            </controls:ModalHost.Body>
+        </controls:ModalHost>
+
+        <!-- ============ TEMPORARY PASSWORD (shown once) ============ -->
+        <controls:ModalHost IsOpen="{Binding IsTempOpen}"
+                            Title="Temporary password"
+                            Subtitle="{Binding TempPasswordFor}"
+                            ModalWidth="400"
+                            PrimaryText="Done"
+                            PrimaryCommand="{Binding CloseTempCommand}"
+                            SecondaryText="Close"
+                            SecondaryCommand="{Binding CloseTempCommand}"
+                            DismissCommand="{Binding CloseTempCommand}">
+            <controls:ModalHost.Body>
+                <VerticalStackLayout Spacing="10">
+                    <Label Style="{StaticResource Muted}"
+                           Text="Give this password to the account holder. It is shown once and cannot be retrieved again — only its hash is stored." />
+
+                    <Border Style="{StaticResource Pill}"
+                            Padding="14,10"
+                            HorizontalOptions="Fill"
+                            BackgroundColor="{AppThemeBinding Light={StaticResource SurfaceAltLight}, Dark={StaticResource SurfaceAltDark}}">
+                        <Label Text="{Binding TempPassword}"
+                               FontSize="16"
+                               FontAttributes="Bold"
+                               HorizontalTextAlignment="Center"
+                               TextColor="{AppThemeBinding Light={StaticResource TextLight}, Dark={StaticResource TextDark}}" />
+                    </Border>
+
+                    <Label Style="{StaticResource Faint}"
+                           Text="They will be required to set a new password at their next sign-in." />
+                </VerticalStackLayout>
+            </controls:ModalHost.Body>
+        </controls:ModalHost>
+
+        </Grid>
+    </Grid>
+
+</ContentView>

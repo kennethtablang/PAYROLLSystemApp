@@ -1,0 +1,315 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentView xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:vm="clr-namespace:PAYROLLSystemApp.ViewModels"
+             xmlns:models="clr-namespace:PAYROLLSystemApp.Models"
+             xmlns:controls="clr-namespace:PAYROLLSystemApp.Views.Controls"
+             x:Class="PAYROLLSystemApp.Views.Sections.ApprovalsView"
+             x:DataType="vm:ApprovalsViewModel">
+
+    <Grid x:Name="RootGrid">
+
+        <Grid Padding="20">
+
+            <!-- FR-002: the section re-checks the permission on load. -->
+            <Border Style="{StaticResource Card}"
+                    IsVisible="{Binding IsDenied}"
+                    Padding="28"
+                    VerticalOptions="Center"
+                    HorizontalOptions="Center">
+                <VerticalStackLayout Spacing="4">
+                    <Label Style="{StaticResource SectionHeading}" Text="Access denied" HorizontalTextAlignment="Center" />
+                    <Label Style="{StaticResource Muted}" Text="You do not have permission to approve payroll." />
+                </VerticalStackLayout>
+            </Border>
+
+            <Grid IsVisible="{Binding IsGranted}" RowDefinitions="Auto,Auto,*" RowSpacing="10">
+
+                <Grid Grid.Row="0" ColumnDefinitions="*,Auto" ColumnSpacing="10">
+                    <VerticalStackLayout Grid.Column="0" Spacing="1" VerticalOptions="Center">
+                        <Label Style="{StaticResource SectionHeading}" Text="Payroll awaiting you" />
+                        <Label Style="{StaticResource Faint}" Text="{Binding QueueSummary}" />
+                    </VerticalStackLayout>
+
+                    <Button Grid.Column="1"
+                            Style="{StaticResource SecondaryButton}"
+                            Text="Refresh"
+                            VerticalOptions="Center"
+                            Command="{Binding RefreshCommand}" />
+                </Grid>
+
+                <!-- Inline result banner (NFR-023) -->
+                <Label Grid.Row="1"
+                       FontSize="12"
+                       TextColor="{StaticResource Success}"
+                       Text="{Binding StatusMessage}"
+                       IsVisible="{Binding HasStatus}" />
+
+                <Label Grid.Row="1"
+                       Style="{StaticResource ErrorText}"
+                       Text="{Binding ErrorMessage}"
+                       IsVisible="{Binding HasError}" />
+
+                <Border Grid.Row="2"
+                        Style="{StaticResource Card}"
+                        Padding="28"
+                        VerticalOptions="Center"
+                        HorizontalOptions="Center"
+                        IsVisible="{Binding HasNothingToDo}">
+                    <VerticalStackLayout Spacing="4">
+                        <Label Style="{StaticResource SectionHeading}"
+                               Text="Nothing to approve"
+                               HorizontalTextAlignment="Center" />
+                        <Label Style="{StaticResource Muted}"
+                               HorizontalTextAlignment="Center"
+                               Text="A run appears here once a payroll officer submits it." />
+                    </VerticalStackLayout>
+                </Border>
+
+                <Grid Grid.Row="2"
+                      ColumnDefinitions="340,*"
+                      ColumnSpacing="14"
+                      IsVisible="{Binding HasQueue}">
+
+                    <!-- ============ QUEUE ============ -->
+                    <Border Grid.Column="0" Style="{StaticResource Card}" Padding="0">
+                        <CollectionView ItemsSource="{Binding Queue}" SelectionMode="None">
+                            <CollectionView.ItemTemplate>
+                                <DataTemplate x:DataType="vm:PayrollRunRow">
+                                    <Grid BackgroundColor="{Binding RowColor}">
+                                        <Grid.GestureRecognizers>
+                                            <TapGestureRecognizer
+                                                Command="{Binding Source={RelativeSource AncestorType={x:Type vm:ApprovalsViewModel}}, Path=SelectRunRowCommand}"
+                                                CommandParameter="{Binding .}" />
+                                        </Grid.GestureRecognizers>
+
+                                        <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8" Padding="16,10">
+                                            <VerticalStackLayout Grid.Column="0" Spacing="1">
+                                                <Label Text="{Binding Reference}"
+                                                       FontSize="12.5"
+                                                       FontAttributes="Bold"
+                                                       LineBreakMode="TailTruncation"
+                                                       TextColor="{AppThemeBinding Light={StaticResource TextLight}, Dark={StaticResource TextDark}}" />
+                                                <Label Style="{StaticResource Faint}"
+                                                       LineBreakMode="TailTruncation"
+                                                       Text="{Binding PeriodDisplay}" />
+                                                <Label Style="{StaticResource Faint}"
+                                                       LineBreakMode="TailTruncation"
+                                                       Text="{Binding HeadcountDisplay}" />
+                                            </VerticalStackLayout>
+
+                                            <VerticalStackLayout Grid.Column="1" Spacing="1" HorizontalOptions="End">
+                                                <Label Text="{Binding StatusDisplay}"
+                                                       FontSize="11"
+                                                       FontAttributes="Bold"
+                                                       HorizontalTextAlignment="End"
+                                                       TextColor="{Binding StatusColor}" />
+                                                <Label Style="{StaticResource Body}"
+                                                       HorizontalTextAlignment="End"
+                                                       Text="{Binding NetDisplay}" />
+                                            </VerticalStackLayout>
+
+                                            <BoxView Grid.ColumnSpan="2" VerticalOptions="End" Style="{StaticResource Divider}" />
+                                        </Grid>
+                                    </Grid>
+                                </DataTemplate>
+                            </CollectionView.ItemTemplate>
+                        </CollectionView>
+                    </Border>
+
+                    <!-- ============ REVIEW ============ -->
+                    <Border Grid.Column="1" Style="{StaticResource Card}" Padding="0">
+                        <Grid RowDefinitions="Auto,Auto,Auto,Auto,Auto,*" IsVisible="{Binding HasRunSelected}">
+
+                            <Grid Grid.Row="0" ColumnDefinitions="*,Auto" ColumnSpacing="10" Padding="16,12">
+                                <VerticalStackLayout Grid.Column="0" Spacing="1">
+                                    <Label Style="{StaticResource SectionHeading}" Text="{Binding DetailTitle}" />
+                                    <Label Style="{StaticResource Faint}"
+                                           LineBreakMode="TailTruncation"
+                                           Text="{Binding DetailSubtitle}" />
+                                </VerticalStackLayout>
+
+                                <HorizontalStackLayout Grid.Column="1" Spacing="6" VerticalOptions="Center">
+                                    <Button Style="{StaticResource SecondaryButton}"
+                                            Text="Return to draft"
+                                            Command="{Binding OpenReturnCommand}" />
+                                    <Button Style="{StaticResource PrimaryButton}"
+                                            Text="Approve"
+                                            IsEnabled="{Binding CanApprove}"
+                                            Command="{Binding OpenApproveCommand}" />
+                                    <Button Style="{StaticResource DangerButton}"
+                                            Text="Post"
+                                            IsEnabled="{Binding CanPost}"
+                                            Command="{Binding OpenPostCommand}" />
+                                </HorizontalStackLayout>
+                            </Grid>
+
+                            <Label Grid.Row="1"
+                                   Style="{StaticResource Body}"
+                                   Padding="16,0,16,4"
+                                   Text="{Binding DetailTotals}" />
+
+                            <Label Grid.Row="2"
+                                   Style="{StaticResource Faint}"
+                                   Padding="16,0,16,10"
+                                   Text="{Binding DetailTrail}" />
+
+                            <!-- Separation of duties, said where the approver is looking. -->
+                            <Border Grid.Row="3"
+                                    Style="{StaticResource Pill}"
+                                    Margin="16,0,16,10"
+                                    Padding="10,7"
+                                    HorizontalOptions="Fill"
+                                    IsVisible="{Binding HasOwnSubmissionWarning}"
+                                    BackgroundColor="{AppThemeBinding Light={StaticResource WarningSoftLight}, Dark={StaticResource WarningSoftDark}}">
+                                <Label FontSize="11.5"
+                                       TextColor="{StaticResource Warning}"
+                                       Text="{Binding OwnSubmissionWarning}" />
+                            </Border>
+
+                            <Grid Grid.Row="4"
+                                  ColumnDefinitions="*,130,130,130,Auto"
+                                  ColumnSpacing="10"
+                                  Padding="16,8"
+                                  BackgroundColor="{AppThemeBinding Light={StaticResource SurfaceAltLight}, Dark={StaticResource SurfaceAltDark}}">
+                                <Label Grid.Column="0" Style="{StaticResource TableHeader}" Text="EMPLOYEE" />
+                                <Label Grid.Column="1" Style="{StaticResource TableHeader}" Text="GROSS" />
+                                <Label Grid.Column="2" Style="{StaticResource TableHeader}" Text="DEDUCTIONS" />
+                                <Label Grid.Column="3" Style="{StaticResource TableHeader}" Text="NET" />
+                                <Label Grid.Column="4" Style="{StaticResource TableHeader}" Text="" WidthRequest="80" />
+                            </Grid>
+
+                            <CollectionView Grid.Row="5" ItemsSource="{Binding Payslips}" SelectionMode="None">
+                                <CollectionView.ItemTemplate>
+                                    <DataTemplate x:DataType="vm:PayslipRow">
+                                        <Grid ColumnDefinitions="*,130,130,130,Auto" ColumnSpacing="10" Padding="16,9">
+
+                                            <VerticalStackLayout Grid.Column="0" Spacing="0" VerticalOptions="Center">
+                                                <Label Text="{Binding EmployeeName}"
+                                                       FontSize="12.5"
+                                                       FontAttributes="Bold"
+                                                       LineBreakMode="TailTruncation"
+                                                       TextColor="{AppThemeBinding Light={StaticResource TextLight}, Dark={StaticResource TextDark}}" />
+                                                <Label Style="{StaticResource Faint}"
+                                                       LineBreakMode="TailTruncation"
+                                                       Text="{Binding TimeDisplay}" />
+                                            </VerticalStackLayout>
+
+                                            <Label Grid.Column="1" Style="{StaticResource Body}" VerticalOptions="Center" Text="{Binding GrossDisplay}" />
+                                            <Label Grid.Column="2" Style="{StaticResource Body}" VerticalOptions="Center" Text="{Binding DeductionsDisplay}" />
+
+                                            <Label Grid.Column="3"
+                                                   FontSize="12.5"
+                                                   FontAttributes="Bold"
+                                                   VerticalOptions="Center"
+                                                   TextColor="{Binding NetColor}"
+                                                   Text="{Binding NetDisplay}" />
+
+                                            <Button Grid.Column="4"
+                                                    Style="{StaticResource RowAction}"
+                                                    Text="Payslip"
+                                                    WidthRequest="80"
+                                                    VerticalOptions="Center"
+                                                    Command="{Binding Source={RelativeSource AncestorType={x:Type vm:ApprovalsViewModel}}, Path=OpenPayslipCommand}"
+                                                    CommandParameter="{Binding .}" />
+
+                                            <BoxView Grid.ColumnSpan="5" VerticalOptions="End" Style="{StaticResource Divider}" />
+                                        </Grid>
+                                    </DataTemplate>
+                                </CollectionView.ItemTemplate>
+                            </CollectionView>
+                        </Grid>
+                    </Border>
+                </Grid>
+            </Grid>
+        </Grid>
+
+        <!--
+            Lifted out of this view by MainPage at load time so the scrim covers
+            the whole window. See MainPage.ShowSectionAsync.
+        -->
+        <Grid x:Name="ModalLayer" IsVisible="{Binding IsAnyModalOpen}">
+
+        <!-- ================ PAYSLIP ================ -->
+        <controls:ModalHost IsOpen="{Binding IsPayslipOpen}"
+                            Title="{Binding PayslipTitle}"
+                            Subtitle="{Binding PayslipSubtitle}"
+                            ModalWidth="620"
+                            PrimaryText="Close"
+                            PrimaryCommand="{Binding ClosePayslipCommand}"
+                            SecondaryText="Done"
+                            SecondaryCommand="{Binding ClosePayslipCommand}"
+                            DismissCommand="{Binding ClosePayslipCommand}">
+            <controls:ModalHost.Body>
+                <VerticalStackLayout Spacing="10">
+
+                    <CollectionView ItemsSource="{Binding Lines}" SelectionMode="None">
+                        <CollectionView.ItemTemplate>
+                            <DataTemplate x:DataType="models:PayslipLine">
+                                <Grid ColumnDefinitions="*,120" ColumnSpacing="10" Padding="0,5">
+
+                                    <VerticalStackLayout Grid.Column="0" Spacing="0">
+                                        <Label Text="{Binding Name}"
+                                               FontSize="12.5"
+                                               LineBreakMode="TailTruncation"
+                                               TextColor="{AppThemeBinding Light={StaticResource TextLight}, Dark={StaticResource TextDark}}" />
+                                        <Label Style="{StaticResource Faint}"
+                                               LineBreakMode="TailTruncation"
+                                               Text="{Binding BasisDisplay}" />
+                                        <Label Style="{StaticResource Faint}"
+                                               LineBreakMode="WordWrap"
+                                               Text="{Binding Note}" />
+                                    </VerticalStackLayout>
+
+                                    <Label Grid.Column="1"
+                                           FontSize="12.5"
+                                           HorizontalTextAlignment="End"
+                                           VerticalOptions="Center"
+                                           Text="{Binding AmountDisplay}"
+                                           TextColor="{AppThemeBinding Light={StaticResource TextLight}, Dark={StaticResource TextDark}}" />
+
+                                    <BoxView Grid.ColumnSpan="2" VerticalOptions="End" Style="{StaticResource Divider}" />
+                                </Grid>
+                            </DataTemplate>
+                        </CollectionView.ItemTemplate>
+                    </CollectionView>
+
+                    <Border Style="{StaticResource Pill}"
+                            Padding="10,7"
+                            HorizontalOptions="Fill"
+                            BackgroundColor="{AppThemeBinding Light={StaticResource BrandSoftLight}, Dark={StaticResource BrandSoftDark}}">
+                        <Label FontSize="12"
+                               FontAttributes="Bold"
+                               TextColor="{StaticResource Brand}"
+                               Text="{Binding PayslipTotals}" />
+                    </Border>
+                </VerticalStackLayout>
+            </controls:ModalHost.Body>
+        </controls:ModalHost>
+
+        <!-- ================ DECISION ================ -->
+        <controls:ModalHost IsOpen="{Binding IsConfirmOpen}"
+                            Title="{Binding ConfirmTitle}"
+                            ModalWidth="500"
+                            PrimaryText="{Binding ConfirmAction}"
+                            PrimaryCommand="{Binding SubmitConfirmCommand}"
+                            SecondaryCommand="{Binding CloseConfirmCommand}"
+                            DismissCommand="{Binding CloseConfirmCommand}"
+                            IsDestructive="{Binding IsConfirmDestructive}"
+                            ErrorText="{Binding ModalError}">
+            <controls:ModalHost.Body>
+                <VerticalStackLayout Spacing="10">
+                    <Label Style="{StaticResource Body}" Text="{Binding ConfirmMessage}" />
+
+                    <controls:FormEntry Label="REASON"
+                                        Text="{Binding ConfirmReason}"
+                                        IsVisible="{Binding NeedsReason}"
+                                        Placeholder="Recorded on the audit trail" />
+                </VerticalStackLayout>
+            </controls:ModalHost.Body>
+        </controls:ModalHost>
+
+        </Grid>
+    </Grid>
+
+</ContentView>

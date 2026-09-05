@@ -1,0 +1,523 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentView xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:vm="clr-namespace:PAYROLLSystemApp.ViewModels"
+             xmlns:controls="clr-namespace:PAYROLLSystemApp.Views.Controls"
+             x:Class="PAYROLLSystemApp.Views.Sections.OrganizationView"
+             x:DataType="vm:OrganizationViewModel">
+
+    <Grid x:Name="RootGrid">
+
+        <Grid Padding="20">
+
+            <!-- FR-002: the section re-checks the permission on load. -->
+            <Border Style="{StaticResource Card}"
+                    IsVisible="{Binding IsDenied}"
+                    Padding="28"
+                    VerticalOptions="Center"
+                    HorizontalOptions="Center">
+                <VerticalStackLayout Spacing="4">
+                    <Label Style="{StaticResource SectionHeading}" Text="Access denied" HorizontalTextAlignment="Center" />
+                    <Label Style="{StaticResource Muted}" Text="You do not have permission to maintain organisation data." />
+                </VerticalStackLayout>
+            </Border>
+
+            <Grid IsVisible="{Binding IsGranted}" RowDefinitions="Auto,Auto,*" RowSpacing="10">
+
+                <!-- Shared toolbar -->
+                <Grid Grid.Row="0" ColumnDefinitions="Auto,Auto,*,Auto" ColumnSpacing="10">
+
+                    <Label Grid.Column="0"
+                           Style="{StaticResource Muted}"
+                           VerticalOptions="Center"
+                           LineBreakMode="NoWrap"
+                           Text="Show retired" />
+
+                    <Switch Grid.Column="1"
+                            IsToggled="{Binding ShowRetired}"
+                            WidthRequest="46"
+                            VerticalOptions="Center"
+                            OnColor="{StaticResource Brand}" />
+
+                    <Button Grid.Column="3"
+                            Style="{StaticResource SecondaryButton}"
+                            Text="Refresh"
+                            Command="{Binding RefreshCommand}" />
+                </Grid>
+
+                <!-- Inline result banner (NFR-023) -->
+                <Label Grid.Row="1"
+                       FontSize="12"
+                       TextColor="{StaticResource Success}"
+                       Text="{Binding StatusMessage}"
+                       IsVisible="{Binding HasStatus}" />
+
+                <Label Grid.Row="1"
+                       Style="{StaticResource ErrorText}"
+                       Text="{Binding ErrorMessage}"
+                       IsVisible="{Binding HasError}" />
+
+                <!-- Departments and positions are maintained together, so they
+                     sit side by side rather than behind a tab each. Work
+                     schedules sit under them, full width: a shift needs room for
+                     its times, its days and its grace period. -->
+                <Grid Grid.Row="2" RowDefinitions="3*,2*" RowSpacing="14">
+
+                <Grid Grid.Row="0" ColumnDefinitions="*,*" ColumnSpacing="14">
+
+                    <!-- ================== DEPARTMENTS ================== -->
+                    <Border Grid.Column="0" Style="{StaticResource Card}" Padding="0">
+                        <Grid RowDefinitions="Auto,Auto,Auto,*">
+
+                            <Grid Grid.Row="0" ColumnDefinitions="*,Auto" Padding="16,12">
+                                <VerticalStackLayout Grid.Column="0" Spacing="1">
+                                    <Label Style="{StaticResource SectionHeading}" Text="Departments" />
+                                    <Label Style="{StaticResource Faint}"
+                                           LineBreakMode="TailTruncation"
+                                           Text="{Binding DepartmentSummary}" />
+                                </VerticalStackLayout>
+
+                                <Button Grid.Column="1"
+                                        Style="{StaticResource PrimaryButton}"
+                                        Text="+  New"
+                                        VerticalOptions="Center"
+                                        Command="{Binding OpenCreateDepartmentCommand}" />
+                            </Grid>
+
+                            <BoxView Grid.Row="1" Style="{StaticResource Divider}" />
+
+                            <Grid Grid.Row="2"
+                                  ColumnDefinitions="*,Auto"
+                                  Padding="16,8"
+                                  BackgroundColor="{AppThemeBinding Light={StaticResource SurfaceAltLight}, Dark={StaticResource SurfaceAltDark}}">
+                                <Label Grid.Column="0" Style="{StaticResource TableHeader}" Text="DEPARTMENT" />
+                                <Label Grid.Column="1" Style="{StaticResource TableHeader}" Text="ACTIONS" WidthRequest="132" />
+                            </Grid>
+
+                            <Grid Grid.Row="3">
+                                <CollectionView ItemsSource="{Binding Departments}" SelectionMode="None">
+                                    <CollectionView.ItemTemplate>
+                                        <DataTemplate x:DataType="vm:DepartmentRow">
+                                            <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="10" Padding="16,9">
+
+                                                <Border Grid.Column="0"
+                                                        Style="{StaticResource Pill}"
+                                                        VerticalOptions="Center"
+                                                        BackgroundColor="{AppThemeBinding Light={StaticResource BrandSoftLight}, Dark={StaticResource BrandSoftDark}}">
+                                                    <Label Text="{Binding Code}"
+                                                           FontSize="10.5"
+                                                           FontAttributes="Bold"
+                                                           TextColor="{StaticResource Brand}" />
+                                                </Border>
+
+                                                <VerticalStackLayout Grid.Column="1" Spacing="0" VerticalOptions="Center">
+                                                    <Label Text="{Binding Name}"
+                                                           FontSize="12.5"
+                                                           FontAttributes="Bold"
+                                                           LineBreakMode="TailTruncation"
+                                                           TextColor="{AppThemeBinding Light={StaticResource TextLight}, Dark={StaticResource TextDark}}" />
+                                                    <Label Style="{StaticResource Faint}"
+                                                           LineBreakMode="TailTruncation"
+                                                           Text="{Binding Detail}" />
+                                                </VerticalStackLayout>
+
+                                                <HorizontalStackLayout Grid.Column="2"
+                                                                       Spacing="6"
+                                                                       WidthRequest="132"
+                                                                       VerticalOptions="Center">
+                                                    <Button Style="{StaticResource RowAction}"
+                                                            Text="Edit"
+                                                            Command="{Binding Source={RelativeSource AncestorType={x:Type vm:OrganizationViewModel}}, Path=OpenEditDepartmentCommand}"
+                                                            CommandParameter="{Binding .}" />
+                                                    <Button Style="{StaticResource RowAction}"
+                                                            Text="{Binding ActionText}"
+                                                            Command="{Binding Source={RelativeSource AncestorType={x:Type vm:OrganizationViewModel}}, Path=OpenToggleDepartmentCommand}"
+                                                            CommandParameter="{Binding .}" />
+                                                </HorizontalStackLayout>
+
+                                                <BoxView Grid.ColumnSpan="3" VerticalOptions="End" Style="{StaticResource Divider}" />
+                                            </Grid>
+                                        </DataTemplate>
+                                    </CollectionView.ItemTemplate>
+                                </CollectionView>
+
+                                <VerticalStackLayout IsVisible="{Binding HasNoDepartments}"
+                                                     Spacing="4"
+                                                     Padding="24"
+                                                     VerticalOptions="Center">
+                                    <Label Style="{StaticResource SectionHeading}"
+                                           Text="No departments"
+                                           HorizontalTextAlignment="Center" />
+                                    <Label Style="{StaticResource Muted}"
+                                           HorizontalTextAlignment="Center"
+                                           Text="Add one, or switch on Show retired." />
+                                </VerticalStackLayout>
+                            </Grid>
+                        </Grid>
+                    </Border>
+
+                    <!-- ================== POSITIONS ================== -->
+                    <Border Grid.Column="1" Style="{StaticResource Card}" Padding="0">
+                        <Grid RowDefinitions="Auto,Auto,Auto,*">
+
+                            <Grid Grid.Row="0" ColumnDefinitions="*,Auto" Padding="16,12">
+                                <VerticalStackLayout Grid.Column="0" Spacing="1">
+                                    <Label Style="{StaticResource SectionHeading}" Text="Positions" />
+                                    <Label Style="{StaticResource Faint}"
+                                           LineBreakMode="TailTruncation"
+                                           Text="{Binding PositionSummary}" />
+                                </VerticalStackLayout>
+
+                                <Button Grid.Column="1"
+                                        Style="{StaticResource PrimaryButton}"
+                                        Text="+  New"
+                                        VerticalOptions="Center"
+                                        Command="{Binding OpenCreatePositionCommand}" />
+                            </Grid>
+
+                            <BoxView Grid.Row="1" Style="{StaticResource Divider}" />
+
+                            <Grid Grid.Row="2"
+                                  ColumnDefinitions="*,Auto"
+                                  Padding="16,8"
+                                  BackgroundColor="{AppThemeBinding Light={StaticResource SurfaceAltLight}, Dark={StaticResource SurfaceAltDark}}">
+                                <Label Grid.Column="0" Style="{StaticResource TableHeader}" Text="POSITION" />
+                                <Label Grid.Column="1" Style="{StaticResource TableHeader}" Text="ACTIONS" WidthRequest="132" />
+                            </Grid>
+
+                            <Grid Grid.Row="3">
+                                <CollectionView ItemsSource="{Binding Positions}" SelectionMode="None">
+                                    <CollectionView.ItemTemplate>
+                                        <DataTemplate x:DataType="vm:PositionRow">
+                                            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10" Padding="16,9">
+
+                                                <VerticalStackLayout Grid.Column="0" Spacing="0" VerticalOptions="Center">
+                                                    <Label Text="{Binding Title}"
+                                                           FontSize="12.5"
+                                                           FontAttributes="Bold"
+                                                           LineBreakMode="TailTruncation"
+                                                           TextColor="{AppThemeBinding Light={StaticResource TextLight}, Dark={StaticResource TextDark}}" />
+                                                    <Label Style="{StaticResource Faint}"
+                                                           LineBreakMode="TailTruncation"
+                                                           Text="{Binding Detail}" />
+                                                </VerticalStackLayout>
+
+                                                <HorizontalStackLayout Grid.Column="1"
+                                                                       Spacing="6"
+                                                                       WidthRequest="132"
+                                                                       VerticalOptions="Center">
+                                                    <Button Style="{StaticResource RowAction}"
+                                                            Text="Edit"
+                                                            Command="{Binding Source={RelativeSource AncestorType={x:Type vm:OrganizationViewModel}}, Path=OpenEditPositionCommand}"
+                                                            CommandParameter="{Binding .}" />
+                                                    <Button Style="{StaticResource RowAction}"
+                                                            Text="{Binding ActionText}"
+                                                            Command="{Binding Source={RelativeSource AncestorType={x:Type vm:OrganizationViewModel}}, Path=OpenTogglePositionCommand}"
+                                                            CommandParameter="{Binding .}" />
+                                                </HorizontalStackLayout>
+
+                                                <BoxView Grid.ColumnSpan="2" VerticalOptions="End" Style="{StaticResource Divider}" />
+                                            </Grid>
+                                        </DataTemplate>
+                                    </CollectionView.ItemTemplate>
+                                </CollectionView>
+
+                                <VerticalStackLayout IsVisible="{Binding HasNoPositions}"
+                                                     Spacing="4"
+                                                     Padding="24"
+                                                     VerticalOptions="Center">
+                                    <Label Style="{StaticResource SectionHeading}"
+                                           Text="No positions"
+                                           HorizontalTextAlignment="Center" />
+                                    <Label Style="{StaticResource Muted}"
+                                           HorizontalTextAlignment="Center"
+                                           Text="Add one, or switch on Show retired." />
+                                </VerticalStackLayout>
+                            </Grid>
+                        </Grid>
+                    </Border>
+                </Grid>
+
+                <!-- ================== WORK SCHEDULES ==================
+                     FR-012, FR-021, FR-026. The shift an employee is measured
+                     against: without one there is no way to say whether they
+                     were late, worked undertime, or went into overtime. -->
+                <Border Grid.Row="1" Style="{StaticResource Card}" Padding="0">
+                    <Grid RowDefinitions="Auto,Auto,Auto,*">
+
+                        <Grid Grid.Row="0" ColumnDefinitions="*,Auto" Padding="16,12">
+                            <VerticalStackLayout Grid.Column="0" Spacing="1">
+                                <Label Style="{StaticResource SectionHeading}" Text="Work schedules" />
+                                <Label Style="{StaticResource Faint}"
+                                       LineBreakMode="TailTruncation"
+                                       Text="{Binding ScheduleSummary}" />
+                            </VerticalStackLayout>
+
+                            <Button Grid.Column="1"
+                                    Style="{StaticResource PrimaryButton}"
+                                    Text="+  New"
+                                    VerticalOptions="Center"
+                                    Command="{Binding OpenCreateScheduleCommand}" />
+                        </Grid>
+
+                        <BoxView Grid.Row="1" Style="{StaticResource Divider}" />
+
+                        <Grid Grid.Row="2"
+                              ColumnDefinitions="*,Auto,Auto,Auto,Auto"
+                              ColumnSpacing="10"
+                              Padding="16,8"
+                              BackgroundColor="{AppThemeBinding Light={StaticResource SurfaceAltLight}, Dark={StaticResource SurfaceAltDark}}">
+                            <Label Grid.Column="0" Style="{StaticResource TableHeader}" Text="SCHEDULE" />
+                            <Label Grid.Column="1" Style="{StaticResource TableHeader}" Text="SHIFT" WidthRequest="180" />
+                            <Label Grid.Column="2" Style="{StaticResource TableHeader}" Text="DAYS"  WidthRequest="150" />
+                            <Label Grid.Column="3" Style="{StaticResource TableHeader}" Text="PAID"  WidthRequest="60" />
+                            <Label Grid.Column="4" Style="{StaticResource TableHeader}" Text="ACTIONS" WidthRequest="132" />
+                        </Grid>
+
+                        <Grid Grid.Row="3">
+                            <CollectionView ItemsSource="{Binding Schedules}" SelectionMode="None">
+                                <CollectionView.ItemTemplate>
+                                    <DataTemplate x:DataType="vm:WorkScheduleRow">
+                                        <Grid ColumnDefinitions="*,Auto,Auto,Auto,Auto" ColumnSpacing="10" Padding="16,9">
+
+                                            <VerticalStackLayout Grid.Column="0" Spacing="0" VerticalOptions="Center">
+                                                <Label Text="{Binding Name}"
+                                                       FontSize="12.5"
+                                                       FontAttributes="Bold"
+                                                       LineBreakMode="TailTruncation"
+                                                       TextColor="{AppThemeBinding Light={StaticResource TextLight}, Dark={StaticResource TextDark}}" />
+                                                <Label Style="{StaticResource Faint}"
+                                                       LineBreakMode="TailTruncation"
+                                                       Text="{Binding Detail}" />
+                                            </VerticalStackLayout>
+
+                                            <Label Grid.Column="1" Style="{StaticResource Muted}" WidthRequest="180"
+                                                   VerticalOptions="Center" Text="{Binding TimeDisplay}" />
+                                            <Label Grid.Column="2" Style="{StaticResource Muted}" WidthRequest="150"
+                                                   VerticalOptions="Center" Text="{Binding DaysDisplay}" />
+                                            <Label Grid.Column="3" Style="{StaticResource Body}" WidthRequest="60"
+                                                   VerticalOptions="Center" Text="{Binding HoursDisplay}" />
+
+                                            <HorizontalStackLayout Grid.Column="4"
+                                                                   Spacing="6"
+                                                                   WidthRequest="132"
+                                                                   VerticalOptions="Center">
+                                                <Button Style="{StaticResource RowAction}"
+                                                        Text="Edit"
+                                                        Command="{Binding Source={RelativeSource AncestorType={x:Type vm:OrganizationViewModel}}, Path=OpenEditScheduleCommand}"
+                                                        CommandParameter="{Binding .}" />
+                                                <Button Style="{StaticResource RowAction}"
+                                                        Text="{Binding ActionText}"
+                                                        Command="{Binding Source={RelativeSource AncestorType={x:Type vm:OrganizationViewModel}}, Path=OpenToggleScheduleCommand}"
+                                                        CommandParameter="{Binding .}" />
+                                            </HorizontalStackLayout>
+
+                                            <BoxView Grid.ColumnSpan="5" VerticalOptions="End" Style="{StaticResource Divider}" />
+                                        </Grid>
+                                    </DataTemplate>
+                                </CollectionView.ItemTemplate>
+                            </CollectionView>
+
+                            <VerticalStackLayout IsVisible="{Binding HasNoSchedules}"
+                                                 Spacing="4"
+                                                 Padding="24"
+                                                 VerticalOptions="Center">
+                                <Label Style="{StaticResource SectionHeading}"
+                                       Text="No work schedules"
+                                       HorizontalTextAlignment="Center" />
+                                <Label Style="{StaticResource Muted}"
+                                       HorizontalTextAlignment="Center"
+                                       Text="Add one, or switch on Show retired. Attendance cannot measure lateness or overtime without a shift to measure against." />
+                            </VerticalStackLayout>
+                        </Grid>
+                    </Grid>
+                </Border>
+                </Grid>
+            </Grid>
+        </Grid>
+
+        <!--
+            Lifted out of this view by MainPage at load time so the scrim covers
+            the whole window. See MainPage.ShowSectionAsync.
+        -->
+        <Grid x:Name="ModalLayer" IsVisible="{Binding IsAnyModalOpen}">
+
+        <!-- ================ DEPARTMENT FORM ================ -->
+        <controls:ModalHost IsOpen="{Binding IsDepartmentFormOpen}"
+                            Title="{Binding DepartmentFormTitle}"
+                            Subtitle="Used when assigning employees and grouping reports"
+                            ModalWidth="440"
+                            PrimaryText="Save department"
+                            PrimaryCommand="{Binding SubmitDepartmentCommand}"
+                            SecondaryCommand="{Binding CloseDepartmentFormCommand}"
+                            DismissCommand="{Binding CloseDepartmentFormCommand}"
+                            ErrorText="{Binding ModalError}">
+            <controls:ModalHost.Body>
+                <VerticalStackLayout Spacing="12">
+                    <controls:FormEntry Label="CODE"
+                                        Text="{Binding DepartmentCode}"
+                                        Placeholder="e.g. FIN"
+                                        ErrorText="{Binding ErrDepartmentCode}" />
+
+                    <controls:FormEntry Label="NAME"
+                                        Text="{Binding DepartmentName}"
+                                        Placeholder="Finance and Accounting"
+                                        ErrorText="{Binding ErrDepartmentName}" />
+
+                    <controls:FormEntry Label="DESCRIPTION"
+                                        Text="{Binding DepartmentDescription}"
+                                        Placeholder="What this unit does" />
+
+                    <Label Style="{StaticResource Faint}"
+                           Text="Departments are never deleted. One that is no longer used is retired, so it still names the unit on payslips already produced against it." />
+                </VerticalStackLayout>
+            </controls:ModalHost.Body>
+        </controls:ModalHost>
+
+        <!-- ================ POSITION FORM ================ -->
+        <controls:ModalHost IsOpen="{Binding IsPositionFormOpen}"
+                            Title="{Binding PositionFormTitle}"
+                            Subtitle="A job title, and whether it earns overtime"
+                            ModalWidth="440"
+                            PrimaryText="Save position"
+                            PrimaryCommand="{Binding SubmitPositionCommand}"
+                            SecondaryCommand="{Binding ClosePositionFormCommand}"
+                            DismissCommand="{Binding ClosePositionFormCommand}"
+                            ErrorText="{Binding ModalError}">
+            <controls:ModalHost.Body>
+                <VerticalStackLayout Spacing="12">
+                    <controls:FormEntry Label="CODE"
+                                        Text="{Binding PositionCode}"
+                                        Placeholder="e.g. SUPV"
+                                        ErrorText="{Binding ErrPositionCode}" />
+
+                    <controls:FormEntry Label="TITLE"
+                                        Text="{Binding PositionTitle}"
+                                        Placeholder="Supervisor"
+                                        ErrorText="{Binding ErrPositionTitle}" />
+
+                    <Grid ColumnDefinitions="*,Auto" Margin="0,4,0,0">
+                        <VerticalStackLayout Grid.Column="0" Spacing="1">
+                            <Label Style="{StaticResource Body}" Text="Managerial or supervisory" />
+                            <Label Style="{StaticResource Faint}"
+                                   Text="Art. 82 places these staff outside the hours-of-work rules: they earn no overtime, night differential or premium pay. This changes the pay of everyone holding the position." />
+                        </VerticalStackLayout>
+                        <Switch Grid.Column="1"
+                                IsToggled="{Binding PositionIsManagerial}"
+                                WidthRequest="46"
+                                HorizontalOptions="End"
+                                VerticalOptions="Center"
+                                OnColor="{StaticResource Brand}" />
+                    </Grid>
+                </VerticalStackLayout>
+            </controls:ModalHost.Body>
+        </controls:ModalHost>
+
+        <!-- ================ WORK SCHEDULE FORM ================ -->
+        <controls:ModalHost IsOpen="{Binding IsScheduleFormOpen}"
+                            Title="{Binding ScheduleFormTitle}"
+                            Subtitle="The shift attendance is measured against"
+                            ModalWidth="520"
+                            PrimaryText="Save schedule"
+                            PrimaryCommand="{Binding SubmitScheduleCommand}"
+                            SecondaryCommand="{Binding CloseScheduleFormCommand}"
+                            DismissCommand="{Binding CloseScheduleFormCommand}"
+                            ErrorText="{Binding ModalError}">
+            <controls:ModalHost.Body>
+                <VerticalStackLayout Spacing="12">
+
+                    <controls:FormEntry Label="NAME"
+                                        Text="{Binding ScheduleName}"
+                                        Placeholder="e.g. Regular day shift"
+                                        ErrorText="{Binding ErrScheduleName}" />
+
+                    <Grid ColumnDefinitions="*,*" ColumnSpacing="10">
+                        <VerticalStackLayout Grid.Column="0" Spacing="0">
+                            <Label Style="{StaticResource FieldLabel}" Text="SHIFT STARTS" />
+                            <Border Style="{StaticResource FieldFrame}">
+                                <TimePicker Time="{Binding ScheduleStart}" Format="h:mm tt" />
+                            </Border>
+                        </VerticalStackLayout>
+
+                        <VerticalStackLayout Grid.Column="1" Spacing="0">
+                            <Label Style="{StaticResource FieldLabel}" Text="SHIFT ENDS" />
+                            <Border Style="{StaticResource FieldFrame}">
+                                <TimePicker Time="{Binding ScheduleEnd}" Format="h:mm tt" />
+                            </Border>
+                        </VerticalStackLayout>
+                    </Grid>
+
+                    <Grid ColumnDefinitions="*,*" ColumnSpacing="10">
+                        <controls:FormEntry Grid.Column="0"
+                                            Label="UNPAID BREAK (MINUTES)"
+                                            Text="{Binding ScheduleBreak}"
+                                            Placeholder="60" />
+
+                        <controls:FormEntry Grid.Column="1"
+                                            Label="GRACE PERIOD (MINUTES)"
+                                            Text="{Binding ScheduleGrace}"
+                                            Placeholder="15" />
+                    </Grid>
+
+                    <Label Style="{StaticResource Faint}"
+                           Text="FR-026: arriving within the grace period is not late. Once it is exceeded, lateness is counted from the shift start, not from the end of the grace." />
+
+                    <VerticalStackLayout Spacing="2">
+                        <Label Style="{StaticResource FieldLabel}" Text="WORKING DAYS" />
+                        <Label Style="{StaticResource Faint}"
+                               Text="A day left unticked is a rest day, and work on it earns the rest day premium." />
+
+                        <HorizontalStackLayout Spacing="2" Margin="0,4,0,0">
+                            <CheckBox IsChecked="{Binding DayMonday}" Color="{StaticResource Brand}" />
+                            <Label Style="{StaticResource Body}" VerticalOptions="Center" Text="Mon" />
+                            <CheckBox IsChecked="{Binding DayTuesday}" Color="{StaticResource Brand}" />
+                            <Label Style="{StaticResource Body}" VerticalOptions="Center" Text="Tue" />
+                            <CheckBox IsChecked="{Binding DayWednesday}" Color="{StaticResource Brand}" />
+                            <Label Style="{StaticResource Body}" VerticalOptions="Center" Text="Wed" />
+                            <CheckBox IsChecked="{Binding DayThursday}" Color="{StaticResource Brand}" />
+                            <Label Style="{StaticResource Body}" VerticalOptions="Center" Text="Thu" />
+                        </HorizontalStackLayout>
+
+                        <HorizontalStackLayout Spacing="2">
+                            <CheckBox IsChecked="{Binding DayFriday}" Color="{StaticResource Brand}" />
+                            <Label Style="{StaticResource Body}" VerticalOptions="Center" Text="Fri" />
+                            <CheckBox IsChecked="{Binding DaySaturday}" Color="{StaticResource Brand}" />
+                            <Label Style="{StaticResource Body}" VerticalOptions="Center" Text="Sat" />
+                            <CheckBox IsChecked="{Binding DaySunday}" Color="{StaticResource Brand}" />
+                            <Label Style="{StaticResource Body}" VerticalOptions="Center" Text="Sun" />
+                        </HorizontalStackLayout>
+                    </VerticalStackLayout>
+
+                    <!-- The arithmetic, recomputed as the times are typed, so a
+                         schedule that pays nothing is visible before it is saved. -->
+                    <Border Style="{StaticResource Pill}"
+                            Padding="10,7"
+                            HorizontalOptions="Fill"
+                            BackgroundColor="{AppThemeBinding Light={StaticResource BrandSoftLight}, Dark={StaticResource BrandSoftDark}}">
+                        <Label FontSize="11.5"
+                               TextColor="{StaticResource Brand}"
+                               Text="{Binding SchedulePreview}" />
+                    </Border>
+                </VerticalStackLayout>
+            </controls:ModalHost.Body>
+        </controls:ModalHost>
+
+        <!-- ================ RETIRE / RESTORE ================ -->
+        <controls:ModalHost IsOpen="{Binding IsConfirmOpen}"
+                            Title="{Binding ConfirmTitle}"
+                            ModalWidth="420"
+                            PrimaryText="{Binding ConfirmAction}"
+                            PrimaryCommand="{Binding SubmitConfirmCommand}"
+                            SecondaryCommand="{Binding CloseConfirmCommand}"
+                            DismissCommand="{Binding CloseConfirmCommand}"
+                            IsDestructive="{Binding IsConfirmDestructive}"
+                            ErrorText="{Binding ModalError}">
+            <controls:ModalHost.Body>
+                <Label Style="{StaticResource Body}" Text="{Binding ConfirmMessage}" />
+            </controls:ModalHost.Body>
+        </controls:ModalHost>
+
+        </Grid>
+    </Grid>
+
+</ContentView>

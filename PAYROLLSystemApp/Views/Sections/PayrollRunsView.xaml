@@ -1,0 +1,775 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentView xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:vm="clr-namespace:PAYROLLSystemApp.ViewModels"
+             xmlns:models="clr-namespace:PAYROLLSystemApp.Models"
+             xmlns:controls="clr-namespace:PAYROLLSystemApp.Views.Controls"
+             x:Class="PAYROLLSystemApp.Views.Sections.PayrollRunsView"
+             x:DataType="vm:PayrollRunsViewModel">
+
+    <Grid x:Name="RootGrid">
+
+        <Grid Padding="20">
+
+            <!-- FR-002: the section re-checks the permission on load. -->
+            <Border Style="{StaticResource Card}"
+                    IsVisible="{Binding IsDenied}"
+                    Padding="28"
+                    VerticalOptions="Center"
+                    HorizontalOptions="Center">
+                <VerticalStackLayout Spacing="4">
+                    <Label Style="{StaticResource SectionHeading}" Text="Access denied" HorizontalTextAlignment="Center" />
+                    <Label Style="{StaticResource Muted}" Text="You do not have permission to run payroll." />
+                </VerticalStackLayout>
+            </Border>
+
+            <Grid IsVisible="{Binding IsGranted}" RowDefinitions="Auto,Auto,*" RowSpacing="10">
+
+                <!-- ============ PANEL SWITCH ============ -->
+                <Grid Grid.Row="0" ColumnDefinitions="Auto,Auto,Auto,*,Auto,Auto" ColumnSpacing="8">
+
+                    <Grid Grid.Column="0" RowDefinitions="Auto,2">
+                        <Button Grid.Row="0"
+                                Style="{StaticResource GhostButton}"
+                                Text="Payroll runs"
+                                Command="{Binding ShowRunsCommand}" />
+                        <BoxView Grid.Row="1" Color="{StaticResource Brand}" IsVisible="{Binding IsRuns}" />
+                    </Grid>
+
+                    <Grid Grid.Column="1" RowDefinitions="Auto,2">
+                        <Button Grid.Row="0"
+                                Style="{StaticResource GhostButton}"
+                                Text="Loans &amp; advances"
+                                Command="{Binding ShowLoansCommand}" />
+                        <BoxView Grid.Row="1" Color="{StaticResource Brand}" IsVisible="{Binding IsLoans}" />
+                    </Grid>
+
+                    <Border Grid.Column="2"
+                            Style="{StaticResource FieldFrame}"
+                            IsVisible="{Binding IsRuns}"
+                            VerticalOptions="Center">
+                        <Picker ItemsSource="{Binding YearOptions}"
+                                SelectedItem="{Binding SelectedYearOption}"
+                                ItemDisplayBinding="{Binding Label, x:DataType=vm:LookupOption}"
+                                WidthRequest="110" />
+                    </Border>
+
+                    <Button Grid.Column="4"
+                            Style="{StaticResource SecondaryButton}"
+                            Text="Refresh"
+                            VerticalOptions="Center"
+                            Command="{Binding RefreshCommand}" />
+
+                    <Button Grid.Column="5"
+                            Style="{StaticResource PrimaryButton}"
+                            Text="+  New run"
+                            VerticalOptions="Center"
+                            IsVisible="{Binding IsRuns}"
+                            Command="{Binding OpenCreateCommand}" />
+                </Grid>
+
+                <!-- Inline result banner (NFR-023) -->
+                <Label Grid.Row="1"
+                       FontSize="12"
+                       TextColor="{StaticResource Success}"
+                       Text="{Binding StatusMessage}"
+                       IsVisible="{Binding HasStatus}" />
+
+                <Label Grid.Row="1"
+                       Style="{StaticResource ErrorText}"
+                       Text="{Binding ErrorMessage}"
+                       IsVisible="{Binding HasError}" />
+
+                <!-- ==================================================== -->
+                <!-- ==================  PAYROLL RUNS  ================== -->
+                <!-- ==================================================== -->
+                <Grid Grid.Row="2"
+                      ColumnDefinitions="360,*"
+                      ColumnSpacing="14"
+                      IsVisible="{Binding IsRuns}">
+
+                    <!-- ============ RUN LIST ============ -->
+                    <Border Grid.Column="0" Style="{StaticResource Card}" Padding="0">
+                        <Grid RowDefinitions="Auto,Auto,*">
+
+                            <VerticalStackLayout Grid.Row="0" Spacing="1" Padding="16,12">
+                                <Label Style="{StaticResource SectionHeading}" Text="Runs" />
+                                <Label Style="{StaticResource Faint}"
+                                       LineBreakMode="TailTruncation"
+                                       Text="{Binding RunSummary}" />
+                            </VerticalStackLayout>
+
+                            <BoxView Grid.Row="1" Style="{StaticResource Divider}" />
+
+                            <Grid Grid.Row="2">
+                                <CollectionView ItemsSource="{Binding Runs}" SelectionMode="None">
+                                    <CollectionView.ItemTemplate>
+                                        <DataTemplate x:DataType="vm:PayrollRunRow">
+                                            <Grid Padding="0" BackgroundColor="{Binding RowColor}">
+                                                <Grid.GestureRecognizers>
+                                                    <TapGestureRecognizer
+                                                        Command="{Binding Source={RelativeSource AncestorType={x:Type vm:PayrollRunsViewModel}}, Path=SelectRunRowCommand}"
+                                                        CommandParameter="{Binding .}" />
+                                                </Grid.GestureRecognizers>
+
+                                                <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8" Padding="16,10">
+
+                                                    <VerticalStackLayout Grid.Column="0" Spacing="1">
+                                                        <Label Text="{Binding Reference}"
+                                                               FontSize="12.5"
+                                                               FontAttributes="Bold"
+                                                               LineBreakMode="TailTruncation"
+                                                               TextColor="{AppThemeBinding Light={StaticResource TextLight}, Dark={StaticResource TextDark}}" />
+                                                        <Label Style="{StaticResource Faint}"
+                                                               LineBreakMode="TailTruncation"
+                                                               Text="{Binding PeriodDisplay}" />
+                                                        <Label Style="{StaticResource Faint}"
+                                                               LineBreakMode="TailTruncation"
+                                                               Text="{Binding HeadcountDisplay}" />
+                                                    </VerticalStackLayout>
+
+                                                    <VerticalStackLayout Grid.Column="1" Spacing="1" HorizontalOptions="End">
+                                                        <Label Text="{Binding StatusDisplay}"
+                                                               FontSize="11"
+                                                               FontAttributes="Bold"
+                                                               HorizontalTextAlignment="End"
+                                                               TextColor="{Binding StatusColor}" />
+                                                        <Label Style="{StaticResource Body}"
+                                                               HorizontalTextAlignment="End"
+                                                               Text="{Binding NetDisplay}" />
+                                                        <Label FontSize="10.5"
+                                                               HorizontalTextAlignment="End"
+                                                               TextColor="{StaticResource Warning}"
+                                                               IsVisible="{Binding HasExceptions}"
+                                                               Text="{Binding ExceptionDisplay}" />
+                                                    </VerticalStackLayout>
+
+                                                    <BoxView Grid.ColumnSpan="2" VerticalOptions="End" Style="{StaticResource Divider}" />
+                                                </Grid>
+                                            </Grid>
+                                        </DataTemplate>
+                                    </CollectionView.ItemTemplate>
+                                </CollectionView>
+
+                                <VerticalStackLayout IsVisible="{Binding HasNoRuns}"
+                                                     Spacing="4"
+                                                     Padding="24"
+                                                     VerticalOptions="Center">
+                                    <Label Style="{StaticResource SectionHeading}"
+                                           Text="No runs yet"
+                                           HorizontalTextAlignment="Center" />
+                                    <Label Style="{StaticResource Muted}"
+                                           HorizontalTextAlignment="Center"
+                                           Text="Create one for a pay period whose attendance cut-off has closed." />
+                                </VerticalStackLayout>
+                            </Grid>
+                        </Grid>
+                    </Border>
+
+                    <!-- ============ RUN DETAIL ============ -->
+                    <Border Grid.Column="1" Style="{StaticResource Card}" Padding="0">
+                        <Grid>
+
+                            <VerticalStackLayout IsVisible="{Binding HasNoRunSelected}"
+                                                 Spacing="4"
+                                                 Padding="24"
+                                                 VerticalOptions="Center">
+                                <Label Style="{StaticResource SectionHeading}"
+                                       Text="No run selected"
+                                       HorizontalTextAlignment="Center" />
+                                <Label Style="{StaticResource Muted}"
+                                       HorizontalTextAlignment="Center"
+                                       Text="Pick a run on the left, or create one." />
+                            </VerticalStackLayout>
+
+                            <Grid RowDefinitions="Auto,Auto,Auto,Auto,Auto,*"
+                                  IsVisible="{Binding HasRunSelected}">
+
+                                <!-- Header and actions -->
+                                <Grid Grid.Row="0" ColumnDefinitions="*,Auto" ColumnSpacing="10" Padding="16,12">
+
+                                    <VerticalStackLayout Grid.Column="0" Spacing="1">
+                                        <Label Style="{StaticResource SectionHeading}" Text="{Binding DetailTitle}" />
+                                        <Label Style="{StaticResource Faint}"
+                                               LineBreakMode="TailTruncation"
+                                               Text="{Binding DetailSubtitle}" />
+                                    </VerticalStackLayout>
+
+                                    <HorizontalStackLayout Grid.Column="1" Spacing="6" VerticalOptions="Center">
+                                        <Button Style="{StaticResource SecondaryButton}"
+                                                Text="Calculate"
+                                                IsEnabled="{Binding CanEditRun}"
+                                                Command="{Binding CalculateCommand}" />
+                                        <Button Style="{StaticResource SecondaryButton}"
+                                                Text="Adjustment"
+                                                IsEnabled="{Binding CanEditRun}"
+                                                Command="{Binding OpenCreateAdjustmentCommand}" />
+                                        <Button Style="{StaticResource PrimaryButton}"
+                                                Text="Submit"
+                                                IsEnabled="{Binding CanSubmitRun}"
+                                                Command="{Binding OpenSubmitCommand}" />
+                                        <Button Style="{StaticResource DangerButton}"
+                                                Text="Discard"
+                                                IsEnabled="{Binding CanEditRun}"
+                                                Command="{Binding OpenDiscardCommand}" />
+                                    </HorizontalStackLayout>
+                                </Grid>
+
+                                <Label Grid.Row="1"
+                                       Style="{StaticResource Body}"
+                                       Padding="16,0,16,10"
+                                       Text="{Binding DetailTotals}" />
+
+                                <!-- FR-056: what has to be dealt with before this run can go anywhere. -->
+                                <Border Grid.Row="2"
+                                        Style="{StaticResource Pill}"
+                                        Margin="16,0,16,10"
+                                        Padding="10,7"
+                                        HorizontalOptions="Fill"
+                                        IsVisible="{Binding HasBlockers}"
+                                        BackgroundColor="{AppThemeBinding Light={StaticResource WarningSoftLight}, Dark={StaticResource WarningSoftDark}}">
+                                    <Label FontSize="11.5"
+                                           TextColor="{StaticResource Warning}"
+                                           Text="{Binding BlockerText}" />
+                                </Border>
+
+                                <!-- Adjustments on this run (FR-057) -->
+                                <VerticalStackLayout Grid.Row="3"
+                                                     Padding="16,0,16,10"
+                                                     Spacing="4"
+                                                     IsVisible="{Binding HasAdjustments}">
+                                    <Label Style="{StaticResource TableHeader}" Text="ONE-OFF ADJUSTMENTS" />
+
+                                    <CollectionView ItemsSource="{Binding Adjustments}"
+                                                    SelectionMode="None"
+                                                    HeightRequest="86">
+                                        <CollectionView.ItemTemplate>
+                                            <DataTemplate x:DataType="vm:AdjustmentRow">
+                                                <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="8" Padding="0,4">
+                                                    <VerticalStackLayout Grid.Column="0" Spacing="0">
+                                                        <Label Text="{Binding Name}"
+                                                               FontSize="12"
+                                                               LineBreakMode="TailTruncation"
+                                                               TextColor="{AppThemeBinding Light={StaticResource TextLight}, Dark={StaticResource TextDark}}" />
+                                                        <Label Style="{StaticResource Faint}"
+                                                               LineBreakMode="TailTruncation"
+                                                               Text="{Binding Detail}" />
+                                                    </VerticalStackLayout>
+
+                                                    <Label Grid.Column="1"
+                                                           FontSize="12"
+                                                           FontAttributes="Bold"
+                                                           VerticalOptions="Center"
+                                                           TextColor="{Binding AmountColor}"
+                                                           Text="{Binding AmountDisplay}" />
+
+                                                    <HorizontalStackLayout Grid.Column="2" Spacing="4" VerticalOptions="Center">
+                                                        <Button Style="{StaticResource RowAction}"
+                                                                Text="Edit"
+                                                                Command="{Binding Source={RelativeSource AncestorType={x:Type vm:PayrollRunsViewModel}}, Path=OpenEditAdjustmentCommand}"
+                                                                CommandParameter="{Binding .}" />
+                                                        <Button Style="{StaticResource RowAction}"
+                                                                Text="Remove"
+                                                                Command="{Binding Source={RelativeSource AncestorType={x:Type vm:PayrollRunsViewModel}}, Path=RemoveAdjustmentCommand}"
+                                                                CommandParameter="{Binding .}" />
+                                                    </HorizontalStackLayout>
+                                                </Grid>
+                                            </DataTemplate>
+                                        </CollectionView.ItemTemplate>
+                                    </CollectionView>
+                                </VerticalStackLayout>
+
+                                <Grid Grid.Row="4"
+                                      ColumnDefinitions="*,130,130,130,Auto"
+                                      ColumnSpacing="10"
+                                      Padding="16,8"
+                                      BackgroundColor="{AppThemeBinding Light={StaticResource SurfaceAltLight}, Dark={StaticResource SurfaceAltDark}}">
+                                    <Label Grid.Column="0" Style="{StaticResource TableHeader}" Text="EMPLOYEE" />
+                                    <Label Grid.Column="1" Style="{StaticResource TableHeader}" Text="GROSS" />
+                                    <Label Grid.Column="2" Style="{StaticResource TableHeader}" Text="DEDUCTIONS" />
+                                    <Label Grid.Column="3" Style="{StaticResource TableHeader}" Text="NET" />
+                                    <Label Grid.Column="4" Style="{StaticResource TableHeader}" Text="" WidthRequest="80" />
+                                </Grid>
+
+                                <CollectionView Grid.Row="5" ItemsSource="{Binding Payslips}" SelectionMode="None">
+                                    <CollectionView.ItemTemplate>
+                                        <DataTemplate x:DataType="vm:PayslipRow">
+                                            <Grid ColumnDefinitions="*,130,130,130,Auto"
+                                                  ColumnSpacing="10"
+                                                  Padding="16,9">
+
+                                                <VerticalStackLayout Grid.Column="0" Spacing="0" VerticalOptions="Center">
+                                                    <Label Text="{Binding EmployeeName}"
+                                                           FontSize="12.5"
+                                                           FontAttributes="Bold"
+                                                           LineBreakMode="TailTruncation"
+                                                           TextColor="{AppThemeBinding Light={StaticResource TextLight}, Dark={StaticResource TextDark}}" />
+                                                    <Label Style="{StaticResource Faint}"
+                                                           LineBreakMode="TailTruncation"
+                                                           Text="{Binding TimeDisplay}" />
+                                                    <Label FontSize="10.5"
+                                                           LineBreakMode="TailTruncation"
+                                                           TextColor="{StaticResource Warning}"
+                                                           IsVisible="{Binding IsFlagged}"
+                                                           Text="{Binding ReviewNote}" />
+                                                </VerticalStackLayout>
+
+                                                <Label Grid.Column="1" Style="{StaticResource Body}" VerticalOptions="Center" Text="{Binding GrossDisplay}" />
+                                                <Label Grid.Column="2" Style="{StaticResource Body}" VerticalOptions="Center" Text="{Binding DeductionsDisplay}" />
+
+                                                <Label Grid.Column="3"
+                                                       FontSize="12.5"
+                                                       FontAttributes="Bold"
+                                                       VerticalOptions="Center"
+                                                       TextColor="{Binding NetColor}"
+                                                       Text="{Binding NetDisplay}" />
+
+                                                <Button Grid.Column="4"
+                                                        Style="{StaticResource RowAction}"
+                                                        Text="Payslip"
+                                                        WidthRequest="80"
+                                                        VerticalOptions="Center"
+                                                        Command="{Binding Source={RelativeSource AncestorType={x:Type vm:PayrollRunsViewModel}}, Path=OpenPayslipCommand}"
+                                                        CommandParameter="{Binding .}" />
+
+                                                <BoxView Grid.ColumnSpan="5" VerticalOptions="End" Style="{StaticResource Divider}" />
+                                            </Grid>
+                                        </DataTemplate>
+                                    </CollectionView.ItemTemplate>
+                                </CollectionView>
+                            </Grid>
+                        </Grid>
+                    </Border>
+                </Grid>
+
+                <!-- ==================================================== -->
+                <!-- ============  LOANS AND CASH ADVANCES  ============= -->
+                <!-- ==================================================== -->
+                <Border Grid.Row="2"
+                        Style="{StaticResource Card}"
+                        Padding="0"
+                        IsVisible="{Binding IsLoans}">
+
+                    <Grid RowDefinitions="Auto,Auto,Auto,*">
+
+                        <Grid Grid.Row="0" ColumnDefinitions="*,Auto,Auto,Auto" ColumnSpacing="8" Padding="16,12">
+                            <VerticalStackLayout Grid.Column="0" Spacing="1">
+                                <Label Style="{StaticResource SectionHeading}" Text="Loans and cash advances" />
+                                <Label Style="{StaticResource Faint}"
+                                       LineBreakMode="TailTruncation"
+                                       Text="{Binding LoanSummary}" />
+                            </VerticalStackLayout>
+
+                            <Label Grid.Column="1"
+                                   Style="{StaticResource Muted}"
+                                   VerticalOptions="Center"
+                                   LineBreakMode="NoWrap"
+                                   Text="Show closed" />
+
+                            <Switch Grid.Column="2"
+                                    IsToggled="{Binding ShowClosedLoans}"
+                                    WidthRequest="46"
+                                    VerticalOptions="Center"
+                                    OnColor="{StaticResource Brand}" />
+
+                            <Button Grid.Column="3"
+                                    Style="{StaticResource PrimaryButton}"
+                                    Text="+  New"
+                                    VerticalOptions="Center"
+                                    Command="{Binding OpenCreateLoanCommand}" />
+                        </Grid>
+
+                        <Label Grid.Row="1"
+                               Style="{StaticResource Faint}"
+                               Padding="16,0,16,10"
+                               Text="FR-055. The instalment is taken each period until the balance reaches zero, and the last one is whatever is left rather than the full amortisation. Balances move only when a run is posted — recalculating a draft never takes an instalment." />
+
+                        <Grid Grid.Row="2"
+                              ColumnDefinitions="*,140,Auto"
+                              ColumnSpacing="10"
+                              Padding="16,8"
+                              BackgroundColor="{AppThemeBinding Light={StaticResource SurfaceAltLight}, Dark={StaticResource SurfaceAltDark}}">
+                            <Label Grid.Column="0" Style="{StaticResource TableHeader}" Text="LOAN" />
+                            <Label Grid.Column="1" Style="{StaticResource TableHeader}" Text="OUTSTANDING" />
+                            <Label Grid.Column="2" Style="{StaticResource TableHeader}" Text="ACTIONS" WidthRequest="150" />
+                        </Grid>
+
+                        <CollectionView Grid.Row="3" ItemsSource="{Binding Loans}" SelectionMode="None">
+                            <CollectionView.ItemTemplate>
+                                <DataTemplate x:DataType="vm:LoanRow">
+                                    <Grid ColumnDefinitions="*,140,Auto" ColumnSpacing="10" Padding="16,9">
+
+                                        <VerticalStackLayout Grid.Column="0" Spacing="0" VerticalOptions="Center">
+                                            <Label Text="{Binding Name}"
+                                                   FontSize="12.5"
+                                                   FontAttributes="Bold"
+                                                   LineBreakMode="TailTruncation"
+                                                   TextColor="{AppThemeBinding Light={StaticResource TextLight}, Dark={StaticResource TextDark}}" />
+                                            <Label Style="{StaticResource Faint}"
+                                                   LineBreakMode="TailTruncation"
+                                                   Text="{Binding Detail}" />
+                                        </VerticalStackLayout>
+
+                                        <Label Grid.Column="1"
+                                               Style="{StaticResource Body}"
+                                               VerticalOptions="Center"
+                                               Text="{Binding BalanceDisplay}" />
+
+                                        <HorizontalStackLayout Grid.Column="2"
+                                                               Spacing="6"
+                                                               WidthRequest="150"
+                                                               VerticalOptions="Center">
+                                            <Button Style="{StaticResource RowAction}"
+                                                    Text="Edit"
+                                                    Command="{Binding Source={RelativeSource AncestorType={x:Type vm:PayrollRunsViewModel}}, Path=OpenEditLoanCommand}"
+                                                    CommandParameter="{Binding .}" />
+                                            <Button Style="{StaticResource RowAction}"
+                                                    Text="{Binding ActionText}"
+                                                    IsVisible="{Binding IsToggleable}"
+                                                    Command="{Binding Source={RelativeSource AncestorType={x:Type vm:PayrollRunsViewModel}}, Path=OpenToggleLoanCommand}"
+                                                    CommandParameter="{Binding .}" />
+                                        </HorizontalStackLayout>
+
+                                        <BoxView Grid.ColumnSpan="3" VerticalOptions="End" Style="{StaticResource Divider}" />
+                                    </Grid>
+                                </DataTemplate>
+                            </CollectionView.ItemTemplate>
+                        </CollectionView>
+                    </Grid>
+                </Border>
+            </Grid>
+        </Grid>
+
+        <!--
+            Lifted out of this view by MainPage at load time so the scrim covers
+            the whole window. See MainPage.ShowSectionAsync.
+        -->
+        <Grid x:Name="ModalLayer" IsVisible="{Binding IsAnyModalOpen}">
+
+        <!-- ================ NEW RUN ================ -->
+        <controls:ModalHost IsOpen="{Binding IsCreateOpen}"
+                            Title="New payroll run"
+                            Subtitle="A pay period, a kind of run, and who is on it"
+                            ModalWidth="560"
+                            PrimaryText="Create run"
+                            PrimaryCommand="{Binding SubmitCreateCommand}"
+                            SecondaryCommand="{Binding CloseCreateCommand}"
+                            DismissCommand="{Binding CloseCreateCommand}"
+                            ErrorText="{Binding ModalError}">
+            <controls:ModalHost.Body>
+                <VerticalStackLayout Spacing="12">
+
+                    <VerticalStackLayout Spacing="0">
+                        <Label Style="{StaticResource FieldLabel}" Text="PAY PERIOD" />
+                        <Border Style="{StaticResource FieldFrame}">
+                            <Picker ItemsSource="{Binding PeriodOptions}"
+                                    SelectedItem="{Binding CreatePeriod}"
+                                    ItemDisplayBinding="{Binding Label, x:DataType=vm:LookupOption}" />
+                        </Border>
+                    </VerticalStackLayout>
+
+                    <VerticalStackLayout Spacing="0">
+                        <Label Style="{StaticResource FieldLabel}" Text="KIND OF RUN" />
+                        <Border Style="{StaticResource FieldFrame}">
+                            <Picker ItemsSource="{Binding RunTypeOptions}"
+                                    SelectedItem="{Binding CreateRunType}"
+                                    ItemDisplayBinding="{Binding Label, x:DataType=vm:EnumOption}" />
+                        </Border>
+                    </VerticalStackLayout>
+
+                    <Label Style="{StaticResource Faint}"
+                           Text="A 13th month run pays the PD 851 entitlement and takes no contributions or loan instalments. A final pay run adds unused leave conversion and a pro-rated 13th month, and settles the year's tax." />
+
+                    <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="6">
+                        <Label Grid.Column="0"
+                               Style="{StaticResource Body}"
+                               VerticalOptions="Center"
+                               Text="{Binding CreateSummary}" />
+                        <Button Grid.Column="1"
+                                Style="{StaticResource RowAction}"
+                                Text="All"
+                                Command="{Binding SelectAllCandidatesCommand}" />
+                        <Button Grid.Column="2"
+                                Style="{StaticResource RowAction}"
+                                Text="None"
+                                Command="{Binding SelectNoCandidatesCommand}" />
+                    </Grid>
+
+                    <Border Style="{StaticResource FieldFrame}" Padding="0" HeightRequest="260">
+                        <CollectionView ItemsSource="{Binding Candidates}" SelectionMode="None">
+                            <CollectionView.ItemTemplate>
+                                <DataTemplate x:DataType="vm:RunCandidateRow">
+                                    <Grid ColumnDefinitions="Auto,*" ColumnSpacing="4" Padding="6,3">
+                                        <CheckBox Grid.Column="0"
+                                                  IsChecked="{Binding IsSelected}"
+                                                  IsEnabled="{Binding IsAvailable}"
+                                                  Color="{StaticResource Brand}"
+                                                  VerticalOptions="Center" />
+
+                                        <VerticalStackLayout Grid.Column="1" Spacing="0" VerticalOptions="Center">
+                                            <Label Text="{Binding FullName}"
+                                                   FontSize="12"
+                                                   LineBreakMode="TailTruncation"
+                                                   TextColor="{AppThemeBinding Light={StaticResource TextLight}, Dark={StaticResource TextDark}}" />
+                                            <Label Style="{StaticResource Faint}"
+                                                   LineBreakMode="TailTruncation"
+                                                   Text="{Binding Detail}" />
+                                        </VerticalStackLayout>
+                                    </Grid>
+                                </DataTemplate>
+                            </CollectionView.ItemTemplate>
+                        </CollectionView>
+                    </Border>
+
+                    <controls:FormEntry Label="REMARKS"
+                                        Text="{Binding CreateRemarks}"
+                                        Placeholder="Optional" />
+                </VerticalStackLayout>
+            </controls:ModalHost.Body>
+        </controls:ModalHost>
+
+        <!-- ================ PAYSLIP ================ -->
+        <controls:ModalHost IsOpen="{Binding IsPayslipOpen}"
+                            Title="{Binding PayslipTitle}"
+                            Subtitle="{Binding PayslipSubtitle}"
+                            ModalWidth="620"
+                            PrimaryText="Close"
+                            PrimaryCommand="{Binding ClosePayslipCommand}"
+                            SecondaryText="Done"
+                            SecondaryCommand="{Binding ClosePayslipCommand}"
+                            DismissCommand="{Binding ClosePayslipCommand}">
+            <controls:ModalHost.Body>
+                <VerticalStackLayout Spacing="10">
+
+                    <Border Style="{StaticResource Pill}"
+                            Padding="10,7"
+                            HorizontalOptions="Fill"
+                            IsVisible="{Binding HasPayslipNote}"
+                            BackgroundColor="{AppThemeBinding Light={StaticResource WarningSoftLight}, Dark={StaticResource WarningSoftDark}}">
+                        <Label FontSize="11.5"
+                               TextColor="{StaticResource Warning}"
+                               Text="{Binding PayslipNote}" />
+                    </Border>
+
+                    <CollectionView ItemsSource="{Binding Lines}" SelectionMode="None">
+                        <CollectionView.ItemTemplate>
+                            <DataTemplate x:DataType="models:PayslipLine">
+                                <Grid ColumnDefinitions="*,120" ColumnSpacing="10" Padding="0,5">
+
+                                    <VerticalStackLayout Grid.Column="0" Spacing="0">
+                                        <Label Text="{Binding Name}"
+                                               FontSize="12.5"
+                                               LineBreakMode="TailTruncation"
+                                               TextColor="{AppThemeBinding Light={StaticResource TextLight}, Dark={StaticResource TextDark}}" />
+                                        <Label Style="{StaticResource Faint}"
+                                               LineBreakMode="TailTruncation"
+                                               Text="{Binding BasisDisplay}" />
+                                        <Label Style="{StaticResource Faint}"
+                                               LineBreakMode="WordWrap"
+                                               Text="{Binding Note}" />
+                                    </VerticalStackLayout>
+
+                                    <Label Grid.Column="1"
+                                           FontSize="12.5"
+                                           HorizontalTextAlignment="End"
+                                           VerticalOptions="Center"
+                                           Text="{Binding AmountDisplay}"
+                                           TextColor="{AppThemeBinding Light={StaticResource TextLight}, Dark={StaticResource TextDark}}" />
+
+                                    <BoxView Grid.ColumnSpan="2" VerticalOptions="End" Style="{StaticResource Divider}" />
+                                </Grid>
+                            </DataTemplate>
+                        </CollectionView.ItemTemplate>
+                    </CollectionView>
+
+                    <Border Style="{StaticResource Pill}"
+                            Padding="10,7"
+                            HorizontalOptions="Fill"
+                            BackgroundColor="{AppThemeBinding Light={StaticResource BrandSoftLight}, Dark={StaticResource BrandSoftDark}}">
+                        <Label FontSize="12"
+                               FontAttributes="Bold"
+                               TextColor="{StaticResource Brand}"
+                               Text="{Binding PayslipTotals}" />
+                    </Border>
+                </VerticalStackLayout>
+            </controls:ModalHost.Body>
+        </controls:ModalHost>
+
+        <!-- ================ ADJUSTMENT ================ -->
+        <controls:ModalHost IsOpen="{Binding IsAdjustmentFormOpen}"
+                            Title="{Binding AdjustmentFormTitle}"
+                            Subtitle="FR-057 — a one-off earning or deduction on this run"
+                            ModalWidth="480"
+                            PrimaryText="Save adjustment"
+                            PrimaryCommand="{Binding SubmitAdjustmentCommand}"
+                            SecondaryCommand="{Binding CloseAdjustmentFormCommand}"
+                            DismissCommand="{Binding CloseAdjustmentFormCommand}"
+                            ErrorText="{Binding ModalError}">
+            <controls:ModalHost.Body>
+                <VerticalStackLayout Spacing="12">
+
+                    <VerticalStackLayout Spacing="0">
+                        <Label Style="{StaticResource FieldLabel}" Text="EMPLOYEE" />
+                        <Border Style="{StaticResource FieldFrame}">
+                            <Picker ItemsSource="{Binding EmployeeOptions}"
+                                    SelectedItem="{Binding AdjustmentEmployee}"
+                                    ItemDisplayBinding="{Binding Label, x:DataType=vm:LookupOption}" />
+                        </Border>
+                    </VerticalStackLayout>
+
+                    <VerticalStackLayout Spacing="0">
+                        <Label Style="{StaticResource FieldLabel}" Text="KIND" />
+                        <Border Style="{StaticResource FieldFrame}">
+                            <Picker ItemsSource="{Binding AdjustmentKindOptions}"
+                                    SelectedItem="{Binding AdjustmentKind}"
+                                    ItemDisplayBinding="{Binding Label, x:DataType=vm:EnumOption}" />
+                        </Border>
+                    </VerticalStackLayout>
+
+                    <Grid ColumnDefinitions="2*,*" ColumnSpacing="10">
+                        <controls:FormEntry Grid.Column="0"
+                                            Label="NAME ON THE PAYSLIP"
+                                            Text="{Binding AdjustmentName}"
+                                            Placeholder="e.g. Retroactive pay increase" />
+
+                        <controls:FormEntry Grid.Column="1"
+                                            Label="AMOUNT"
+                                            Text="{Binding AdjustmentAmount}"
+                                            Placeholder="0.00" />
+                    </Grid>
+
+                    <Label Style="{StaticResource Faint}"
+                           Text="Always a positive amount — whether it adds to or comes off the pay is the kind, not the sign." />
+
+                    <controls:FormEntry Label="REMARK (REQUIRED)"
+                                        Text="{Binding AdjustmentRemark}"
+                                        Placeholder="Why this adjustment is being made" />
+
+                    <Label Style="{StaticResource Faint}"
+                           Text="The remark appears on the audit trail. An unexplained adjustment is exactly what an employee or an auditor will ask about." />
+
+                    <Grid ColumnDefinitions="*,Auto" Margin="0,4,0,0">
+                        <VerticalStackLayout Grid.Column="0" Spacing="1">
+                            <Label Style="{StaticResource Body}" Text="Taxable" />
+                            <Label Style="{StaticResource Faint}"
+                                   Text="On an earning: whether it enters the withholding base." />
+                        </VerticalStackLayout>
+                        <Switch Grid.Column="1"
+                                IsToggled="{Binding AdjustmentIsTaxable}"
+                                WidthRequest="46"
+                                HorizontalOptions="End"
+                                VerticalOptions="Center"
+                                OnColor="{StaticResource Brand}" />
+                    </Grid>
+
+                    <Grid ColumnDefinitions="*,Auto">
+                        <VerticalStackLayout Grid.Column="0" Spacing="1">
+                            <Label Style="{StaticResource Body}" Text="Reduces taxable income" />
+                            <Label Style="{StaticResource Faint}"
+                                   Text="On a deduction: whether it comes off before tax is computed." />
+                        </VerticalStackLayout>
+                        <Switch Grid.Column="1"
+                                IsToggled="{Binding AdjustmentReducesTax}"
+                                WidthRequest="46"
+                                HorizontalOptions="End"
+                                VerticalOptions="Center"
+                                OnColor="{StaticResource Brand}" />
+                    </Grid>
+                </VerticalStackLayout>
+            </controls:ModalHost.Body>
+        </controls:ModalHost>
+
+        <!-- ================ LOAN ================ -->
+        <controls:ModalHost IsOpen="{Binding IsLoanFormOpen}"
+                            Title="{Binding LoanFormTitle}"
+                            Subtitle="A recurring deduction that carries a balance"
+                            ModalWidth="500"
+                            PrimaryText="Save loan"
+                            PrimaryCommand="{Binding SubmitLoanCommand}"
+                            SecondaryCommand="{Binding CloseLoanFormCommand}"
+                            DismissCommand="{Binding CloseLoanFormCommand}"
+                            ErrorText="{Binding ModalError}">
+            <controls:ModalHost.Body>
+                <VerticalStackLayout Spacing="12">
+
+                    <VerticalStackLayout Spacing="0">
+                        <Label Style="{StaticResource FieldLabel}" Text="EMPLOYEE" />
+                        <Border Style="{StaticResource FieldFrame}">
+                            <Picker ItemsSource="{Binding EmployeeOptions}"
+                                    SelectedItem="{Binding LoanEmployee}"
+                                    ItemDisplayBinding="{Binding Label, x:DataType=vm:LookupOption}" />
+                        </Border>
+                    </VerticalStackLayout>
+
+                    <VerticalStackLayout Spacing="0">
+                        <Label Style="{StaticResource FieldLabel}" Text="TAKEN UNDER" />
+                        <Border Style="{StaticResource FieldFrame}">
+                            <Picker ItemsSource="{Binding DeductionOptions}"
+                                    SelectedItem="{Binding LoanDeduction}"
+                                    ItemDisplayBinding="{Binding Label, x:DataType=vm:LookupOption}" />
+                        </Border>
+                        <Label Style="{StaticResource Faint}"
+                               Text="Only deductions flagged as amortised on Payroll Setup are offered." />
+                    </VerticalStackLayout>
+
+                    <Grid ColumnDefinitions="*,*" ColumnSpacing="10">
+                        <controls:FormEntry Grid.Column="0"
+                                            Label="AMOUNT BORROWED"
+                                            Text="{Binding LoanPrincipal}"
+                                            Placeholder="0.00" />
+
+                        <controls:FormEntry Grid.Column="1"
+                                            Label="TAKEN EACH PERIOD"
+                                            Text="{Binding LoanAmortisation}"
+                                            Placeholder="0.00" />
+                    </Grid>
+
+                    <Grid ColumnDefinitions="*,*" ColumnSpacing="10">
+                        <controls:FormEntry Grid.Column="0"
+                                            Label="REFERENCE"
+                                            Text="{Binding LoanReference}"
+                                            Placeholder="Loan or voucher number" />
+
+                        <VerticalStackLayout Grid.Column="1" Spacing="0">
+                            <Label Style="{StaticResource FieldLabel}" Text="FIRST TAKEN FROM" />
+                            <Border Style="{StaticResource FieldFrame}">
+                                <DatePicker Date="{Binding LoanStartDate}" Format="dd MMM yyyy" />
+                            </Border>
+                        </VerticalStackLayout>
+                    </Grid>
+
+                    <controls:FormEntry Label="REMARKS"
+                                        Text="{Binding LoanRemarks}"
+                                        Placeholder="Optional" />
+
+                    <Label Style="{StaticResource Faint}" Text="{Binding LoanBalanceNote}" />
+                </VerticalStackLayout>
+            </controls:ModalHost.Body>
+        </controls:ModalHost>
+
+        <!-- ================ CONFIRMATION ================ -->
+        <controls:ModalHost IsOpen="{Binding IsConfirmOpen}"
+                            Title="{Binding ConfirmTitle}"
+                            ModalWidth="480"
+                            PrimaryText="{Binding ConfirmAction}"
+                            PrimaryCommand="{Binding SubmitConfirmCommand}"
+                            SecondaryCommand="{Binding CloseConfirmCommand}"
+                            DismissCommand="{Binding CloseConfirmCommand}"
+                            IsDestructive="{Binding IsConfirmDestructive}"
+                            ErrorText="{Binding ModalError}">
+            <controls:ModalHost.Body>
+                <VerticalStackLayout Spacing="10">
+                    <Label Style="{StaticResource Body}" Text="{Binding ConfirmMessage}" />
+
+                    <controls:FormEntry Label="REASON"
+                                        Text="{Binding ConfirmReason}"
+                                        IsVisible="{Binding NeedsReason}"
+                                        Placeholder="Recorded on the audit trail" />
+                </VerticalStackLayout>
+            </controls:ModalHost.Body>
+        </controls:ModalHost>
+
+        </Grid>
+    </Grid>
+
+</ContentView>

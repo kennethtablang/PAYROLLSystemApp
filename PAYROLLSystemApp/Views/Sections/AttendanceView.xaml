@@ -1,0 +1,873 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentView xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:vm="clr-namespace:PAYROLLSystemApp.ViewModels"
+             xmlns:controls="clr-namespace:PAYROLLSystemApp.Views.Controls"
+             x:Class="PAYROLLSystemApp.Views.Sections.AttendanceView"
+             x:DataType="vm:AttendanceViewModel">
+
+    <Grid x:Name="RootGrid">
+
+        <Grid Padding="20">
+
+            <!-- FR-002: the section re-checks the permission on load. -->
+            <Border Style="{StaticResource Card}"
+                    IsVisible="{Binding IsDenied}"
+                    Padding="28"
+                    VerticalOptions="Center"
+                    HorizontalOptions="Center">
+                <VerticalStackLayout Spacing="4">
+                    <Label Style="{StaticResource SectionHeading}" Text="Access denied" HorizontalTextAlignment="Center" />
+                    <Label Style="{StaticResource Muted}" Text="You do not have permission to record or review attendance." />
+                </VerticalStackLayout>
+            </Border>
+
+            <Grid IsVisible="{Binding IsGranted}" RowDefinitions="Auto,Auto,*" RowSpacing="10">
+
+                <!-- ============ PANEL SWITCH ============
+                     Three views of the same data: everyone on one date, one
+                     employee over a cut-off, and the calendar both are
+                     classified against. -->
+                <Grid Grid.Row="0" ColumnDefinitions="Auto,*,Auto" ColumnSpacing="10">
+
+                    <HorizontalStackLayout Grid.Column="0" Spacing="4">
+
+                        <Grid RowDefinitions="Auto,2">
+                            <Button Grid.Row="0"
+                                    Style="{StaticResource GhostButton}"
+                                    Text="Daily board"
+                                    Command="{Binding ShowDailyCommand}" />
+                            <BoxView Grid.Row="1"
+                                     Color="{StaticResource Brand}"
+                                     IsVisible="{Binding IsDaily}" />
+                        </Grid>
+
+                        <Grid RowDefinitions="Auto,2">
+                            <Button Grid.Row="0"
+                                    Style="{StaticResource GhostButton}"
+                                    Text="Timesheet"
+                                    Command="{Binding ShowTimesheetCommand}" />
+                            <BoxView Grid.Row="1"
+                                     Color="{StaticResource Brand}"
+                                     IsVisible="{Binding IsTimesheet}" />
+                        </Grid>
+
+                        <Grid RowDefinitions="Auto,2">
+                            <Button Grid.Row="0"
+                                    Style="{StaticResource GhostButton}"
+                                    Text="Holiday calendar"
+                                    Command="{Binding ShowHolidaysCommand}" />
+                            <BoxView Grid.Row="1"
+                                     Color="{StaticResource Brand}"
+                                     IsVisible="{Binding IsHolidays}" />
+                        </Grid>
+                    </HorizontalStackLayout>
+
+                    <Button Grid.Column="2"
+                            Style="{StaticResource SecondaryButton}"
+                            Text="Refresh"
+                            VerticalOptions="Center"
+                            Command="{Binding RefreshCommand}" />
+                </Grid>
+
+                <!-- Inline result banner (NFR-023) -->
+                <Label Grid.Row="1"
+                       FontSize="12"
+                       TextColor="{StaticResource Success}"
+                       Text="{Binding StatusMessage}"
+                       IsVisible="{Binding HasStatus}" />
+
+                <Label Grid.Row="1"
+                       Style="{StaticResource ErrorText}"
+                       Text="{Binding ErrorMessage}"
+                       IsVisible="{Binding HasError}" />
+
+                <!-- ==================================================== -->
+                <!-- ==================  DAILY BOARD  =================== -->
+                <!-- ==================================================== -->
+                <Border Grid.Row="2"
+                        Style="{StaticResource Card}"
+                        Padding="0"
+                        IsVisible="{Binding IsDaily}">
+
+                    <Grid RowDefinitions="Auto,Auto,Auto,Auto,*">
+
+                        <!-- Date navigation and filter -->
+                        <Grid Grid.Row="0"
+                              ColumnDefinitions="Auto,Auto,Auto,Auto,Auto,*,Auto"
+                              ColumnSpacing="8"
+                              Padding="16,12">
+
+                            <Button Grid.Column="0"
+                                    Style="{StaticResource SecondaryButton}"
+                                    Text="◀"
+                                    WidthRequest="36"
+                                    Command="{Binding PreviousDayCommand}" />
+
+                            <Border Grid.Column="1" Style="{StaticResource FieldFrame}">
+                                <DatePicker Date="{Binding SelectedDate}"
+                                            Format="ddd, dd MMM yyyy"
+                                            WidthRequest="170" />
+                            </Border>
+
+                            <Button Grid.Column="2"
+                                    Style="{StaticResource SecondaryButton}"
+                                    Text="▶"
+                                    WidthRequest="36"
+                                    Command="{Binding NextDayCommand}" />
+
+                            <Button Grid.Column="3"
+                                    Style="{StaticResource SecondaryButton}"
+                                    Text="Today"
+                                    Command="{Binding TodayCommand}" />
+
+                            <Border Grid.Column="4" Style="{StaticResource FieldFrame}">
+                                <Entry Text="{Binding SearchTerm}"
+                                       Placeholder="Search name or number"
+                                       WidthRequest="230" />
+                            </Border>
+
+                            <Button Grid.Column="6"
+                                    Style="{StaticResource PrimaryButton}"
+                                    Text="Fill in the day"
+                                    Command="{Binding OpenGenerateCommand}" />
+                        </Grid>
+
+                        <!-- What the date is worth before anyone works it (FR-025) -->
+                        <HorizontalStackLayout Grid.Row="1" Margin="16,0,16,10" Spacing="8">
+                            <Label Style="{StaticResource Muted}" Text="{Binding DayClassification}" />
+                            <Label Style="{StaticResource Faint}" Text="·" />
+                            <Label Style="{StaticResource Faint}" Text="{Binding BoardSummary}" />
+                        </HorizontalStackLayout>
+
+                        <BoxView Grid.Row="2" Style="{StaticResource Divider}" />
+
+                        <Grid Grid.Row="3"
+                              ColumnDefinitions="2*,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto"
+                              ColumnSpacing="8"
+                              Padding="16,8"
+                              BackgroundColor="{AppThemeBinding Light={StaticResource SurfaceAltLight}, Dark={StaticResource SurfaceAltDark}}">
+                            <Label Grid.Column="0" Style="{StaticResource TableHeader}" Text="EMPLOYEE" />
+                            <Label Grid.Column="1" Style="{StaticResource TableHeader}" Text="IN"    WidthRequest="66" />
+                            <Label Grid.Column="2" Style="{StaticResource TableHeader}" Text="OUT"   WidthRequest="76" />
+                            <Label Grid.Column="3" Style="{StaticResource TableHeader}" Text="HOURS" WidthRequest="48" />
+                            <Label Grid.Column="4" Style="{StaticResource TableHeader}" Text="LATE"  WidthRequest="48" />
+                            <Label Grid.Column="5" Style="{StaticResource TableHeader}" Text="UT"    WidthRequest="48" />
+                            <Label Grid.Column="6" Style="{StaticResource TableHeader}" Text="NIGHT" WidthRequest="48" />
+                            <Label Grid.Column="7" Style="{StaticResource TableHeader}" Text="OT"    WidthRequest="64" />
+                            <Label Grid.Column="8" Style="{StaticResource TableHeader}" Text="STATUS"  WidthRequest="100" />
+                            <Label Grid.Column="9" Style="{StaticResource TableHeader}" Text="ACTIONS" WidthRequest="162" />
+                        </Grid>
+
+                        <Grid Grid.Row="4">
+                            <CollectionView ItemsSource="{Binding Board}" SelectionMode="None">
+                                <CollectionView.ItemTemplate>
+                                    <DataTemplate x:DataType="vm:AttendanceRow">
+                                        <Grid ColumnDefinitions="2*,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto"
+                                              ColumnSpacing="8"
+                                              Padding="16,9">
+
+                                            <VerticalStackLayout Grid.Column="0" Spacing="0" VerticalOptions="Center">
+                                                <Label Text="{Binding EmployeeName}"
+                                                       FontSize="12.5"
+                                                       FontAttributes="Bold"
+                                                       LineBreakMode="TailTruncation"
+                                                       TextColor="{AppThemeBinding Light={StaticResource TextLight}, Dark={StaticResource TextDark}}" />
+                                                <Label Style="{StaticResource Faint}"
+                                                       LineBreakMode="TailTruncation"
+                                                       Text="{Binding Detail}" />
+                                            </VerticalStackLayout>
+
+                                            <Label Grid.Column="1" Style="{StaticResource Muted}" WidthRequest="66"
+                                                   VerticalOptions="Center" Text="{Binding TimeInDisplay}" />
+                                            <Label Grid.Column="2" Style="{StaticResource Muted}" WidthRequest="76"
+                                                   VerticalOptions="Center" Text="{Binding TimeOutDisplay}" />
+                                            <Label Grid.Column="3" Style="{StaticResource Body}" WidthRequest="48"
+                                                   VerticalOptions="Center" Text="{Binding HoursDisplay}" />
+                                            <Label Grid.Column="4" Style="{StaticResource Muted}" WidthRequest="48"
+                                                   VerticalOptions="Center" Text="{Binding LateDisplay}" />
+                                            <Label Grid.Column="5" Style="{StaticResource Muted}" WidthRequest="48"
+                                                   VerticalOptions="Center" Text="{Binding UndertimeDisplay}" />
+                                            <Label Grid.Column="6" Style="{StaticResource Muted}" WidthRequest="48"
+                                                   VerticalOptions="Center" Text="{Binding NightDifferentialDisplay}" />
+                                            <Label Grid.Column="7" Style="{StaticResource Muted}" WidthRequest="64"
+                                                   VerticalOptions="Center" Text="{Binding OvertimeDisplay}" />
+
+                                            <Border Grid.Column="8"
+                                                    Style="{StaticResource Pill}"
+                                                    WidthRequest="100"
+                                                    VerticalOptions="Center">
+                                                <Label Text="{Binding StatusDisplay}"
+                                                       FontSize="10.5"
+                                                       FontAttributes="Bold"
+                                                       LineBreakMode="TailTruncation"
+                                                       TextColor="{Binding StatusColor}" />
+                                            </Border>
+
+                                            <HorizontalStackLayout Grid.Column="9"
+                                                                   Spacing="6"
+                                                                   WidthRequest="162"
+                                                                   VerticalOptions="Center">
+                                                <Button Style="{StaticResource RowAction}"
+                                                        Text="{Binding ActionText}"
+                                                        Command="{Binding Source={RelativeSource AncestorType={x:Type vm:AttendanceViewModel}}, Path=OpenEntryCommand}"
+                                                        CommandParameter="{Binding .}" />
+
+                                                <!-- FR-022: shown only while there is
+                                                     overtime nobody has authorised. -->
+                                                <Button Style="{StaticResource RowAction}"
+                                                        Text="OT"
+                                                        IsVisible="{Binding HasPendingOvertime}"
+                                                        Command="{Binding Source={RelativeSource AncestorType={x:Type vm:AttendanceViewModel}}, Path=OpenApprovalCommand}"
+                                                        CommandParameter="{Binding .}" />
+
+                                                <Button Style="{StaticResource RowAction}"
+                                                        Text="Remove"
+                                                        IsVisible="{Binding IsRemovable}"
+                                                        Command="{Binding Source={RelativeSource AncestorType={x:Type vm:AttendanceViewModel}}, Path=OpenRemoveCommand}"
+                                                        CommandParameter="{Binding .}" />
+                                            </HorizontalStackLayout>
+
+                                            <BoxView Grid.ColumnSpan="10" VerticalOptions="End" Style="{StaticResource Divider}" />
+                                        </Grid>
+                                    </DataTemplate>
+                                </CollectionView.ItemTemplate>
+                            </CollectionView>
+
+                            <VerticalStackLayout IsVisible="{Binding HasNoBoard}"
+                                                 Spacing="4"
+                                                 Padding="24"
+                                                 VerticalOptions="Center">
+                                <Label Style="{StaticResource SectionHeading}"
+                                       Text="Nobody to show"
+                                       HorizontalTextAlignment="Center" />
+                                <Label Style="{StaticResource Muted}"
+                                       HorizontalTextAlignment="Center"
+                                       Text="No active employee was employed on this date, or the search matched nothing." />
+                            </VerticalStackLayout>
+                        </Grid>
+                    </Grid>
+                </Border>
+
+                <!-- ==================================================== -->
+                <!-- ===================  TIMESHEET  ==================== -->
+                <!-- ==================================================== -->
+                <Border Grid.Row="2"
+                        Style="{StaticResource Card}"
+                        Padding="0"
+                        IsVisible="{Binding IsTimesheet}">
+
+                    <Grid RowDefinitions="Auto,Auto,Auto,Auto,*">
+
+                        <!-- Employee and cut-off -->
+                        <Grid Grid.Row="0"
+                              ColumnDefinitions="Auto,Auto,Auto,Auto,Auto,*,Auto"
+                              ColumnSpacing="8"
+                              Padding="16,12">
+
+                            <Border Grid.Column="0" Style="{StaticResource FieldFrame}">
+                                <Picker ItemsSource="{Binding EmployeeOptions}"
+                                        SelectedItem="{Binding SelectedEmployee}"
+                                        ItemDisplayBinding="{Binding Display, x:DataType=vm:EmployeeOption}"
+                                        WidthRequest="260" />
+                            </Border>
+
+                            <Border Grid.Column="1" Style="{StaticResource FieldFrame}">
+                                <DatePicker Date="{Binding PeriodStart}" Format="dd MMM yyyy" WidthRequest="120" />
+                            </Border>
+
+                            <Label Grid.Column="2" Style="{StaticResource Faint}" VerticalOptions="Center" Text="to" />
+
+                            <Border Grid.Column="3" Style="{StaticResource FieldFrame}">
+                                <DatePicker Date="{Binding PeriodEnd}" Format="dd MMM yyyy" WidthRequest="120" />
+                            </Border>
+
+                            <!-- A-02: the two semi-monthly cut-offs, one click each -->
+                            <HorizontalStackLayout Grid.Column="4" Spacing="4">
+                                <Button Style="{StaticResource SecondaryButton}"
+                                        Text="1–15"
+                                        Command="{Binding FirstHalfCommand}" />
+                                <Button Style="{StaticResource SecondaryButton}"
+                                        Text="16–EOM"
+                                        Command="{Binding SecondHalfCommand}" />
+                            </HorizontalStackLayout>
+
+                            <Button Grid.Column="6"
+                                    Style="{StaticResource PrimaryButton}"
+                                    Text="Fill in the cut-off"
+                                    Command="{Binding OpenGenerateCommand}" />
+                        </Grid>
+
+                        <!-- FR-027: the cut-off summary -->
+                        <Grid Grid.Row="1"
+                              Margin="16,0,16,12"
+                              ColumnDefinitions="*,*,*,*,*,*"
+                              ColumnSpacing="10"
+                              IsVisible="{Binding HasSummary}">
+
+                            <Border Grid.Column="0" Style="{StaticResource StatCard}">
+                                <VerticalStackLayout Spacing="1">
+                                    <Label Style="{StaticResource TableHeader}" Text="REGULAR HOURS" />
+                                    <Label FontSize="17" FontAttributes="Bold"
+                                           TextColor="{AppThemeBinding Light={StaticResource TextLight}, Dark={StaticResource TextDark}}"
+                                           Text="{Binding Summary.RegularHoursDisplay}" />
+                                </VerticalStackLayout>
+                            </Border>
+
+                            <Border Grid.Column="1" Style="{StaticResource StatCard}">
+                                <VerticalStackLayout Spacing="1">
+                                    <Label Style="{StaticResource TableHeader}" Text="OVERTIME" />
+                                    <Label FontSize="17" FontAttributes="Bold"
+                                           TextColor="{AppThemeBinding Light={StaticResource TextLight}, Dark={StaticResource TextDark}}"
+                                           Text="{Binding Summary.OvertimeDisplay}" />
+                                    <Label Style="{StaticResource Faint}" Text="approved / rendered" />
+                                </VerticalStackLayout>
+                            </Border>
+
+                            <Border Grid.Column="2" Style="{StaticResource StatCard}">
+                                <VerticalStackLayout Spacing="1">
+                                    <Label Style="{StaticResource TableHeader}" Text="NIGHT DIFFERENTIAL" />
+                                    <Label FontSize="17" FontAttributes="Bold"
+                                           TextColor="{AppThemeBinding Light={StaticResource TextLight}, Dark={StaticResource TextDark}}"
+                                           Text="{Binding Summary.NightDifferentialDisplay}" />
+                                </VerticalStackLayout>
+                            </Border>
+
+                            <Border Grid.Column="3" Style="{StaticResource StatCard}">
+                                <VerticalStackLayout Spacing="1">
+                                    <Label Style="{StaticResource TableHeader}" Text="LATE" />
+                                    <Label FontSize="17" FontAttributes="Bold"
+                                           TextColor="{StaticResource Warning}"
+                                           Text="{Binding Summary.LateDisplay}" />
+                                </VerticalStackLayout>
+                            </Border>
+
+                            <Border Grid.Column="4" Style="{StaticResource StatCard}">
+                                <VerticalStackLayout Spacing="1">
+                                    <Label Style="{StaticResource TableHeader}" Text="UNDERTIME" />
+                                    <Label FontSize="17" FontAttributes="Bold"
+                                           TextColor="{StaticResource Warning}"
+                                           Text="{Binding Summary.UndertimeDisplay}" />
+                                </VerticalStackLayout>
+                            </Border>
+
+                            <Border Grid.Column="5" Style="{StaticResource StatCard}">
+                                <VerticalStackLayout Spacing="1">
+                                    <Label Style="{StaticResource TableHeader}" Text="ATTENDANCE" />
+                                    <Label FontSize="12.5" FontAttributes="Bold"
+                                           TextColor="{AppThemeBinding Light={StaticResource TextLight}, Dark={StaticResource TextDark}}"
+                                           Text="{Binding Summary.AttendanceDisplay}" />
+                                    <Label Style="{StaticResource Faint}" Text="{Binding TimesheetSummary}" />
+                                </VerticalStackLayout>
+                            </Border>
+                        </Grid>
+
+                        <BoxView Grid.Row="2" Style="{StaticResource Divider}" />
+
+                        <Grid Grid.Row="3"
+                              ColumnDefinitions="*,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto"
+                              ColumnSpacing="8"
+                              Padding="16,8"
+                              BackgroundColor="{AppThemeBinding Light={StaticResource SurfaceAltLight}, Dark={StaticResource SurfaceAltDark}}">
+                            <Label Grid.Column="0" Style="{StaticResource TableHeader}" Text="DATE" />
+                            <Label Grid.Column="1" Style="{StaticResource TableHeader}" Text="IN"    WidthRequest="66" />
+                            <Label Grid.Column="2" Style="{StaticResource TableHeader}" Text="OUT"   WidthRequest="76" />
+                            <Label Grid.Column="3" Style="{StaticResource TableHeader}" Text="HOURS" WidthRequest="48" />
+                            <Label Grid.Column="4" Style="{StaticResource TableHeader}" Text="LATE"  WidthRequest="48" />
+                            <Label Grid.Column="5" Style="{StaticResource TableHeader}" Text="UT"    WidthRequest="48" />
+                            <Label Grid.Column="6" Style="{StaticResource TableHeader}" Text="NIGHT" WidthRequest="48" />
+                            <Label Grid.Column="7" Style="{StaticResource TableHeader}" Text="OT"    WidthRequest="64" />
+                            <Label Grid.Column="8" Style="{StaticResource TableHeader}" Text="STATUS"  WidthRequest="100" />
+                            <Label Grid.Column="9" Style="{StaticResource TableHeader}" Text="ACTIONS" WidthRequest="162" />
+                        </Grid>
+
+                        <Grid Grid.Row="4">
+                            <CollectionView ItemsSource="{Binding Timesheet}" SelectionMode="None">
+                                <CollectionView.ItemTemplate>
+                                    <DataTemplate x:DataType="vm:AttendanceRow">
+                                        <Grid ColumnDefinitions="*,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto"
+                                              ColumnSpacing="8"
+                                              Padding="16,9">
+
+                                            <VerticalStackLayout Grid.Column="0" Spacing="0" VerticalOptions="Center">
+                                                <Label Text="{Binding DateDisplay}"
+                                                       FontSize="12.5"
+                                                       FontAttributes="Bold"
+                                                       LineBreakMode="TailTruncation"
+                                                       TextColor="{AppThemeBinding Light={StaticResource TextLight}, Dark={StaticResource TextDark}}" />
+                                                <Label Style="{StaticResource Faint}"
+                                                       LineBreakMode="TailTruncation"
+                                                       Text="{Binding Detail}" />
+                                            </VerticalStackLayout>
+
+                                            <Label Grid.Column="1" Style="{StaticResource Muted}" WidthRequest="66"
+                                                   VerticalOptions="Center" Text="{Binding TimeInDisplay}" />
+                                            <Label Grid.Column="2" Style="{StaticResource Muted}" WidthRequest="76"
+                                                   VerticalOptions="Center" Text="{Binding TimeOutDisplay}" />
+                                            <Label Grid.Column="3" Style="{StaticResource Body}" WidthRequest="48"
+                                                   VerticalOptions="Center" Text="{Binding HoursDisplay}" />
+                                            <Label Grid.Column="4" Style="{StaticResource Muted}" WidthRequest="48"
+                                                   VerticalOptions="Center" Text="{Binding LateDisplay}" />
+                                            <Label Grid.Column="5" Style="{StaticResource Muted}" WidthRequest="48"
+                                                   VerticalOptions="Center" Text="{Binding UndertimeDisplay}" />
+                                            <Label Grid.Column="6" Style="{StaticResource Muted}" WidthRequest="48"
+                                                   VerticalOptions="Center" Text="{Binding NightDifferentialDisplay}" />
+                                            <Label Grid.Column="7" Style="{StaticResource Muted}" WidthRequest="64"
+                                                   VerticalOptions="Center" Text="{Binding OvertimeDisplay}" />
+
+                                            <Border Grid.Column="8"
+                                                    Style="{StaticResource Pill}"
+                                                    WidthRequest="100"
+                                                    VerticalOptions="Center">
+                                                <Label Text="{Binding StatusDisplay}"
+                                                       FontSize="10.5"
+                                                       FontAttributes="Bold"
+                                                       LineBreakMode="TailTruncation"
+                                                       TextColor="{Binding StatusColor}" />
+                                            </Border>
+
+                                            <HorizontalStackLayout Grid.Column="9"
+                                                                   Spacing="6"
+                                                                   WidthRequest="162"
+                                                                   VerticalOptions="Center">
+                                                <Button Style="{StaticResource RowAction}"
+                                                        Text="{Binding ActionText}"
+                                                        Command="{Binding Source={RelativeSource AncestorType={x:Type vm:AttendanceViewModel}}, Path=OpenEntryCommand}"
+                                                        CommandParameter="{Binding .}" />
+
+                                                <Button Style="{StaticResource RowAction}"
+                                                        Text="OT"
+                                                        IsVisible="{Binding HasPendingOvertime}"
+                                                        Command="{Binding Source={RelativeSource AncestorType={x:Type vm:AttendanceViewModel}}, Path=OpenApprovalCommand}"
+                                                        CommandParameter="{Binding .}" />
+
+                                                <Button Style="{StaticResource RowAction}"
+                                                        Text="Remove"
+                                                        IsVisible="{Binding IsRemovable}"
+                                                        Command="{Binding Source={RelativeSource AncestorType={x:Type vm:AttendanceViewModel}}, Path=OpenRemoveCommand}"
+                                                        CommandParameter="{Binding .}" />
+                                            </HorizontalStackLayout>
+
+                                            <BoxView Grid.ColumnSpan="10" VerticalOptions="End" Style="{StaticResource Divider}" />
+                                        </Grid>
+                                    </DataTemplate>
+                                </CollectionView.ItemTemplate>
+                            </CollectionView>
+
+                            <VerticalStackLayout IsVisible="{Binding HasNoTimesheet}"
+                                                 Spacing="4"
+                                                 Padding="24"
+                                                 VerticalOptions="Center">
+                                <Label Style="{StaticResource SectionHeading}"
+                                       Text="Nothing in this cut-off"
+                                       HorizontalTextAlignment="Center" />
+                                <Label Style="{StaticResource Muted}"
+                                       HorizontalTextAlignment="Center"
+                                       Text="Choose an employee and a period, or check that the dates are the right way round." />
+                            </VerticalStackLayout>
+                        </Grid>
+                    </Grid>
+                </Border>
+
+                <!-- ==================================================== -->
+                <!-- ===============  HOLIDAY CALENDAR  ================= -->
+                <!-- ==================================================== -->
+                <Border Grid.Row="2"
+                        Style="{StaticResource Card}"
+                        Padding="0"
+                        IsVisible="{Binding IsHolidays}">
+
+                    <Grid RowDefinitions="Auto,Auto,Auto,Auto,*">
+
+                        <Grid Grid.Row="0"
+                              ColumnDefinitions="Auto,Auto,Auto,Auto,Auto,*,Auto"
+                              ColumnSpacing="8"
+                              Padding="16,12">
+
+                            <Button Grid.Column="0"
+                                    Style="{StaticResource SecondaryButton}"
+                                    Text="◀"
+                                    WidthRequest="36"
+                                    Command="{Binding PreviousYearCommand}" />
+
+                            <Label Grid.Column="1"
+                                   Style="{StaticResource SectionHeading}"
+                                   VerticalOptions="Center"
+                                   WidthRequest="56"
+                                   HorizontalTextAlignment="Center"
+                                   Text="{Binding HolidayYearDisplay}" />
+
+                            <Button Grid.Column="2"
+                                    Style="{StaticResource SecondaryButton}"
+                                    Text="▶"
+                                    WidthRequest="36"
+                                    Command="{Binding NextYearCommand}" />
+
+                            <Label Grid.Column="3"
+                                   Style="{StaticResource Muted}"
+                                   VerticalOptions="Center"
+                                   LineBreakMode="NoWrap"
+                                   Margin="8,0,0,0"
+                                   Text="Show retired" />
+
+                            <Switch Grid.Column="4"
+                                    IsToggled="{Binding ShowRetired}"
+                                    WidthRequest="46"
+                                    VerticalOptions="Center"
+                                    OnColor="{StaticResource Brand}" />
+
+                            <Button Grid.Column="6"
+                                    Style="{StaticResource PrimaryButton}"
+                                    Text="+  New holiday"
+                                    Command="{Binding OpenCreateHolidayCommand}" />
+                        </Grid>
+
+                        <HorizontalStackLayout Grid.Row="1" Margin="16,0,16,10" Spacing="8">
+                            <Label Style="{StaticResource Faint}" Text="{Binding HolidaySummary}" />
+                            <Label Style="{StaticResource Faint}" Text="·" />
+                            <Label Style="{StaticResource Faint}"
+                                   Text="Movable holidays — Holy Week, the Eid festivals, National Heroes Day — are added each year as they are proclaimed." />
+                        </HorizontalStackLayout>
+
+                        <BoxView Grid.Row="2" Style="{StaticResource Divider}" />
+
+                        <Grid Grid.Row="3"
+                              ColumnDefinitions="Auto,*,Auto,Auto"
+                              ColumnSpacing="10"
+                              Padding="16,8"
+                              BackgroundColor="{AppThemeBinding Light={StaticResource SurfaceAltLight}, Dark={StaticResource SurfaceAltDark}}">
+                            <Label Grid.Column="0" Style="{StaticResource TableHeader}" Text="DATE" WidthRequest="150" />
+                            <Label Grid.Column="1" Style="{StaticResource TableHeader}" Text="HOLIDAY" />
+                            <Label Grid.Column="2" Style="{StaticResource TableHeader}" Text="TYPE" WidthRequest="150" />
+                            <Label Grid.Column="3" Style="{StaticResource TableHeader}" Text="ACTIONS" WidthRequest="132" />
+                        </Grid>
+
+                        <Grid Grid.Row="4">
+                            <CollectionView ItemsSource="{Binding Holidays}" SelectionMode="None">
+                                <CollectionView.ItemTemplate>
+                                    <DataTemplate x:DataType="vm:HolidayRow">
+                                        <Grid ColumnDefinitions="Auto,*,Auto,Auto" ColumnSpacing="10" Padding="16,9">
+
+                                            <Label Grid.Column="0"
+                                                   Style="{StaticResource Body}"
+                                                   WidthRequest="150"
+                                                   VerticalOptions="Center"
+                                                   Text="{Binding DateDisplay}" />
+
+                                            <VerticalStackLayout Grid.Column="1" Spacing="0" VerticalOptions="Center">
+                                                <Label Text="{Binding Name}"
+                                                       FontSize="12.5"
+                                                       FontAttributes="Bold"
+                                                       LineBreakMode="TailTruncation"
+                                                       TextColor="{AppThemeBinding Light={StaticResource TextLight}, Dark={StaticResource TextDark}}" />
+                                                <Label Style="{StaticResource Faint}"
+                                                       LineBreakMode="TailTruncation"
+                                                       Text="{Binding Detail}" />
+                                            </VerticalStackLayout>
+
+                                            <Label Grid.Column="2"
+                                                   FontSize="11.5"
+                                                   FontAttributes="Bold"
+                                                   WidthRequest="150"
+                                                   VerticalOptions="Center"
+                                                   TextColor="{Binding TypeColor}"
+                                                   Text="{Binding TypeDisplay}" />
+
+                                            <HorizontalStackLayout Grid.Column="3"
+                                                                   Spacing="6"
+                                                                   WidthRequest="132"
+                                                                   VerticalOptions="Center">
+                                                <Button Style="{StaticResource RowAction}"
+                                                        Text="Edit"
+                                                        Command="{Binding Source={RelativeSource AncestorType={x:Type vm:AttendanceViewModel}}, Path=OpenEditHolidayCommand}"
+                                                        CommandParameter="{Binding .}" />
+                                                <Button Style="{StaticResource RowAction}"
+                                                        Text="{Binding ActionText}"
+                                                        Command="{Binding Source={RelativeSource AncestorType={x:Type vm:AttendanceViewModel}}, Path=OpenToggleHolidayCommand}"
+                                                        CommandParameter="{Binding .}" />
+                                            </HorizontalStackLayout>
+
+                                            <BoxView Grid.ColumnSpan="4" VerticalOptions="End" Style="{StaticResource Divider}" />
+                                        </Grid>
+                                    </DataTemplate>
+                                </CollectionView.ItemTemplate>
+                            </CollectionView>
+
+                            <VerticalStackLayout IsVisible="{Binding HasNoHolidays}"
+                                                 Spacing="4"
+                                                 Padding="24"
+                                                 VerticalOptions="Center">
+                                <Label Style="{StaticResource SectionHeading}"
+                                       Text="No holidays for this year"
+                                       HorizontalTextAlignment="Center" />
+                                <Label Style="{StaticResource Muted}"
+                                       HorizontalTextAlignment="Center"
+                                       Text="Add one, or switch on Show retired." />
+                            </VerticalStackLayout>
+                        </Grid>
+                    </Grid>
+                </Border>
+            </Grid>
+        </Grid>
+
+        <!--
+            Lifted out of this view by MainPage at load time so the scrim covers
+            the whole window. See MainPage.ShowSectionAsync.
+        -->
+        <Grid x:Name="ModalLayer" IsVisible="{Binding IsAnyModalOpen}">
+
+            <!-- ================ DAY ENTRY (FR-020, FR-024) ================ -->
+            <controls:ModalHost IsOpen="{Binding IsEntryOpen}"
+                                Title="{Binding EntryTitle}"
+                                Subtitle="{Binding EntrySubtitle}"
+                                ModalWidth="520"
+                                PrimaryText="Save the day"
+                                PrimaryCommand="{Binding SubmitEntryCommand}"
+                                SecondaryCommand="{Binding CloseEntryCommand}"
+                                DismissCommand="{Binding CloseEntryCommand}"
+                                ErrorText="{Binding ModalError}">
+                <controls:ModalHost.Body>
+                    <VerticalStackLayout Spacing="12">
+
+                        <Grid ColumnDefinitions="*,Auto">
+                            <VerticalStackLayout Grid.Column="0" Spacing="1">
+                                <Label Style="{StaticResource Body}" Text="Did not report" />
+                                <Label Style="{StaticResource Faint}"
+                                       Text="Clears the punches. Whether that is an absence, a rest day or a holiday follows from the classification below." />
+                            </VerticalStackLayout>
+                            <Switch Grid.Column="1"
+                                    IsToggled="{Binding EntryDidNotReport}"
+                                    WidthRequest="46"
+                                    HorizontalOptions="End"
+                                    VerticalOptions="Center"
+                                    OnColor="{StaticResource Brand}" />
+                        </Grid>
+
+                        <Grid ColumnDefinitions="*,*"
+                              ColumnSpacing="10"
+                              IsVisible="{Binding EntryHasPunches}">
+
+                            <VerticalStackLayout Grid.Column="0" Spacing="0">
+                                <Label Style="{StaticResource FieldLabel}" Text="TIME IN" />
+                                <Border Style="{StaticResource FieldFrame}">
+                                    <TimePicker Time="{Binding EntryTimeIn}" Format="h:mm tt" />
+                                </Border>
+                                <Label Style="{StaticResource ErrorText}"
+                                       Margin="0,3,0,0"
+                                       Text="{Binding ErrEntryTimeIn}" />
+                            </VerticalStackLayout>
+
+                            <VerticalStackLayout Grid.Column="1" Spacing="0">
+                                <Label Style="{StaticResource FieldLabel}" Text="TIME OUT" />
+                                <Border Style="{StaticResource FieldFrame}">
+                                    <TimePicker Time="{Binding EntryTimeOut}" Format="h:mm tt" />
+                                </Border>
+                                <Label Style="{StaticResource ErrorText}"
+                                       Margin="0,3,0,0"
+                                       Text="{Binding ErrEntryTimeOut}" />
+                            </VerticalStackLayout>
+                        </Grid>
+
+                        <Grid ColumnDefinitions="*,Auto" IsVisible="{Binding EntryHasPunches}">
+                            <VerticalStackLayout Grid.Column="0" Spacing="1">
+                                <Label Style="{StaticResource Body}" Text="The break was punched" />
+                                <Label Style="{StaticResource Faint}"
+                                       Text="Leave this off and the schedule's own break is assumed, placed in the middle of the shift." />
+                            </VerticalStackLayout>
+                            <Switch Grid.Column="1"
+                                    IsToggled="{Binding EntryHasBreakPunches}"
+                                    WidthRequest="46"
+                                    HorizontalOptions="End"
+                                    VerticalOptions="Center"
+                                    OnColor="{StaticResource Brand}" />
+                        </Grid>
+
+                        <Grid ColumnDefinitions="*,*"
+                              ColumnSpacing="10"
+                              IsVisible="{Binding EntryHasBreakPunches}">
+
+                            <VerticalStackLayout Grid.Column="0" Spacing="0">
+                                <Label Style="{StaticResource FieldLabel}" Text="BREAK OUT" />
+                                <Border Style="{StaticResource FieldFrame}">
+                                    <TimePicker Time="{Binding EntryBreakOut}" Format="h:mm tt" />
+                                </Border>
+                            </VerticalStackLayout>
+
+                            <VerticalStackLayout Grid.Column="1" Spacing="0">
+                                <Label Style="{StaticResource FieldLabel}" Text="BREAK IN" />
+                                <Border Style="{StaticResource FieldFrame}">
+                                    <TimePicker Time="{Binding EntryBreakIn}" Format="h:mm tt" />
+                                </Border>
+                            </VerticalStackLayout>
+                        </Grid>
+
+                        <Label Style="{StaticResource ErrorText}" Text="{Binding ErrEntryBreak}" />
+
+                        <BoxView Style="{StaticResource Divider}" />
+
+                        <!-- FR-023: the two halves of the day's classification.
+                             They are independent, because a regular holiday on a
+                             rest day pays more than either alone. -->
+                        <Grid ColumnDefinitions="*,Auto">
+                            <VerticalStackLayout Grid.Column="0" Spacing="1">
+                                <Label Style="{StaticResource Body}" Text="Rest day" />
+                                <Label Style="{StaticResource Faint}"
+                                       Text="Set from the work schedule. Override it when the employee was moved off their usual rest day." />
+                            </VerticalStackLayout>
+                            <Switch Grid.Column="1"
+                                    IsToggled="{Binding EntryIsRestDay}"
+                                    WidthRequest="46"
+                                    HorizontalOptions="End"
+                                    VerticalOptions="Center"
+                                    OnColor="{StaticResource Brand}" />
+                        </Grid>
+
+                        <Grid ColumnDefinitions="*,*" ColumnSpacing="10">
+
+                            <VerticalStackLayout Grid.Column="0" Spacing="0">
+                                <Label Style="{StaticResource FieldLabel}" Text="HOLIDAY" />
+                                <Border Style="{StaticResource FieldFrame}">
+                                    <Picker ItemsSource="{Binding HolidayTypes}"
+                                            SelectedItem="{Binding EntryHolidayType}"
+                                            ItemDisplayBinding="{Binding Display, x:DataType=vm:HolidayTypeOption}" />
+                                </Border>
+                            </VerticalStackLayout>
+
+                            <VerticalStackLayout Grid.Column="1" Spacing="0">
+                                <Label Style="{StaticResource FieldLabel}" Text="STATUS" />
+                                <Border Style="{StaticResource FieldFrame}">
+                                    <Picker ItemsSource="{Binding StatusOptions}"
+                                            SelectedItem="{Binding EntryStatus}"
+                                            ItemDisplayBinding="{Binding Display, x:DataType=vm:AttendanceStatusOption}" />
+                                </Border>
+                            </VerticalStackLayout>
+                        </Grid>
+
+                        <!-- The production calculator, run on the form as it is
+                             typed: what this shows is what will be saved. -->
+                        <Border Style="{StaticResource Pill}"
+                                Padding="10,7"
+                                HorizontalOptions="Fill"
+                                BackgroundColor="{AppThemeBinding Light={StaticResource BrandSoftLight}, Dark={StaticResource BrandSoftDark}}">
+                            <Label FontSize="11.5"
+                                   TextColor="{StaticResource Brand}"
+                                   Text="{Binding EntryPreview}" />
+                        </Border>
+
+                        <VerticalStackLayout Spacing="0">
+                            <Label Style="{StaticResource FieldLabel}" Text="{Binding EntryRemarksLabel}" />
+                            <Border Style="{StaticResource FieldFrame}">
+                                <Entry Text="{Binding EntryRemarks}"
+                                       Placeholder="e.g. forgot to punch out; confirmed with the supervisor" />
+                            </Border>
+                            <Label Style="{StaticResource ErrorText}"
+                                   Margin="0,3,0,0"
+                                   Text="{Binding ErrEntryRemarks}" />
+                        </VerticalStackLayout>
+
+                        <Label Style="{StaticResource Faint}"
+                               Text="FR-024: a correction records the reason, who made it and when, on the entry itself and in the audit log." />
+                    </VerticalStackLayout>
+                </controls:ModalHost.Body>
+            </controls:ModalHost>
+
+            <!-- ================ OVERTIME APPROVAL (FR-022) ================ -->
+            <controls:ModalHost IsOpen="{Binding IsApprovalOpen}"
+                                Title="{Binding ApprovalTitle}"
+                                ModalWidth="440"
+                                PrimaryText="Save approval"
+                                PrimaryCommand="{Binding SubmitApprovalCommand}"
+                                SecondaryCommand="{Binding CloseApprovalCommand}"
+                                DismissCommand="{Binding CloseApprovalCommand}"
+                                ErrorText="{Binding ModalError}">
+                <controls:ModalHost.Body>
+                    <VerticalStackLayout Spacing="12">
+                        <Label Style="{StaticResource Body}" Text="{Binding ApprovalMessage}" />
+
+                        <controls:FormEntry Label="HOURS TO APPROVE"
+                                            Text="{Binding ApprovalHours}"
+                                            Placeholder="2"
+                                            ErrorText="{Binding ErrApprovalHours}" />
+                    </VerticalStackLayout>
+                </controls:ModalHost.Body>
+            </controls:ModalHost>
+
+            <!-- ================ HOLIDAY FORM (FR-025) ================ -->
+            <controls:ModalHost IsOpen="{Binding IsHolidayFormOpen}"
+                                Title="{Binding HolidayFormTitle}"
+                                Subtitle="What this date is worth on every payslip that covers it"
+                                ModalWidth="460"
+                                PrimaryText="Save holiday"
+                                PrimaryCommand="{Binding SubmitHolidayCommand}"
+                                SecondaryCommand="{Binding CloseHolidayFormCommand}"
+                                DismissCommand="{Binding CloseHolidayFormCommand}"
+                                ErrorText="{Binding ModalError}">
+                <controls:ModalHost.Body>
+                    <VerticalStackLayout Spacing="12">
+
+                        <controls:FormEntry Label="NAME"
+                                            Text="{Binding HolidayName}"
+                                            Placeholder="e.g. Eid'l Fitr"
+                                            ErrorText="{Binding ErrHolidayName}" />
+
+                        <Grid ColumnDefinitions="*,*" ColumnSpacing="10">
+                            <VerticalStackLayout Grid.Column="0" Spacing="0">
+                                <Label Style="{StaticResource FieldLabel}" Text="DATE" />
+                                <Border Style="{StaticResource FieldFrame}">
+                                    <DatePicker Date="{Binding HolidayDate}" Format="dd MMM yyyy" />
+                                </Border>
+                            </VerticalStackLayout>
+
+                            <VerticalStackLayout Grid.Column="1" Spacing="0">
+                                <Label Style="{StaticResource FieldLabel}" Text="TYPE" />
+                                <Border Style="{StaticResource FieldFrame}">
+                                    <Picker ItemsSource="{Binding HolidayTypes}"
+                                            SelectedItem="{Binding HolidayTypeChoice}"
+                                            ItemDisplayBinding="{Binding Display, x:DataType=vm:HolidayTypeOption}" />
+                                </Border>
+                            </VerticalStackLayout>
+                        </Grid>
+
+                        <Grid ColumnDefinitions="*,Auto">
+                            <VerticalStackLayout Grid.Column="0" Spacing="1">
+                                <Label Style="{StaticResource Body}" Text="Falls on this date every year" />
+                                <Label Style="{StaticResource Faint}"
+                                       Text="On for a fixed holiday such as Christmas Day. Off for one proclaimed annually — Holy Week, the Eid festivals, National Heroes Day — which must be entered again each year." />
+                            </VerticalStackLayout>
+                            <Switch Grid.Column="1"
+                                    IsToggled="{Binding HolidayIsAnnual}"
+                                    WidthRequest="46"
+                                    HorizontalOptions="End"
+                                    VerticalOptions="Center"
+                                    OnColor="{StaticResource Brand}" />
+                        </Grid>
+
+                        <controls:FormEntry Label="REMARKS"
+                                            Text="{Binding HolidayRemarks}"
+                                            Placeholder="Which proclamation put this day on the calendar" />
+
+                        <Label Style="{StaticResource Faint}"
+                               Text="A regular holiday pays 2.00× for hours worked and is paid even when unworked; a special non-working day pays 1.30× and nothing when unworked." />
+                    </VerticalStackLayout>
+                </controls:ModalHost.Body>
+            </controls:ModalHost>
+
+            <!-- ================ CONFIRMATIONS (NFR-022) ================ -->
+            <controls:ModalHost IsOpen="{Binding IsConfirmOpen}"
+                                Title="{Binding ConfirmTitle}"
+                                ModalWidth="460"
+                                PrimaryText="{Binding ConfirmAction}"
+                                PrimaryCommand="{Binding SubmitConfirmCommand}"
+                                SecondaryCommand="{Binding CloseConfirmCommand}"
+                                DismissCommand="{Binding CloseConfirmCommand}"
+                                IsDestructive="{Binding IsConfirmDestructive}"
+                                ErrorText="{Binding ModalError}">
+                <controls:ModalHost.Body>
+                    <Label Style="{StaticResource Body}" Text="{Binding ConfirmMessage}" />
+                </controls:ModalHost.Body>
+            </controls:ModalHost>
+
+        </Grid>
+    </Grid>
+
+</ContentView>

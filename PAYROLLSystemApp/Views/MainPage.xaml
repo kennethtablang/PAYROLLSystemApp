@@ -1,0 +1,214 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:vm="clr-namespace:PAYROLLSystemApp.ViewModels"
+             x:Class="PAYROLLSystemApp.Views.MainPage"
+             x:DataType="vm:MainViewModel"
+             Title="Payroll Management System"
+             BackgroundColor="{AppThemeBinding Light={StaticResource CanvasLight}, Dark={StaticResource CanvasDark}}">
+
+    <Grid x:Name="RootLayer">
+      <Grid ColumnDefinitions="Auto,*">
+
+        <!-- ==================== SIDEBAR ==================== -->
+        <Grid Grid.Column="0"
+              RowDefinitions="Auto,*,Auto"
+              WidthRequest="{StaticResource SidebarWidth}"
+              BackgroundColor="{StaticResource SidebarBg}">
+
+            <!-- Brand -->
+            <Grid Grid.Row="0" ColumnDefinitions="Auto,*" ColumnSpacing="10" Padding="16,16,16,14">
+                <Border Grid.Column="0"
+                        WidthRequest="32"
+                        HeightRequest="32"
+                        StrokeThickness="0"
+                        BackgroundColor="{StaticResource Brand}">
+                    <Border.StrokeShape>
+                        <RoundRectangle CornerRadius="8" />
+                    </Border.StrokeShape>
+                    <Label Text="P"
+                           FontSize="16"
+                           FontAttributes="Bold"
+                           TextColor="White"
+                           HorizontalOptions="Center"
+                           VerticalOptions="Center" />
+                </Border>
+
+                <VerticalStackLayout Grid.Column="1" Spacing="0" VerticalOptions="Center">
+                    <Label Text="Payroll"
+                           FontSize="14"
+                           FontAttributes="Bold"
+                           TextColor="{StaticResource SidebarTextActive}" />
+                    <Label Text="Management System"
+                           FontSize="10"
+                           TextColor="{StaticResource SidebarText}" />
+                </VerticalStackLayout>
+            </Grid>
+
+            <BoxView Grid.Row="0" VerticalOptions="End" HeightRequest="1" Color="{StaticResource SidebarDivider}" />
+
+            <!-- Navigation, filtered by role (FR-002) -->
+            <ScrollView Grid.Row="1" Padding="0,10">
+                <VerticalStackLayout Spacing="2" BindableLayout.ItemsSource="{Binding NavGroups}">
+                    <BindableLayout.ItemTemplate>
+                        <DataTemplate x:DataType="vm:NavGroupViewModel">
+                            <VerticalStackLayout Spacing="1" Margin="0,4,0,8">
+
+                                <Label Text="{Binding Name}"
+                                       FontSize="9.5"
+                                       FontAttributes="Bold"
+                                       TextColor="#6F7192"
+                                       Margin="16,4,16,6" />
+
+                                <VerticalStackLayout Spacing="1" BindableLayout.ItemsSource="{Binding Items}">
+                                    <BindableLayout.ItemTemplate>
+                                        <DataTemplate x:DataType="vm:NavItemViewModel">
+                                            <Grid ColumnDefinitions="3,*,Auto"
+                                                  HeightRequest="34"
+                                                  BackgroundColor="{Binding RowColor}">
+
+                                                <BoxView Grid.Column="0"
+                                                         InputTransparent="True"
+                                                         Color="{Binding IndicatorColor}" />
+
+                                                <Label Grid.Column="1"
+                                                       InputTransparent="True"
+                                                       Text="{Binding Title}"
+                                                       FontSize="12.5"
+                                                       VerticalOptions="Center"
+                                                       Margin="13,0,0,0"
+                                                       TextColor="{Binding LabelColor}" />
+
+                                                <Border Grid.Column="2"
+                                                        InputTransparent="True"
+                                                        IsVisible="{Binding HasBadge}"
+                                                        Padding="5,1"
+                                                        Margin="0,0,12,0"
+                                                        StrokeThickness="0"
+                                                        VerticalOptions="Center"
+                                                        BackgroundColor="#332F55">
+                                                    <Border.StrokeShape>
+                                                        <RoundRectangle CornerRadius="3" />
+                                                    </Border.StrokeShape>
+                                                    <Label Text="{Binding Badge}"
+                                                           FontSize="8.5"
+                                                           TextColor="#9B9CBA" />
+                                                </Border>
+
+                                                <!--
+                                                    Hit target LAST so it is topmost and actually receives the
+                                                    click. Underneath it the row visuals still show through,
+                                                    because the button is transparent in every state bar hover.
+                                                -->
+                                                <Button Grid.ColumnSpan="3"
+                                                        Style="{StaticResource SidebarNavButton}"
+                                                        Command="{Binding SelectCommand}"
+                                                        SemanticProperties.Description="{Binding Title}"
+                                                        AutomationId="{Binding Title}" />
+                                            </Grid>
+                                        </DataTemplate>
+                                    </BindableLayout.ItemTemplate>
+                                </VerticalStackLayout>
+                            </VerticalStackLayout>
+                        </DataTemplate>
+                    </BindableLayout.ItemTemplate>
+                </VerticalStackLayout>
+            </ScrollView>
+
+            <!-- Signed-in user -->
+            <VerticalStackLayout Grid.Row="2" Spacing="0">
+                <BoxView HeightRequest="1" Color="{StaticResource SidebarDivider}" />
+                <Grid ColumnDefinitions="Auto,*" ColumnSpacing="9" Padding="14,12">
+                    <Border Grid.Column="0"
+                            WidthRequest="30"
+                            HeightRequest="30"
+                            StrokeThickness="0"
+                            BackgroundColor="{StaticResource SidebarHover}">
+                        <Border.StrokeShape>
+                            <RoundRectangle CornerRadius="15" />
+                        </Border.StrokeShape>
+                        <Label Text="{Binding UserInitials}"
+                               FontSize="11"
+                               FontAttributes="Bold"
+                               TextColor="{StaticResource SidebarTextActive}"
+                               HorizontalOptions="Center"
+                               VerticalOptions="Center" />
+                    </Border>
+
+                    <VerticalStackLayout Grid.Column="1" Spacing="0" VerticalOptions="Center">
+                        <Label Text="{Binding UserName}"
+                               FontSize="11.5"
+                               FontAttributes="Bold"
+                               LineBreakMode="TailTruncation"
+                               TextColor="{StaticResource SidebarTextActive}" />
+                        <Label Text="{Binding UserRole}"
+                               FontSize="9.5"
+                               LineBreakMode="TailTruncation"
+                               TextColor="{StaticResource SidebarText}" />
+                    </VerticalStackLayout>
+                </Grid>
+            </VerticalStackLayout>
+        </Grid>
+
+        <!-- ==================== WORKSPACE ==================== -->
+        <Grid Grid.Column="1" RowDefinitions="Auto,*,Auto">
+
+            <!-- Top bar -->
+            <Grid Grid.Row="0"
+                  ColumnDefinitions="*,Auto,Auto"
+                  ColumnSpacing="14"
+                  Padding="20,0"
+                  HeightRequest="{StaticResource TopBarHeight}"
+                  BackgroundColor="{AppThemeBinding Light={StaticResource SurfaceLight}, Dark={StaticResource SurfaceDark}}">
+
+                <VerticalStackLayout Grid.Column="0" Spacing="0" VerticalOptions="Center">
+                    <Label Text="{Binding PageTitle}"
+                           FontSize="15"
+                           FontAttributes="Bold"
+                           TextColor="{AppThemeBinding Light={StaticResource TextLight}, Dark={StaticResource TextDark}}" />
+                    <Label Style="{StaticResource Faint}" Text="{Binding PageSubtitle}" />
+                </VerticalStackLayout>
+
+                <Label Grid.Column="1"
+                       Style="{StaticResource Muted}"
+                       Text="{Binding Clock}"
+                       VerticalOptions="Center" />
+
+                <Button Grid.Column="2"
+                        Style="{StaticResource SecondaryButton}"
+                        Text="Sign out"
+                        Command="{Binding SignOutCommand}"
+                        VerticalOptions="Center" />
+
+                <BoxView Grid.ColumnSpan="3" VerticalOptions="End" Style="{StaticResource Divider}" />
+            </Grid>
+
+            <!-- Section content -->
+            <ContentView Grid.Row="1" x:Name="SectionHost" />
+
+            <!-- Footer -->
+            <Grid Grid.Row="2"
+                  ColumnDefinitions="*,Auto"
+                  Padding="20,0"
+                  HeightRequest="{StaticResource FooterHeight}"
+                  BackgroundColor="{AppThemeBinding Light={StaticResource SurfaceLight}, Dark={StaticResource SurfaceDark}}">
+
+                <BoxView Grid.ColumnSpan="2" VerticalOptions="Start" Style="{StaticResource Divider}" />
+
+                <Label Grid.Column="0"
+                       Style="{StaticResource Faint}"
+                       Text="{Binding FooterStatus}"
+                       VerticalOptions="Center" />
+
+                <Label Grid.Column="1"
+                       Style="{StaticResource Faint}"
+                       Text="{Binding AppVersion}"
+                       VerticalOptions="Center" />
+            </Grid>
+        </Grid>
+      </Grid>
+
+      <!-- The dialog layer is added here at runtime; see MainPage.ShowSectionAsync. -->
+    </Grid>
+
+</ContentPage>

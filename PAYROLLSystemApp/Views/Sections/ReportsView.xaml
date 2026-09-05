@@ -1,0 +1,280 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentView xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:vm="clr-namespace:PAYROLLSystemApp.ViewModels"
+             x:Class="PAYROLLSystemApp.Views.Sections.ReportsView"
+             x:DataType="vm:ReportsViewModel">
+
+    <Grid Padding="20">
+
+        <!-- FR-002: the section re-checks the permission on load. An employee
+             does not hold ViewReports — a payroll register is everybody's
+             salary on one page. -->
+        <Border Style="{StaticResource Card}"
+                IsVisible="{Binding IsDenied}"
+                Padding="28"
+                VerticalOptions="Center"
+                HorizontalOptions="Center">
+            <VerticalStackLayout Spacing="4">
+                <Label Style="{StaticResource SectionHeading}"
+                       Text="Access denied"
+                       HorizontalTextAlignment="Center" />
+                <Label Style="{StaticResource Muted}"
+                       HorizontalTextAlignment="Center"
+                       Text="You do not have permission to read payroll reports." />
+            </VerticalStackLayout>
+        </Border>
+
+        <Grid IsVisible="{Binding IsGranted}" ColumnDefinitions="290,*" ColumnSpacing="14">
+
+            <!-- ============ THE REPORTS ON OFFER ============ -->
+            <Border Grid.Column="0" Style="{StaticResource Card}" Padding="0">
+                <CollectionView ItemsSource="{Binding Reports}" SelectionMode="None">
+                    <CollectionView.ItemTemplate>
+                        <DataTemplate x:DataType="vm:ReportChoice">
+                            <Grid BackgroundColor="{Binding RowColor}">
+                                <Grid.GestureRecognizers>
+                                    <TapGestureRecognizer
+                                        Command="{Binding Source={RelativeSource AncestorType={x:Type vm:ReportsViewModel}}, Path=SelectReportCommand}"
+                                        CommandParameter="{Binding .}" />
+                                </Grid.GestureRecognizers>
+
+                                <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8" Padding="16,10">
+                                    <VerticalStackLayout Grid.Column="0" Spacing="1">
+                                        <Label Text="{Binding Title}"
+                                               FontSize="12.5"
+                                               FontAttributes="Bold"
+                                               LineBreakMode="TailTruncation"
+                                               TextColor="{AppThemeBinding Light={StaticResource TextLight}, Dark={StaticResource TextDark}}" />
+                                        <Label Style="{StaticResource Faint}"
+                                               LineBreakMode="WordWrap"
+                                               Text="{Binding Description}" />
+                                    </VerticalStackLayout>
+
+                                    <Label Grid.Column="1"
+                                           Style="{StaticResource Faint}"
+                                           VerticalOptions="Start"
+                                           Text="{Binding RequirementRef}" />
+
+                                    <BoxView Grid.ColumnSpan="2" VerticalOptions="End" Style="{StaticResource Divider}" />
+                                </Grid>
+                            </Grid>
+                        </DataTemplate>
+                    </CollectionView.ItemTemplate>
+                </CollectionView>
+            </Border>
+
+            <!-- ============ THE REPORT ITSELF ============ -->
+            <Grid Grid.Column="1" RowDefinitions="Auto,Auto,Auto,Auto,*" RowSpacing="10">
+
+                <!-- Scope. Only the control the selected report actually uses
+                     is shown, rather than four disabled ones. -->
+                <Border Grid.Row="0" Style="{StaticResource Card}" Padding="14,10">
+                    <VerticalStackLayout Spacing="8">
+
+                        <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10">
+                            <VerticalStackLayout Grid.Column="0" Spacing="1">
+                                <Label Style="{StaticResource SectionHeading}" Text="{Binding GridTitle}" />
+                                <Label Style="{StaticResource Faint}"
+                                       LineBreakMode="TailTruncation"
+                                       Text="{Binding GridSubtitle}" />
+                            </VerticalStackLayout>
+
+                            <HorizontalStackLayout Grid.Column="1" Spacing="6" VerticalOptions="Center">
+                                <Button Style="{StaticResource SecondaryButton}"
+                                        Text="Refresh"
+                                        Command="{Binding RefreshCommand}" />
+                                <Button Style="{StaticResource SecondaryButton}"
+                                        Text="Export CSV"
+                                        Command="{Binding ExportCsvCommand}" />
+                                <Button Style="{StaticResource PrimaryButton}"
+                                        Text="Export PDF"
+                                        Command="{Binding ExportPdfCommand}" />
+                            </HorizontalStackLayout>
+                        </Grid>
+
+                        <FlexLayout Wrap="Wrap" JustifyContent="Start" AlignItems="Center">
+
+                            <!-- FR-080, FR-082 — one run -->
+                            <Border Style="{StaticResource FieldFrame}"
+                                    Margin="0,0,8,0"
+                                    IsVisible="{Binding NeedsRun}">
+                                <Picker ItemsSource="{Binding RunOptions}"
+                                        SelectedItem="{Binding SelectedRun}"
+                                        ItemDisplayBinding="{Binding Label, x:DataType=vm:LookupOption}"
+                                        WidthRequest="330" />
+                            </Border>
+
+                            <!-- FR-081 — one month, taken from the pay period -->
+                            <Border Style="{StaticResource FieldFrame}"
+                                    Margin="0,0,8,0"
+                                    IsVisible="{Binding NeedsMonth}">
+                                <Picker ItemsSource="{Binding MonthOptions}"
+                                        SelectedItem="{Binding SelectedMonth}"
+                                        ItemDisplayBinding="{Binding Label, x:DataType=vm:LookupOption}"
+                                        WidthRequest="140" />
+                            </Border>
+
+                            <!-- FR-081, FR-084 — the year -->
+                            <Border Style="{StaticResource FieldFrame}"
+                                    Margin="0,0,8,0"
+                                    IsVisible="{Binding ShowYear}">
+                                <Picker ItemsSource="{Binding YearOptions}"
+                                        SelectedItem="{Binding SelectedYear}"
+                                        ItemDisplayBinding="{Binding Label, x:DataType=vm:LookupOption}"
+                                        WidthRequest="110" />
+                            </Border>
+
+                            <!-- FR-083 — a range of dates -->
+                            <Border Style="{StaticResource FieldFrame}"
+                                    Margin="0,0,8,0"
+                                    IsVisible="{Binding NeedsDateRange}">
+                                <DatePicker Date="{Binding From}" Format="dd MMM yyyy" WidthRequest="120" />
+                            </Border>
+
+                            <Label Style="{StaticResource Faint}"
+                                   VerticalOptions="Center"
+                                   Margin="0,0,8,0"
+                                   Text="to"
+                                   IsVisible="{Binding NeedsDateRange}" />
+
+                            <Border Style="{StaticResource FieldFrame}"
+                                    Margin="0,0,8,0"
+                                    IsVisible="{Binding NeedsDateRange}">
+                                <DatePicker Date="{Binding To}" Format="dd MMM yyyy" WidthRequest="120" />
+                            </Border>
+
+                            <Border Style="{StaticResource FieldFrame}"
+                                    Margin="0,0,8,0"
+                                    IsVisible="{Binding SupportsDepartment}">
+                                <Picker ItemsSource="{Binding DepartmentOptions}"
+                                        SelectedItem="{Binding SelectedDepartment}"
+                                        ItemDisplayBinding="{Binding Label, x:DataType=vm:LookupOption}"
+                                        WidthRequest="200" />
+                            </Border>
+
+                            <Label Style="{StaticResource Faint}"
+                                   VerticalOptions="Center"
+                                   Text="{Binding RowSummary}" />
+                        </FlexLayout>
+                    </VerticalStackLayout>
+                </Border>
+
+                <!-- Inline result banner (NFR-023) -->
+                <Label Grid.Row="1"
+                       FontSize="12"
+                       TextColor="{StaticResource Success}"
+                       Text="{Binding StatusMessage}"
+                       IsVisible="{Binding HasStatus}" />
+
+                <Label Grid.Row="1"
+                       Style="{StaticResource ErrorText}"
+                       Text="{Binding ErrorMessage}"
+                       IsVisible="{Binding HasError}" />
+
+                <!-- Where the file went, and a way to open it. -->
+                <Grid Grid.Row="2"
+                      ColumnDefinitions="*,Auto"
+                      ColumnSpacing="8"
+                      IsVisible="{Binding HasExport}">
+                    <Label Grid.Column="0"
+                           Style="{StaticResource Faint}"
+                           VerticalOptions="Center"
+                           LineBreakMode="MiddleTruncation"
+                           Text="{Binding ExportedPath}" />
+                    <Button Grid.Column="1"
+                            Style="{StaticResource RowAction}"
+                            Text="Open"
+                            Command="{Binding OpenExportCommand}" />
+                </Grid>
+
+                <!-- What the report says about its own trustworthiness. A
+                     blocking note leads the page, because the person holding
+                     the printout is the person who has to see it. -->
+                <VerticalStackLayout Grid.Row="3" Spacing="4" BindableLayout.ItemsSource="{Binding Notes}">
+                    <BindableLayout.ItemTemplate>
+                        <DataTemplate x:DataType="vm:ReportNoteView">
+                            <Border BackgroundColor="{Binding Background}"
+                                    Stroke="Transparent"
+                                    StrokeThickness="0"
+                                    Padding="8,5">
+                                <Label FontSize="11.5"
+                                       LineBreakMode="WordWrap"
+                                       TextColor="{Binding TextColor}"
+                                       Text="{Binding Text}" />
+                            </Border>
+                        </DataTemplate>
+                    </BindableLayout.ItemTemplate>
+                </VerticalStackLayout>
+
+                <!-- ============ THE TABLE ============ -->
+                <Border Grid.Row="4" Style="{StaticResource Card}" Padding="0">
+                    <Grid>
+
+                        <VerticalStackLayout IsVisible="{Binding HasNoResult}"
+                                             Spacing="4"
+                                             Padding="24"
+                                             VerticalOptions="Center">
+                            <Label Style="{StaticResource SectionHeading}"
+                                   Text="Nothing to report"
+                                   HorizontalTextAlignment="Center" />
+                            <Label Style="{StaticResource Muted}"
+                                   HorizontalTextAlignment="Center"
+                                   Text="{Binding EmptyMessage}" />
+                        </VerticalStackLayout>
+
+                        <!-- One horizontal scroller holds both the heading row
+                             and the body, so the columns cannot drift apart. -->
+                        <ScrollView Orientation="Horizontal" IsVisible="{Binding HasResult}">
+                            <Grid RowDefinitions="Auto,*" WidthRequest="{Binding TableWidth}">
+
+                                <HorizontalStackLayout Grid.Row="0"
+                                                       Padding="12,8"
+                                                       BackgroundColor="{AppThemeBinding Light={StaticResource SurfaceAltLight}, Dark={StaticResource SurfaceAltDark}}"
+                                                       BindableLayout.ItemsSource="{Binding HeaderCells}">
+                                    <BindableLayout.ItemTemplate>
+                                        <DataTemplate x:DataType="vm:ReportCellView">
+                                            <Label Style="{StaticResource TableHeader}"
+                                                   WidthRequest="{Binding Width}"
+                                                   Padding="0,0,10,0"
+                                                   LineBreakMode="TailTruncation"
+                                                   HorizontalTextAlignment="{Binding Alignment}"
+                                                   Text="{Binding Text}" />
+                                        </DataTemplate>
+                                    </BindableLayout.ItemTemplate>
+                                </HorizontalStackLayout>
+
+                                <CollectionView Grid.Row="1" ItemsSource="{Binding Rows}" SelectionMode="None">
+                                    <CollectionView.ItemTemplate>
+                                        <DataTemplate x:DataType="vm:ReportRowView">
+                                            <Grid BackgroundColor="{Binding Background}">
+                                                <HorizontalStackLayout Padding="12,6"
+                                                                       BindableLayout.ItemsSource="{Binding Cells}">
+                                                    <BindableLayout.ItemTemplate>
+                                                        <DataTemplate x:DataType="vm:ReportCellView">
+                                                            <Label FontSize="12"
+                                                                   FontAttributes="{Binding Weight}"
+                                                                   WidthRequest="{Binding Width}"
+                                                                   Padding="0,0,10,0"
+                                                                   LineBreakMode="TailTruncation"
+                                                                   HorizontalTextAlignment="{Binding Alignment}"
+                                                                   TextColor="{AppThemeBinding Light={StaticResource TextLight}, Dark={StaticResource TextDark}}"
+                                                                   Text="{Binding Text}" />
+                                                        </DataTemplate>
+                                                    </BindableLayout.ItemTemplate>
+                                                </HorizontalStackLayout>
+
+                                                <BoxView VerticalOptions="End" Style="{StaticResource Divider}" />
+                                            </Grid>
+                                        </DataTemplate>
+                                    </CollectionView.ItemTemplate>
+                                </CollectionView>
+                            </Grid>
+                        </ScrollView>
+                    </Grid>
+                </Border>
+            </Grid>
+        </Grid>
+    </Grid>
+
+</ContentView>

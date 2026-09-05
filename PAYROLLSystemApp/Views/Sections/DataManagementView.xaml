@@ -1,0 +1,234 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentView xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:vm="clr-namespace:PAYROLLSystemApp.ViewModels"
+             x:Class="PAYROLLSystemApp.Views.Sections.DataManagementView"
+             x:DataType="vm:DataManagementViewModel">
+
+    <Grid Padding="20">
+
+        <!-- FR-002. ManageBackups is the administrator's alone: a restore
+             replaces every payslip in the system with an older copy. -->
+        <Border Style="{StaticResource Card}"
+                IsVisible="{Binding IsDenied}"
+                Padding="28"
+                VerticalOptions="Center"
+                HorizontalOptions="Center">
+            <VerticalStackLayout Spacing="4">
+                <Label Style="{StaticResource SectionHeading}"
+                       Text="Access denied"
+                       HorizontalTextAlignment="Center" />
+                <Label Style="{StaticResource Muted}"
+                       HorizontalTextAlignment="Center"
+                       Text="Only a System Administrator may back up, restore or archive." />
+            </VerticalStackLayout>
+        </Border>
+
+        <Grid IsVisible="{Binding IsGranted}" RowDefinitions="Auto,Auto,*" RowSpacing="10">
+
+            <!-- ============ THE POLICY ============ -->
+            <Border Grid.Row="0" Style="{StaticResource Card}" Padding="14,12">
+                <VerticalStackLayout Spacing="8">
+
+                    <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10">
+                        <VerticalStackLayout Grid.Column="0" Spacing="1">
+                            <Label Style="{StaticResource SectionHeading}" Text="Backup policy" />
+                            <Label Style="{StaticResource Faint}"
+                                   LineBreakMode="WordWrap"
+                                   Text="{Binding PolicySummary}" />
+                        </VerticalStackLayout>
+
+                        <HorizontalStackLayout Grid.Column="1" Spacing="6" VerticalOptions="Center">
+                            <Button Style="{StaticResource SecondaryButton}"
+                                    Text="Save policy"
+                                    Command="{Binding SavePolicyCommand}" />
+                            <Button Style="{StaticResource PrimaryButton}"
+                                    Text="Back up now"
+                                    Command="{Binding BackUpNowCommand}" />
+                        </HorizontalStackLayout>
+                    </Grid>
+
+                    <FlexLayout Wrap="Wrap" JustifyContent="Start" AlignItems="Center">
+
+                        <HorizontalStackLayout Spacing="6" Margin="0,0,18,0" VerticalOptions="Center">
+                            <CheckBox IsChecked="{Binding IsAutomaticEnabled}" VerticalOptions="Center" />
+                            <Label Style="{StaticResource Body}"
+                                   VerticalOptions="Center"
+                                   Text="Back up automatically when due" />
+                        </HorizontalStackLayout>
+
+                        <Label Style="{StaticResource FieldLabel}"
+                               VerticalOptions="Center"
+                               Margin="0,0,6,0"
+                               Text="EVERY (DAYS)" />
+                        <Border Style="{StaticResource FieldFrame}" Margin="0,0,18,0">
+                            <Entry Text="{Binding IntervalDays}" Keyboard="Numeric" WidthRequest="60" />
+                        </Border>
+
+                        <Label Style="{StaticResource FieldLabel}"
+                               VerticalOptions="Center"
+                               Margin="0,0,6,0"
+                               Text="KEEP" />
+                        <Border Style="{StaticResource FieldFrame}" Margin="0,0,18,0">
+                            <Entry Text="{Binding KeepCount}" Keyboard="Numeric" WidthRequest="60" />
+                        </Border>
+
+                        <Label Style="{StaticResource FieldLabel}"
+                               VerticalOptions="Center"
+                               Margin="0,0,6,0"
+                               Text="KEEP YEARS ONLINE" />
+                        <Border Style="{StaticResource FieldFrame}" Margin="0,0,18,0">
+                            <Entry Text="{Binding RetentionYears}" Keyboard="Numeric" WidthRequest="60" />
+                        </Border>
+                    </FlexLayout>
+
+                    <Label Style="{StaticResource Faint}"
+                           LineBreakMode="WordWrap"
+                           Text="A backup is a copy of the whole database file, taken to your Documents folder rather than beside the live database — that one is what an uninstall removes. Manual backups are never swept by the keep count." />
+                </VerticalStackLayout>
+            </Border>
+
+            <!-- Inline result banner (NFR-023) -->
+            <VerticalStackLayout Grid.Row="1" Spacing="2">
+                <Label FontSize="12"
+                       TextColor="{StaticResource Success}"
+                       LineBreakMode="WordWrap"
+                       Text="{Binding StatusMessage}"
+                       IsVisible="{Binding HasStatus}" />
+
+                <Label Style="{StaticResource ErrorText}"
+                       LineBreakMode="WordWrap"
+                       Text="{Binding ErrorMessage}"
+                       IsVisible="{Binding HasError}" />
+
+                <Label Style="{StaticResource Faint}"
+                       LineBreakMode="WordWrap"
+                       Text="{Binding LastResultDetail}"
+                       IsVisible="{Binding HasResultDetail}" />
+            </VerticalStackLayout>
+
+            <Grid Grid.Row="2" ColumnDefinitions="*,*" ColumnSpacing="14">
+
+                <!-- ============ FR-093 BACKUPS ============ -->
+                <Border Grid.Column="0" Style="{StaticResource Card}" Padding="0">
+                    <Grid RowDefinitions="Auto,Auto,*">
+
+                        <Grid Grid.Row="0" ColumnDefinitions="*,Auto" ColumnSpacing="8" Padding="16,12,16,6">
+                            <VerticalStackLayout Grid.Column="0" Spacing="1">
+                                <Label Style="{StaticResource SectionHeading}" Text="Backups" />
+                                <Label Style="{StaticResource Faint}" Text="{Binding BackupSummary}" />
+                            </VerticalStackLayout>
+
+                            <Button Grid.Column="1"
+                                    Style="{StaticResource RowAction}"
+                                    Text="Refresh"
+                                    VerticalOptions="Center"
+                                    Command="{Binding RefreshCommand}" />
+                        </Grid>
+
+                        <Label Grid.Row="1"
+                               Style="{StaticResource Faint}"
+                               Padding="16,0,16,8"
+                               LineBreakMode="MiddleTruncation"
+                               Text="{Binding BackupFolder}" />
+
+                        <CollectionView Grid.Row="2" ItemsSource="{Binding Backups}" SelectionMode="None">
+                            <CollectionView.ItemTemplate>
+                                <DataTemplate x:DataType="vm:BackupRow">
+                                    <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8" Padding="16,9">
+                                        <VerticalStackLayout Grid.Column="0" Spacing="1">
+                                            <Label Text="{Binding TakenDisplay}"
+                                                   FontSize="12.5"
+                                                   FontAttributes="Bold"
+                                                   LineBreakMode="TailTruncation"
+                                                   TextColor="{AppThemeBinding Light={StaticResource TextLight}, Dark={StaticResource TextDark}}" />
+                                            <Label FontSize="11"
+                                                   LineBreakMode="TailTruncation"
+                                                   TextColor="{Binding StatusColor}"
+                                                   Text="{Binding Detail}" />
+                                        </VerticalStackLayout>
+
+                                        <HorizontalStackLayout Grid.Column="1" Spacing="4" VerticalOptions="Center">
+                                            <Button Style="{StaticResource RowAction}"
+                                                    Text="Restore"
+                                                    IsEnabled="{Binding IsRestorable}"
+                                                    Command="{Binding Source={RelativeSource AncestorType={x:Type vm:DataManagementViewModel}}, Path=RestoreCommand}"
+                                                    CommandParameter="{Binding .}" />
+                                            <Button Style="{StaticResource RowAction}"
+                                                    Text="Delete"
+                                                    Command="{Binding Source={RelativeSource AncestorType={x:Type vm:DataManagementViewModel}}, Path=DeleteBackupCommand}"
+                                                    CommandParameter="{Binding .}" />
+                                        </HorizontalStackLayout>
+
+                                        <BoxView Grid.ColumnSpan="2" VerticalOptions="End" Style="{StaticResource Divider}" />
+                                    </Grid>
+                                </DataTemplate>
+                            </CollectionView.ItemTemplate>
+                        </CollectionView>
+                    </Grid>
+                </Border>
+
+                <!-- ============ FR-094 ARCHIVE ============ -->
+                <Border Grid.Column="1" Style="{StaticResource Card}" Padding="0">
+                    <Grid RowDefinitions="Auto,Auto,*">
+
+                        <VerticalStackLayout Grid.Row="0" Spacing="1" Padding="16,12,16,6">
+                            <Label Style="{StaticResource SectionHeading}" Text="Payroll years" />
+                            <Label Style="{StaticResource Faint}" Text="{Binding ArchiveSummary}" />
+                        </VerticalStackLayout>
+
+                        <Label Grid.Row="1"
+                               Style="{StaticResource Faint}"
+                               Padding="16,0,16,8"
+                               LineBreakMode="MiddleTruncation"
+                               Text="{Binding ArchiveFolder}" />
+
+                        <CollectionView Grid.Row="2" ItemsSource="{Binding Years}" SelectionMode="None">
+                            <CollectionView.ItemTemplate>
+                                <DataTemplate x:DataType="vm:ArchiveYearRow">
+                                    <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8" Padding="16,9">
+                                        <VerticalStackLayout Grid.Column="0" Spacing="1">
+                                            <Label Text="{Binding Title}"
+                                                   FontSize="12.5"
+                                                   FontAttributes="Bold"
+                                                   TextColor="{AppThemeBinding Light={StaticResource TextLight}, Dark={StaticResource TextDark}}" />
+                                            <Label Style="{StaticResource Faint}"
+                                                   LineBreakMode="TailTruncation"
+                                                   Text="{Binding Summary}" />
+                                            <Label FontSize="11"
+                                                   TextColor="{Binding StatusColor}"
+                                                   Text="{Binding Status}" />
+
+                                            <!-- The refusal explains itself rather than
+                                                 leaving a greyed-out button. -->
+                                            <Label Style="{StaticResource Faint}"
+                                                   LineBreakMode="WordWrap"
+                                                   IsVisible="{Binding HasBlockedReason}"
+                                                   Text="{Binding BlockedReason}" />
+                                        </VerticalStackLayout>
+
+                                        <HorizontalStackLayout Grid.Column="1" Spacing="4" VerticalOptions="Center">
+                                            <Button Style="{StaticResource RowAction}"
+                                                    Text="Archive"
+                                                    IsVisible="{Binding CanArchive}"
+                                                    Command="{Binding Source={RelativeSource AncestorType={x:Type vm:DataManagementViewModel}}, Path=ArchiveYearCommand}"
+                                                    CommandParameter="{Binding .}" />
+                                            <Button Style="{StaticResource DangerButton}"
+                                                    Text="Remove"
+                                                    IsVisible="{Binding CanPurge}"
+                                                    Command="{Binding Source={RelativeSource AncestorType={x:Type vm:DataManagementViewModel}}, Path=PurgeYearCommand}"
+                                                    CommandParameter="{Binding .}" />
+                                        </HorizontalStackLayout>
+
+                                        <BoxView Grid.ColumnSpan="2" VerticalOptions="End" Style="{StaticResource Divider}" />
+                                    </Grid>
+                                </DataTemplate>
+                            </CollectionView.ItemTemplate>
+                        </CollectionView>
+                    </Grid>
+                </Border>
+            </Grid>
+        </Grid>
+    </Grid>
+
+</ContentView>

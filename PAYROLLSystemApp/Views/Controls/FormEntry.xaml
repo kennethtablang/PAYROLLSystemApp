@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentView xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:controls="clr-namespace:PAYROLLSystemApp.Views.Controls"
+             x:Class="PAYROLLSystemApp.Views.Controls.FormEntry"
+             x:Name="Root">
+
+    <VerticalStackLayout Spacing="0">
+
+        <Label Style="{StaticResource FieldLabel}"
+               Text="{Binding Label, Source={x:Reference Root}, x:DataType=controls:FormEntry}"
+               IsVisible="{Binding HasLabel, Source={x:Reference Root}, x:DataType=controls:FormEntry}" />
+
+        <Border Style="{StaticResource FieldFrame}">
+            <Entry x:Name="Field"
+                   Text="{Binding Text, Source={x:Reference Root}, x:DataType=controls:FormEntry}"
+                   Placeholder="{Binding Placeholder, Source={x:Reference Root}, x:DataType=controls:FormEntry}"
+                   IsPassword="{Binding IsPassword, Source={x:Reference Root}, x:DataType=controls:FormEntry}"
+                   IsEnabled="{Binding IsFieldEnabled, Source={x:Reference Root}, x:DataType=controls:FormEntry}"
+                   ReturnCommand="{Binding ReturnCommand, Source={x:Reference Root}, x:DataType=controls:FormEntry}"
+                   IsSpellCheckEnabled="False"
+                   IsTextPredictionEnabled="False" />
+        </Border>
+
+        <Label Style="{StaticResource ErrorText}"
+               Margin="0,3,0,0"
+               Text="{Binding ErrorText, Source={x:Reference Root}, x:DataType=controls:FormEntry}"
+               IsVisible="{Binding HasError, Source={x:Reference Root}, x:DataType=controls:FormEntry}" />
+
+    </VerticalStackLayout>
+
+</ContentView>

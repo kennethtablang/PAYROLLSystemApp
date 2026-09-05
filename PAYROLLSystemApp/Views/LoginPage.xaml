@@ -1,0 +1,148 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:vm="clr-namespace:PAYROLLSystemApp.ViewModels"
+             xmlns:controls="clr-namespace:PAYROLLSystemApp.Views.Controls"
+             x:Class="PAYROLLSystemApp.Views.LoginPage"
+             x:DataType="vm:LoginViewModel"
+             Title="Sign in"
+             BackgroundColor="{AppThemeBinding Light={StaticResource CanvasLight}, Dark={StaticResource CanvasDark}}">
+
+    <Grid ColumnDefinitions="*,Auto">
+
+        <!-- Brand panel (hidden on narrow windows) -->
+        <Grid Grid.Column="0"
+              x:Name="BrandPanel"
+              BackgroundColor="{StaticResource SidebarBg}"
+              Padding="52">
+            <VerticalStackLayout VerticalOptions="Center" Spacing="16" MaximumWidthRequest="420">
+
+                <Border WidthRequest="42"
+                        HeightRequest="42"
+                        HorizontalOptions="Start"
+                        StrokeThickness="0"
+                        BackgroundColor="{StaticResource Brand}">
+                    <Border.StrokeShape>
+                        <RoundRectangle CornerRadius="10" />
+                    </Border.StrokeShape>
+                    <Label Text="P"
+                           FontSize="21"
+                           FontAttributes="Bold"
+                           TextColor="White"
+                           HorizontalOptions="Center"
+                           VerticalOptions="Center" />
+                </Border>
+
+                <Label Text="Payroll Management System"
+                       FontSize="27"
+                       FontAttributes="Bold"
+                       TextColor="White" />
+
+                <Label Text="Employee records, attendance, statutory deductions and payslips — in one place."
+                       FontSize="13.5"
+                       TextColor="{StaticResource SidebarText}" />
+
+                <BoxView HeightRequest="1" Color="{StaticResource SidebarDivider}" Margin="0,8" />
+
+                <VerticalStackLayout Spacing="7">
+                    <Label Text="✓   Role-based access control" FontSize="12" TextColor="{StaticResource SidebarText}" />
+                    <Label Text="✓   Every sign-in recorded in the audit trail" FontSize="12" TextColor="{StaticResource SidebarText}" />
+                    <Label Text="✓   Passwords stored only as salted hashes" FontSize="12" TextColor="{StaticResource SidebarText}" />
+                </VerticalStackLayout>
+            </VerticalStackLayout>
+        </Grid>
+
+        <!-- Sign-in panel -->
+        <ScrollView Grid.Column="1" WidthRequest="420"
+                    BackgroundColor="{AppThemeBinding Light={StaticResource SurfaceLight}, Dark={StaticResource SurfaceDark}}">
+            <Grid Padding="44,0" RowDefinitions="*,Auto,*">
+
+                <VerticalStackLayout Grid.Row="1" Spacing="16">
+
+                    <VerticalStackLayout Spacing="3">
+                        <Label Style="{StaticResource PageTitle}" Text="Sign in" />
+                        <Label Style="{StaticResource Muted}" Text="Use your payroll system account" />
+                    </VerticalStackLayout>
+
+                    <!-- First-run guidance; disappears once the seeded password is changed -->
+                    <Border IsVisible="{Binding ShowFirstRunHint}"
+                            Style="{StaticResource Pill}"
+                            Padding="11,9"
+                            HorizontalOptions="Fill"
+                            BackgroundColor="{AppThemeBinding Light=#EEF4FF, Dark=#182742}">
+                        <Label Text="{Binding FirstRunHint}"
+                               FontSize="11.5"
+                               TextColor="{AppThemeBinding Light=#1B4F87, Dark=#BBD8F5}" />
+                    </Border>
+
+                    <controls:FormEntry Label="USERNAME OR E-MAIL"
+                                        Text="{Binding Identifier}"
+                                        Placeholder="e.g. jdelacruz" />
+
+                    <VerticalStackLayout Spacing="0">
+                        <Grid ColumnDefinitions="*,Auto">
+                            <Label Grid.Column="0" Style="{StaticResource FieldLabel}" Text="PASSWORD" />
+                            <Label Grid.Column="1"
+                                   Style="{StaticResource FieldLabel}"
+                                   Text="{Binding PasswordToggleText}"
+                                   TextColor="{StaticResource Brand}">
+                                <Label.GestureRecognizers>
+                                    <TapGestureRecognizer Command="{Binding TogglePasswordVisibilityCommand}" />
+                                </Label.GestureRecognizers>
+                            </Label>
+                        </Grid>
+                        <Border Style="{StaticResource FieldFrame}">
+                            <Entry Text="{Binding Password}"
+                                   Placeholder="Enter your password"
+                                   IsPassword="{Binding IsPasswordHidden}"
+                                   ReturnType="Go"
+                                   ReturnCommand="{Binding SignInCommand}" />
+                        </Border>
+                    </VerticalStackLayout>
+
+                    <!-- NFR-023: inline validation feedback -->
+                    <Label Style="{StaticResource ErrorText}"
+                           Text="{Binding ErrorMessage}"
+                           IsVisible="{Binding HasError}" />
+
+                    <!-- FR-003: lockout / disabled account notice -->
+                    <Border IsVisible="{Binding HasWarning}"
+                            Style="{StaticResource Pill}"
+                            Padding="11,9"
+                            HorizontalOptions="Fill"
+                            BackgroundColor="{AppThemeBinding Light={StaticResource WarningSoftLight}, Dark={StaticResource WarningSoftDark}}">
+                        <Label Text="{Binding WarningMessage}"
+                               FontSize="11.5"
+                               TextColor="{AppThemeBinding Light={StaticResource Warning}, Dark=#F5C77E}" />
+                    </Border>
+
+                    <Label FontSize="12"
+                           TextColor="{StaticResource Success}"
+                           Text="{Binding StatusMessage}"
+                           IsVisible="{Binding HasStatus}" />
+
+                    <Button Style="{StaticResource PrimaryButton}"
+                            Text="Sign in"
+                            HeightRequest="36"
+                            Command="{Binding SignInCommand}"
+                            IsEnabled="{Binding IsNotBusy}" />
+
+                    <ActivityIndicator IsRunning="{Binding IsBusy}"
+                                       IsVisible="{Binding IsBusy}"
+                                       HeightRequest="18"
+                                       Color="{StaticResource Brand}" />
+
+                    <Button Style="{StaticResource GhostButton}"
+                            Text="Forgot password?"
+                            HorizontalOptions="Start"
+                            Command="{Binding ForgotPasswordCommand}" />
+
+                    <Label Style="{StaticResource Faint}"
+                           Margin="0,8,0,0"
+                           Text="Authorised users only. All sign-in activity is recorded." />
+                </VerticalStackLayout>
+            </Grid>
+        </ScrollView>
+    </Grid>
+
+</ContentPage>

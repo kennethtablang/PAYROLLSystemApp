@@ -1,0 +1,98 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentView xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:controls="clr-namespace:PAYROLLSystemApp.Views.Controls"
+             x:Class="PAYROLLSystemApp.Views.Controls.ModalHost"
+             x:Name="Root"
+             IsVisible="{Binding IsOpen, Source={x:Reference Root}, x:DataType=controls:ModalHost}"
+             InputTransparent="False">
+
+    <Grid>
+
+        <!-- Scrim: dims and blocks the page behind the dialog -->
+        <BoxView Color="{StaticResource Scrim}">
+            <BoxView.GestureRecognizers>
+                <TapGestureRecognizer Command="{Binding DismissCommand, Source={x:Reference Root}, x:DataType=controls:ModalHost}" />
+            </BoxView.GestureRecognizers>
+        </BoxView>
+
+        <!-- Dialog -->
+        <Border Style="{StaticResource Card}"
+                Padding="0"
+                Margin="20"
+                VerticalOptions="Center"
+                HorizontalOptions="Center"
+                WidthRequest="{Binding ModalWidth, Source={x:Reference Root}, x:DataType=controls:ModalHost}"
+                MaximumHeightRequest="620">
+
+            <Grid RowDefinitions="Auto,Auto,*,Auto">
+
+                <!-- Header -->
+                <Grid Grid.Row="0" ColumnDefinitions="*,Auto" Padding="18,14,12,12">
+                    <VerticalStackLayout Grid.Column="0" Spacing="2">
+                        <Label Text="{Binding Title, Source={x:Reference Root}, x:DataType=controls:ModalHost}"
+                               FontSize="15"
+                               FontAttributes="Bold"
+                               TextColor="{AppThemeBinding Light={StaticResource TextLight}, Dark={StaticResource TextDark}}" />
+                        <Label Style="{StaticResource Muted}"
+                               Text="{Binding Subtitle, Source={x:Reference Root}, x:DataType=controls:ModalHost}"
+                               IsVisible="{Binding HasSubtitle, Source={x:Reference Root}, x:DataType=controls:ModalHost}" />
+                    </VerticalStackLayout>
+
+                    <Button Grid.Column="1"
+                            Text="✕"
+                            Style="{StaticResource GhostButton}"
+                            FontSize="13"
+                            WidthRequest="28"
+                            HeightRequest="28"
+                            Padding="0"
+                            VerticalOptions="Start"
+                            TextColor="{AppThemeBinding Light={StaticResource MutedLight}, Dark={StaticResource MutedDark}}"
+                            Command="{Binding DismissCommand, Source={x:Reference Root}, x:DataType=controls:ModalHost}"
+                            IsVisible="{Binding IsDismissible, Source={x:Reference Root}, x:DataType=controls:ModalHost}" />
+                </Grid>
+
+                <BoxView Grid.Row="1" Style="{StaticResource Divider}" />
+
+                <!-- Caller-supplied body -->
+                <ScrollView Grid.Row="2" Padding="18,14">
+                    <ContentView Content="{Binding Body, Source={x:Reference Root}, x:DataType=controls:ModalHost}" />
+                </ScrollView>
+
+                <!-- Footer -->
+                <Grid Grid.Row="3"
+                      ColumnDefinitions="*,Auto,Auto"
+                      ColumnSpacing="8"
+                      Padding="18,12"
+                      BackgroundColor="{AppThemeBinding Light={StaticResource SurfaceAltLight}, Dark={StaticResource SurfaceAltDark}}">
+
+                    <Label Grid.Column="0"
+                           Style="{StaticResource ErrorText}"
+                           VerticalOptions="Center"
+                           Text="{Binding ErrorText, Source={x:Reference Root}, x:DataType=controls:ModalHost}"
+                           IsVisible="{Binding HasError, Source={x:Reference Root}, x:DataType=controls:ModalHost}" />
+
+                    <Button Grid.Column="1"
+                            Style="{StaticResource SecondaryButton}"
+                            Text="{Binding SecondaryText, Source={x:Reference Root}, x:DataType=controls:ModalHost}"
+                            Command="{Binding SecondaryCommand, Source={x:Reference Root}, x:DataType=controls:ModalHost}" />
+
+                    <Button Grid.Column="2"
+                            Style="{StaticResource PrimaryButton}"
+                            Text="{Binding PrimaryText, Source={x:Reference Root}, x:DataType=controls:ModalHost}"
+                            Command="{Binding PrimaryCommand, Source={x:Reference Root}, x:DataType=controls:ModalHost}"
+                            IsEnabled="{Binding IsPrimaryEnabled, Source={x:Reference Root}, x:DataType=controls:ModalHost}"
+                            IsVisible="{Binding IsNotDestructive, Source={x:Reference Root}, x:DataType=controls:ModalHost}" />
+
+                    <Button Grid.Column="2"
+                            Style="{StaticResource DangerButton}"
+                            Text="{Binding PrimaryText, Source={x:Reference Root}, x:DataType=controls:ModalHost}"
+                            Command="{Binding PrimaryCommand, Source={x:Reference Root}, x:DataType=controls:ModalHost}"
+                            IsEnabled="{Binding IsPrimaryEnabled, Source={x:Reference Root}, x:DataType=controls:ModalHost}"
+                            IsVisible="{Binding IsDestructive, Source={x:Reference Root}, x:DataType=controls:ModalHost}" />
+                </Grid>
+            </Grid>
+        </Border>
+    </Grid>
+
+</ContentView>

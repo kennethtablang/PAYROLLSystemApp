@@ -1,0 +1,692 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentView xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:vm="clr-namespace:PAYROLLSystemApp.ViewModels"
+             xmlns:models="clr-namespace:PAYROLLSystemApp.Models"
+             xmlns:controls="clr-namespace:PAYROLLSystemApp.Views.Controls"
+             x:Class="PAYROLLSystemApp.Views.Sections.EmployeesView"
+             x:DataType="vm:EmployeeDirectoryViewModel">
+
+    <Grid x:Name="RootGrid">
+
+        <Grid Padding="20">
+
+            <!-- FR-002: the section re-checks the permission on load; the sidebar
+                 hiding it is presentation, not the gate. -->
+            <Border Style="{StaticResource Card}"
+                    IsVisible="{Binding IsDenied}"
+                    Padding="28"
+                    VerticalOptions="Center"
+                    HorizontalOptions="Center">
+                <VerticalStackLayout Spacing="4">
+                    <Label Style="{StaticResource SectionHeading}" Text="Access denied" HorizontalTextAlignment="Center" />
+                    <Label Style="{StaticResource Muted}" Text="You do not have permission to manage employee records." />
+                </VerticalStackLayout>
+            </Border>
+
+            <Border Style="{StaticResource Card}" Padding="0" IsVisible="{Binding IsGranted}">
+                <Grid RowDefinitions="Auto,Auto,Auto,Auto,Auto,*">
+
+                    <!-- Toolbar -->
+                    <Grid Grid.Row="0" ColumnDefinitions="Auto,Auto,Auto,*,Auto,Auto" ColumnSpacing="8" Padding="16,12">
+
+                        <Border Grid.Column="0" Style="{StaticResource FieldFrame}">
+                            <Entry Text="{Binding SearchText}"
+                                   Placeholder="Search name, number, e-mail or government ID"
+                                   WidthRequest="280" />
+                        </Border>
+
+                        <Border Grid.Column="1" Style="{StaticResource FieldFrame}">
+                            <Picker ItemsSource="{Binding DepartmentFilterOptions}"
+                                    SelectedItem="{Binding SelectedDepartmentFilter}"
+                                    ItemDisplayBinding="{Binding Label, x:DataType=vm:LookupOption}"
+                                    WidthRequest="170" />
+                        </Border>
+
+                        <Border Grid.Column="2" Style="{StaticResource FieldFrame}">
+                            <Picker ItemsSource="{Binding StatusOptions}"
+                                    SelectedItem="{Binding SelectedStatus}"
+                                    ItemDisplayBinding="{Binding Label, x:DataType=vm:EnumOption}"
+                                    WidthRequest="160" />
+                        </Border>
+
+                        <!-- Column 3 is a deliberate empty spacer. The counts sit
+                             on the strip below: the toolbar's fixed controls
+                             leave it too narrow, and a label squeezed there
+                             wraps mid-word into "0 / employe / e(s)". -->
+
+                        <Button Grid.Column="4"
+                                Style="{StaticResource SecondaryButton}"
+                                Text="Refresh"
+                                Command="{Binding RefreshCommand}" />
+
+                        <Button Grid.Column="5"
+                                Style="{StaticResource PrimaryButton}"
+                                Text="+  New employee"
+                                Command="{Binding OpenCreateCommand}" />
+                    </Grid>
+
+                    <!-- Counts strip: what the filter returned, then the totals -->
+                    <HorizontalStackLayout Grid.Row="1" Margin="16,0,16,10" Spacing="8">
+                        <Label Style="{StaticResource Muted}"
+                               LineBreakMode="NoWrap"
+                               Text="{Binding ResultSummary}" />
+                        <Label Style="{StaticResource Faint}" Text="·" />
+                        <Label Style="{StaticResource Faint}"
+                               LineBreakMode="NoWrap"
+                               Text="{Binding HeadcountSummary}" />
+                    </HorizontalStackLayout>
+
+                    <!-- Inline result banner (NFR-023) -->
+                    <Label Grid.Row="2"
+                           Margin="16,0,16,10"
+                           FontSize="12"
+                           TextColor="{StaticResource Success}"
+                           Text="{Binding StatusMessage}"
+                           IsVisible="{Binding HasStatus}" />
+
+                    <Label Grid.Row="2"
+                           Margin="16,0,16,10"
+                           Style="{StaticResource ErrorText}"
+                           Text="{Binding ErrorMessage}"
+                           IsVisible="{Binding HasError}" />
+
+                    <BoxView Grid.Row="3" Style="{StaticResource Divider}" />
+
+                    <!-- Column headers -->
+                    <Grid Grid.Row="4"
+                          ColumnDefinitions="2.2*,2*,1.9*,1.3*,1.1*,Auto"
+                          ColumnSpacing="12"
+                          Padding="16,8"
+                          BackgroundColor="{AppThemeBinding Light={StaticResource SurfaceAltLight}, Dark={StaticResource SurfaceAltDark}}">
+                        <Label Grid.Column="0" Style="{StaticResource TableHeader}" Text="EMPLOYEE" />
+                        <Label Grid.Column="1" Style="{StaticResource TableHeader}" Text="POSITION / DEPARTMENT" />
+                        <Label Grid.Column="2" Style="{StaticResource TableHeader}" Text="EMPLOYMENT" />
+                        <Label Grid.Column="3" Style="{StaticResource TableHeader}" Text="RATE" />
+                        <Label Grid.Column="4" Style="{StaticResource TableHeader}" Text="STATUS" />
+                        <Label Grid.Column="5" Style="{StaticResource TableHeader}" Text="ACTIONS" WidthRequest="210" />
+                    </Grid>
+
+                    <!-- Rows -->
+                    <Grid Grid.Row="5">
+
+                        <CollectionView ItemsSource="{Binding Employees}" SelectionMode="None">
+                            <CollectionView.ItemTemplate>
+                                <DataTemplate x:DataType="vm:EmployeeRow">
+                                    <Grid ColumnDefinitions="2.2*,2*,1.9*,1.3*,1.1*,Auto"
+                                          ColumnSpacing="12"
+                                          Padding="16,8">
+
+                                        <Grid Grid.Column="0" ColumnDefinitions="Auto,*" ColumnSpacing="9">
+
+                                            <Border Grid.Column="0"
+                                                    WidthRequest="30"
+                                                    HeightRequest="30"
+                                                    StrokeThickness="0"
+                                                    VerticalOptions="Center"
+                                                    BackgroundColor="{AppThemeBinding Light={StaticResource BrandSoftLight}, Dark={StaticResource BrandSoftDark}}">
+                                                <Border.StrokeShape>
+                                                    <RoundRectangle CornerRadius="15" />
+                                                </Border.StrokeShape>
+                                                <Label Text="{Binding Initials}"
+                                                       FontSize="11"
+                                                       FontAttributes="Bold"
+                                                       TextColor="{StaticResource Brand}"
+                                                       HorizontalOptions="Center"
+                                                       VerticalOptions="Center" />
+                                            </Border>
+
+                                            <VerticalStackLayout Grid.Column="1" Spacing="0" VerticalOptions="Center">
+                                                <Label Text="{Binding FullName}"
+                                                       FontSize="12.5"
+                                                       FontAttributes="Bold"
+                                                       LineBreakMode="TailTruncation"
+                                                       TextColor="{AppThemeBinding Light={StaticResource TextLight}, Dark={StaticResource TextDark}}" />
+                                                <Label Style="{StaticResource Faint}"
+                                                       Text="{Binding EmployeeNumber}" />
+                                            </VerticalStackLayout>
+                                        </Grid>
+
+                                        <Label Grid.Column="1"
+                                               Style="{StaticResource Muted}"
+                                               VerticalOptions="Center"
+                                               LineBreakMode="TailTruncation"
+                                               Text="{Binding PostingDisplay}" />
+
+                                        <!-- Two lines rather than one: "Probationary · hired
+                                             30 Aug 2026" does not fit the column and truncated
+                                             the date away, which is the half that matters. -->
+                                        <VerticalStackLayout Grid.Column="2" Spacing="0" VerticalOptions="Center">
+                                            <Label Style="{StaticResource Muted}"
+                                                   LineBreakMode="TailTruncation"
+                                                   Text="{Binding EmploymentStatusDisplay}" />
+                                            <Label Style="{StaticResource Faint}"
+                                                   LineBreakMode="TailTruncation"
+                                                   Text="{Binding HiredDisplay}" />
+                                        </VerticalStackLayout>
+
+                                        <Label Grid.Column="3"
+                                               FontSize="11.5"
+                                               VerticalOptions="Center"
+                                               LineBreakMode="TailTruncation"
+                                               Text="{Binding RateDisplay}"
+                                               TextColor="{AppThemeBinding Light={StaticResource TextLight}, Dark={StaticResource TextDark}}" />
+
+                                        <Label Grid.Column="4"
+                                               Style="{StaticResource Muted}"
+                                               VerticalOptions="Center"
+                                               LineBreakMode="TailTruncation"
+                                               Text="{Binding StatusDisplay}" />
+
+                                        <HorizontalStackLayout Grid.Column="5"
+                                                               Spacing="6"
+                                                               WidthRequest="210"
+                                                               VerticalOptions="Center">
+                                            <Button Style="{StaticResource RowAction}"
+                                                    Text="Edit"
+                                                    Command="{Binding Source={RelativeSource AncestorType={x:Type vm:EmployeeDirectoryViewModel}}, Path=OpenEditCommand}"
+                                                    CommandParameter="{Binding .}" />
+                                            <Button Style="{StaticResource RowAction}"
+                                                    Text="History"
+                                                    Command="{Binding Source={RelativeSource AncestorType={x:Type vm:EmployeeDirectoryViewModel}}, Path=OpenHistoryCommand}"
+                                                    CommandParameter="{Binding .}" />
+                                            <Button Style="{StaticResource RowAction}"
+                                                    Text="Separate"
+                                                    IsVisible="{Binding IsNotSeparated}"
+                                                    Command="{Binding Source={RelativeSource AncestorType={x:Type vm:EmployeeDirectoryViewModel}}, Path=OpenSeparateCommand}"
+                                                    CommandParameter="{Binding .}" />
+                                            <Button Style="{StaticResource RowAction}"
+                                                    Text="Reinstate"
+                                                    IsVisible="{Binding IsSeparated}"
+                                                    Command="{Binding Source={RelativeSource AncestorType={x:Type vm:EmployeeDirectoryViewModel}}, Path=OpenReinstateCommand}"
+                                                    CommandParameter="{Binding .}" />
+                                        </HorizontalStackLayout>
+
+                                        <BoxView Grid.ColumnSpan="6" VerticalOptions="End" Style="{StaticResource Divider}" />
+                                    </Grid>
+                                </DataTemplate>
+                            </CollectionView.ItemTemplate>
+                        </CollectionView>
+
+                        <!-- Empty state: a blank panel reads as a failure to load -->
+                        <VerticalStackLayout IsVisible="{Binding HasNoResults}"
+                                             Spacing="4"
+                                             Padding="24"
+                                             VerticalOptions="Center"
+                                             HorizontalOptions="Center">
+                            <Label Style="{StaticResource SectionHeading}"
+                                   Text="No employees to show"
+                                   HorizontalTextAlignment="Center" />
+                            <Label Style="{StaticResource Muted}"
+                                   HorizontalTextAlignment="Center"
+                                   Text="Adjust the search or filters, or add the first employee record." />
+                        </VerticalStackLayout>
+                    </Grid>
+                </Grid>
+            </Border>
+        </Grid>
+
+        <!--
+            Lifted out of this view by MainPage at load time so the scrim covers
+            the whole window. See MainPage.ShowSectionAsync.
+        -->
+        <Grid x:Name="ModalLayer" IsVisible="{Binding IsAnyModalOpen}">
+
+        <!-- ==================== EMPLOYEE FORM ==================== -->
+        <controls:ModalHost IsOpen="{Binding IsFormOpen}"
+                            Title="{Binding FormTitle}"
+                            Subtitle="{Binding FormSubtitle}"
+                            ModalWidth="680"
+                            PrimaryText="Save employee"
+                            PrimaryCommand="{Binding SubmitFormCommand}"
+                            SecondaryCommand="{Binding CloseFormCommand}"
+                            DismissCommand="{Binding CloseFormCommand}"
+                            ErrorText="{Binding ModalError}">
+            <controls:ModalHost.Body>
+                <VerticalStackLayout Spacing="14">
+
+                    <!-- ================ Identity (FR-011) ================ -->
+                    <Label Style="{StaticResource SectionHeading}" Text="Identity" />
+
+                    <Grid ColumnDefinitions="*,*,*" ColumnSpacing="10">
+                        <controls:FormEntry Grid.Column="0"
+                                            Label="EMPLOYEE NUMBER"
+                                            Text="{Binding FormEmployeeNumber}"
+                                            Placeholder="EMP-0001"
+                                            ErrorText="{Binding ErrEmployeeNumber}" />
+                        <controls:FormEntry Grid.Column="1"
+                                            Label="SURNAME"
+                                            Text="{Binding FormLastName}"
+                                            Placeholder="Dela Cruz"
+                                            ErrorText="{Binding ErrLastName}" />
+                        <controls:FormEntry Grid.Column="2"
+                                            Label="FIRST NAME"
+                                            Text="{Binding FormFirstName}"
+                                            Placeholder="Juan"
+                                            ErrorText="{Binding ErrFirstName}" />
+                    </Grid>
+
+                    <Grid ColumnDefinitions="*,*,*" ColumnSpacing="10">
+                        <controls:FormEntry Grid.Column="0"
+                                            Label="MIDDLE NAME"
+                                            Text="{Binding FormMiddleName}"
+                                            Placeholder="Santos" />
+                        <controls:FormEntry Grid.Column="1"
+                                            Label="SUFFIX"
+                                            Text="{Binding FormSuffix}"
+                                            Placeholder="Jr." />
+
+                        <VerticalStackLayout Grid.Column="2" Spacing="0">
+                            <Label Style="{StaticResource FieldLabel}" Text="SEX" />
+                            <Border Style="{StaticResource FieldFrame}">
+                                <Picker ItemsSource="{Binding GenderOptions}"
+                                        SelectedItem="{Binding FormGender}"
+                                        ItemDisplayBinding="{Binding Label, x:DataType=vm:EnumOption}" />
+                            </Border>
+                        </VerticalStackLayout>
+                    </Grid>
+
+                    <Grid ColumnDefinitions="*,*,*" ColumnSpacing="10">
+
+                        <VerticalStackLayout Grid.Column="0" Spacing="0">
+                            <Label Style="{StaticResource FieldLabel}" Text="CIVIL STATUS" />
+                            <Border Style="{StaticResource FieldFrame}">
+                                <Picker ItemsSource="{Binding CivilStatusOptions}"
+                                        SelectedItem="{Binding FormCivilStatus}"
+                                        ItemDisplayBinding="{Binding Label, x:DataType=vm:EnumOption}" />
+                            </Border>
+                        </VerticalStackLayout>
+
+                        <!-- The birth date is optional, so it is switched on
+                             rather than defaulting to a date nobody entered. -->
+                        <VerticalStackLayout Grid.Column="1" Spacing="0">
+                            <HorizontalStackLayout Spacing="6">
+                                <Label Style="{StaticResource FieldLabel}"
+                                       Text="BIRTH DATE"
+                                       LineBreakMode="NoWrap"
+                                       VerticalOptions="Center" />
+                                <Switch IsToggled="{Binding FormHasBirthDate}"
+                                        WidthRequest="46"
+                                        VerticalOptions="Center"
+                                        OnColor="{StaticResource Brand}" />
+                            </HorizontalStackLayout>
+                            <Border Style="{StaticResource FieldFrame}">
+                                <DatePicker Date="{Binding FormBirthDate}"
+                                            Format="dd MMM yyyy"
+                                            IsEnabled="{Binding FormHasBirthDate}" />
+                            </Border>
+                            <Label Style="{StaticResource ErrorText}"
+                                   Margin="0,3,0,0"
+                                   Text="{Binding ErrBirthDate}" />
+                        </VerticalStackLayout>
+
+                        <controls:FormEntry Grid.Column="2"
+                                            Label="CONTACT NUMBER"
+                                            Text="{Binding FormContactNumber}"
+                                            Placeholder="0917 000 0000" />
+                    </Grid>
+
+                    <Grid ColumnDefinitions="*,2*" ColumnSpacing="10">
+                        <controls:FormEntry Grid.Column="0"
+                                            Label="E-MAIL ADDRESS"
+                                            Text="{Binding FormEmail}"
+                                            Placeholder="name@company.com"
+                                            ErrorText="{Binding ErrEmail}" />
+                        <controls:FormEntry Grid.Column="1"
+                                            Label="ADDRESS"
+                                            Text="{Binding FormAddress}"
+                                            Placeholder="House / street, barangay, city" />
+                    </Grid>
+
+                    <Grid ColumnDefinitions="*,*" ColumnSpacing="10">
+                        <controls:FormEntry Grid.Column="0"
+                                            Label="EMERGENCY CONTACT"
+                                            Text="{Binding FormEmergencyName}"
+                                            Placeholder="Name" />
+                        <controls:FormEntry Grid.Column="1"
+                                            Label="EMERGENCY NUMBER"
+                                            Text="{Binding FormEmergencyNumber}"
+                                            Placeholder="0917 000 0000" />
+                    </Grid>
+
+                    <BoxView Style="{StaticResource Divider}" />
+
+                    <!-- ================ Employment (FR-012) ================ -->
+                    <Label Style="{StaticResource SectionHeading}" Text="Employment" />
+
+                    <Grid ColumnDefinitions="*,*,*" ColumnSpacing="10">
+
+                        <VerticalStackLayout Grid.Column="0" Spacing="0">
+                            <Label Style="{StaticResource FieldLabel}" Text="DATE HIRED" />
+                            <Border Style="{StaticResource FieldFrame}">
+                                <DatePicker Date="{Binding FormHireDate}" Format="dd MMM yyyy" />
+                            </Border>
+                            <Label Style="{StaticResource ErrorText}"
+                                   Margin="0,3,0,0"
+                                   Text="{Binding ErrHireDate}" />
+                        </VerticalStackLayout>
+
+                        <VerticalStackLayout Grid.Column="1" Spacing="0">
+                            <Label Style="{StaticResource FieldLabel}" Text="EMPLOYMENT STATUS" />
+                            <Border Style="{StaticResource FieldFrame}">
+                                <Picker ItemsSource="{Binding EmploymentStatusOptions}"
+                                        SelectedItem="{Binding FormEmploymentStatus}"
+                                        ItemDisplayBinding="{Binding Label, x:DataType=vm:EnumOption}" />
+                            </Border>
+                        </VerticalStackLayout>
+
+                        <VerticalStackLayout Grid.Column="2" Spacing="0">
+                            <HorizontalStackLayout Spacing="6">
+                                <Label Style="{StaticResource FieldLabel}"
+                                       Text="REGULARISED"
+                                       LineBreakMode="NoWrap"
+                                       VerticalOptions="Center" />
+                                <Switch IsToggled="{Binding FormIsRegularized}"
+                                        WidthRequest="46"
+                                        VerticalOptions="Center"
+                                        OnColor="{StaticResource Brand}" />
+                            </HorizontalStackLayout>
+                            <Border Style="{StaticResource FieldFrame}">
+                                <DatePicker Date="{Binding FormRegularizationDate}"
+                                            Format="dd MMM yyyy"
+                                            IsEnabled="{Binding FormIsRegularized}" />
+                            </Border>
+                            <Label Style="{StaticResource ErrorText}"
+                                   Margin="0,3,0,0"
+                                   Text="{Binding ErrRegularization}" />
+                        </VerticalStackLayout>
+                    </Grid>
+
+                    <Grid ColumnDefinitions="*,*" ColumnSpacing="10">
+                        <VerticalStackLayout Grid.Column="0" Spacing="0">
+                            <Label Style="{StaticResource FieldLabel}" Text="DEPARTMENT" />
+                            <Border Style="{StaticResource FieldFrame}">
+                                <Picker ItemsSource="{Binding DepartmentOptions}"
+                                        SelectedItem="{Binding FormDepartment}"
+                                        ItemDisplayBinding="{Binding Label, x:DataType=vm:LookupOption}" />
+                            </Border>
+                        </VerticalStackLayout>
+
+                        <VerticalStackLayout Grid.Column="1" Spacing="0">
+                            <Label Style="{StaticResource FieldLabel}" Text="POSITION" />
+                            <Border Style="{StaticResource FieldFrame}">
+                                <Picker ItemsSource="{Binding PositionOptions}"
+                                        SelectedItem="{Binding FormPosition}"
+                                        ItemDisplayBinding="{Binding Label, x:DataType=vm:LookupOption}" />
+                            </Border>
+                        </VerticalStackLayout>
+                    </Grid>
+
+                    <Grid ColumnDefinitions="*,*" ColumnSpacing="10">
+                        <VerticalStackLayout Grid.Column="0" Spacing="0">
+                            <Label Style="{StaticResource FieldLabel}" Text="IMMEDIATE SUPERVISOR" />
+                            <Border Style="{StaticResource FieldFrame}">
+                                <Picker ItemsSource="{Binding SupervisorOptions}"
+                                        SelectedItem="{Binding FormSupervisor}"
+                                        ItemDisplayBinding="{Binding Label, x:DataType=vm:LookupOption}" />
+                            </Border>
+                        </VerticalStackLayout>
+
+                        <VerticalStackLayout Grid.Column="1" Spacing="0">
+                            <Label Style="{StaticResource FieldLabel}" Text="WORK SCHEDULE" />
+                            <Border Style="{StaticResource FieldFrame}">
+                                <Picker ItemsSource="{Binding ScheduleOptions}"
+                                        SelectedItem="{Binding FormSchedule}"
+                                        ItemDisplayBinding="{Binding Label, x:DataType=vm:LookupOption}" />
+                            </Border>
+                            <Label Style="{StaticResource Faint}"
+                                   Margin="0,4,0,0"
+                                   Text="Decides late, undertime and overtime once attendance is recorded." />
+                        </VerticalStackLayout>
+                    </Grid>
+
+                    <BoxView Style="{StaticResource Divider}" />
+
+                    <!-- ================ Compensation (FR-013) ================ -->
+                    <Label Style="{StaticResource SectionHeading}" Text="Compensation" />
+
+                    <Grid ColumnDefinitions="*,*,*" ColumnSpacing="10">
+                        <VerticalStackLayout Grid.Column="0" Spacing="0">
+                            <Label Style="{StaticResource FieldLabel}" Text="PAY TYPE" />
+                            <Border Style="{StaticResource FieldFrame}">
+                                <Picker ItemsSource="{Binding PayTypeOptions}"
+                                        SelectedItem="{Binding FormPayType}"
+                                        ItemDisplayBinding="{Binding Label, x:DataType=vm:EnumOption}" />
+                            </Border>
+                        </VerticalStackLayout>
+
+                        <controls:FormEntry Grid.Column="1"
+                                            Label="BASIC RATE"
+                                            Text="{Binding FormBasicRate}"
+                                            Placeholder="25000.00"
+                                            ErrorText="{Binding ErrBasicRate}" />
+
+                        <VerticalStackLayout Grid.Column="2" Spacing="0">
+                            <Label Style="{StaticResource FieldLabel}" Text="PAY FREQUENCY" />
+                            <Border Style="{StaticResource FieldFrame}">
+                                <Picker ItemsSource="{Binding PayFrequencyOptions}"
+                                        SelectedItem="{Binding FormPayFrequency}"
+                                        ItemDisplayBinding="{Binding Label, x:DataType=vm:EnumOption}" />
+                            </Border>
+                        </VerticalStackLayout>
+                    </Grid>
+
+                    <Grid ColumnDefinitions="*,2*" ColumnSpacing="10">
+                        <controls:FormEntry Grid.Column="0"
+                                            Label="MONTHLY ALLOWANCE"
+                                            Text="{Binding FormAllowance}"
+                                            Placeholder="0.00"
+                                            ErrorText="{Binding ErrAllowance}" />
+
+                        <Grid Grid.Column="1" ColumnDefinitions="*,Auto" VerticalOptions="End" Margin="0,0,0,4">
+                            <VerticalStackLayout Grid.Column="0" Spacing="1">
+                                <Label Style="{StaticResource Body}" Text="Minimum wage earner" />
+                                <Label Style="{StaticResource Faint}"
+                                       Text="Exempt from income tax on basic, holiday, overtime and night differential pay (RA 9504)." />
+                            </VerticalStackLayout>
+                            <Switch Grid.Column="1"
+                                    IsToggled="{Binding FormIsMinimumWageEarner}"
+                                    WidthRequest="46"
+                                    HorizontalOptions="End"
+                                    VerticalOptions="Center"
+                                    OnColor="{StaticResource Brand}" />
+                        </Grid>
+                    </Grid>
+
+                    <!-- Only shown once the compensation has actually moved (FR-018) -->
+                    <controls:FormEntry Label="REASON FOR THE RATE CHANGE"
+                                        Text="{Binding FormRateReason}"
+                                        Placeholder="Promotion, annual review, regularisation…"
+                                        IsVisible="{Binding ShowRateReason}" />
+
+                    <BoxView Style="{StaticResource Divider}" />
+
+                    <!-- ================ Government IDs (FR-014) ================ -->
+                    <Label Style="{StaticResource SectionHeading}" Text="Government identifiers" />
+                    <Label Style="{StaticResource Faint}"
+                           Text="Stored as digits only, so the same person cannot be entered twice by punctuating a number differently. Leave blank if not yet issued." />
+
+                    <Grid ColumnDefinitions="*,*" ColumnSpacing="10">
+                        <controls:FormEntry Grid.Column="0"
+                                            Label="SSS NUMBER"
+                                            Text="{Binding FormSss}"
+                                            Placeholder="{Binding SssHint}"
+                                            ErrorText="{Binding ErrSss}" />
+                        <controls:FormEntry Grid.Column="1"
+                                            Label="PHILHEALTH NUMBER"
+                                            Text="{Binding FormPhilHealth}"
+                                            Placeholder="{Binding PhilHealthHint}"
+                                            ErrorText="{Binding ErrPhilHealth}" />
+                    </Grid>
+
+                    <Grid ColumnDefinitions="*,*" ColumnSpacing="10">
+                        <controls:FormEntry Grid.Column="0"
+                                            Label="PAG-IBIG MID NUMBER"
+                                            Text="{Binding FormPagIbig}"
+                                            Placeholder="{Binding PagIbigHint}"
+                                            ErrorText="{Binding ErrPagIbig}" />
+                        <controls:FormEntry Grid.Column="1"
+                                            Label="TIN"
+                                            Text="{Binding FormTin}"
+                                            Placeholder="{Binding TinHint}"
+                                            ErrorText="{Binding ErrTin}" />
+                    </Grid>
+
+                    <Grid ColumnDefinitions="*,*,*" ColumnSpacing="10">
+                        <HorizontalStackLayout Grid.Column="0" Spacing="6">
+                            <Label Style="{StaticResource Body}"
+                                   Text="Exempt from SSS"
+                                   LineBreakMode="NoWrap"
+                                   VerticalOptions="Center" />
+                            <Switch IsToggled="{Binding FormExemptSss}" WidthRequest="46" VerticalOptions="Center" OnColor="{StaticResource Brand}" />
+                        </HorizontalStackLayout>
+                        <HorizontalStackLayout Grid.Column="1" Spacing="6">
+                            <Label Style="{StaticResource Body}"
+                                   Text="Exempt from PhilHealth"
+                                   LineBreakMode="NoWrap"
+                                   VerticalOptions="Center" />
+                            <Switch IsToggled="{Binding FormExemptPhilHealth}" WidthRequest="46" VerticalOptions="Center" OnColor="{StaticResource Brand}" />
+                        </HorizontalStackLayout>
+                        <HorizontalStackLayout Grid.Column="2" Spacing="6">
+                            <Label Style="{StaticResource Body}"
+                                   Text="Exempt from Pag-IBIG"
+                                   LineBreakMode="NoWrap"
+                                   VerticalOptions="Center" />
+                            <Switch IsToggled="{Binding FormExemptPagIbig}" WidthRequest="46" VerticalOptions="Center" OnColor="{StaticResource Brand}" />
+                        </HorizontalStackLayout>
+                    </Grid>
+
+                    <BoxView Style="{StaticResource Divider}" />
+
+                    <!-- ================ Bank and record state ================ -->
+                    <Label Style="{StaticResource SectionHeading}" Text="Bank details" />
+
+                    <Grid ColumnDefinitions="*,*" ColumnSpacing="10">
+                        <controls:FormEntry Grid.Column="0"
+                                            Label="BANK"
+                                            Text="{Binding FormBankName}"
+                                            Placeholder="For the disbursement file" />
+                        <controls:FormEntry Grid.Column="1"
+                                            Label="ACCOUNT NUMBER"
+                                            Text="{Binding FormBankAccount}"
+                                            Placeholder="Masked in lists and reports" />
+                    </Grid>
+
+                    <Grid ColumnDefinitions="*,Auto" Margin="0,4,0,0">
+                        <VerticalStackLayout Grid.Column="0" Spacing="1">
+                            <Label Style="{StaticResource Body}" Text="Record is active" />
+                            <Label Style="{StaticResource Faint}"
+                                   Text="An inactive record is kept for payroll history but excluded from new runs (FR-017). To record a resignation, use Separate instead." />
+                        </VerticalStackLayout>
+                        <Switch Grid.Column="1"
+                                IsToggled="{Binding FormIsActive}"
+                                WidthRequest="46"
+                                HorizontalOptions="End"
+                                VerticalOptions="Center"
+                                OnColor="{StaticResource Brand}" />
+                    </Grid>
+
+                </VerticalStackLayout>
+            </controls:ModalHost.Body>
+        </controls:ModalHost>
+
+        <!-- ==================== SEPARATE ==================== -->
+        <controls:ModalHost IsOpen="{Binding IsSeparateOpen}"
+                            Title="Separate employee"
+                            Subtitle="{Binding SeparateSubject}"
+                            ModalWidth="440"
+                            PrimaryText="Separate"
+                            IsDestructive="True"
+                            PrimaryCommand="{Binding SubmitSeparateCommand}"
+                            SecondaryCommand="{Binding CloseSeparateCommand}"
+                            DismissCommand="{Binding CloseSeparateCommand}"
+                            ErrorText="{Binding ModalError}">
+            <controls:ModalHost.Body>
+                <VerticalStackLayout Spacing="12">
+                    <Label Style="{StaticResource Muted}"
+                           Text="The record is retained in full and stays on every payslip and report already produced. It is excluded from payroll runs covering periods after the separation date (FR-017)." />
+
+                    <VerticalStackLayout Spacing="0">
+                        <Label Style="{StaticResource FieldLabel}" Text="EFFECTIVE DATE" />
+                        <Border Style="{StaticResource FieldFrame}">
+                            <DatePicker Date="{Binding SeparateDate}" Format="dd MMM yyyy" />
+                        </Border>
+                    </VerticalStackLayout>
+
+                    <controls:FormEntry Label="REASON"
+                                        Text="{Binding SeparateReason}"
+                                        Placeholder="Resignation, end of contract, retirement…" />
+                </VerticalStackLayout>
+            </controls:ModalHost.Body>
+        </controls:ModalHost>
+
+        <!-- ==================== REINSTATE ==================== -->
+        <controls:ModalHost IsOpen="{Binding IsReinstateOpen}"
+                            Title="Reinstate employee"
+                            ModalWidth="420"
+                            PrimaryText="Reinstate"
+                            PrimaryCommand="{Binding SubmitReinstateCommand}"
+                            SecondaryCommand="{Binding CloseReinstateCommand}"
+                            DismissCommand="{Binding CloseReinstateCommand}"
+                            ErrorText="{Binding ModalError}">
+            <controls:ModalHost.Body>
+                <Label Style="{StaticResource Body}" Text="{Binding ReinstateMessage}" />
+            </controls:ModalHost.Body>
+        </controls:ModalHost>
+
+        <!-- ==================== SALARY RATE HISTORY (FR-018) ==================== -->
+        <controls:ModalHost IsOpen="{Binding IsHistoryOpen}"
+                            Title="Salary rate history"
+                            Subtitle="{Binding HistorySubject}"
+                            ModalWidth="560"
+                            PrimaryText="Done"
+                            PrimaryCommand="{Binding CloseHistoryCommand}"
+                            SecondaryText="Close"
+                            SecondaryCommand="{Binding CloseHistoryCommand}"
+                            DismissCommand="{Binding CloseHistoryCommand}">
+            <controls:ModalHost.Body>
+                <VerticalStackLayout Spacing="10">
+
+                    <Label Style="{StaticResource Muted}"
+                           Text="{Binding HistoryEmptyMessage}"
+                           IsVisible="{Binding HasNoHistory}" />
+
+                    <VerticalStackLayout BindableLayout.ItemsSource="{Binding History}" Spacing="8">
+                        <BindableLayout.ItemTemplate>
+                            <DataTemplate x:DataType="models:SalaryRateHistory">
+                                <Border Style="{StaticResource Card}" Padding="12">
+                                    <Grid ColumnDefinitions="*,Auto" RowDefinitions="Auto,Auto,Auto" RowSpacing="2">
+
+                                        <Label Grid.Row="0" Grid.Column="0"
+                                               FontSize="12.5"
+                                               FontAttributes="Bold"
+                                               TextColor="{AppThemeBinding Light={StaticResource TextLight}, Dark={StaticResource TextDark}}"
+                                               Text="{Binding EffectiveDate, StringFormat='Effective {0:dd MMM yyyy}'}" />
+
+                                        <Label Grid.Row="0" Grid.Column="1"
+                                               FontSize="12.5"
+                                               FontAttributes="Bold"
+                                               TextColor="{StaticResource Brand}"
+                                               Text="{Binding ChangeDisplay}" />
+
+                                        <Label Grid.Row="1" Grid.ColumnSpan="2"
+                                               Style="{StaticResource Muted}"
+                                               Text="{Binding FromDisplay, StringFormat='From {0}'}" />
+
+                                        <Label Grid.Row="2" Grid.ColumnSpan="2"
+                                               Style="{StaticResource Faint}"
+                                               Text="{Binding Reason}" />
+                                    </Grid>
+                                </Border>
+                            </DataTemplate>
+                        </BindableLayout.ItemTemplate>
+                    </VerticalStackLayout>
+
+                </VerticalStackLayout>
+            </controls:ModalHost.Body>
+        </controls:ModalHost>
+
+        </Grid>
+    </Grid>
+
+</ContentView>

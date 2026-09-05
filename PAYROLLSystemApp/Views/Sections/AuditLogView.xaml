@@ -1,0 +1,87 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentView xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:vm="clr-namespace:PAYROLLSystemApp.ViewModels"
+             xmlns:models="clr-namespace:PAYROLLSystemApp.Models"
+             x:Class="PAYROLLSystemApp.Views.Sections.AuditLogView"
+             x:DataType="vm:AuditLogViewModel">
+
+    <Grid Padding="20">
+
+        <!-- Access refused -->
+        <Border Style="{StaticResource Card}"
+                IsVisible="{Binding IsDenied}"
+                VerticalOptions="Center"
+                HorizontalOptions="Center"
+                Padding="28">
+            <VerticalStackLayout Spacing="4">
+                <Label Style="{StaticResource SectionHeading}" Text="Access denied" HorizontalTextAlignment="Center" />
+                <Label Style="{StaticResource Muted}" Text="You do not have permission to view the audit log." />
+            </VerticalStackLayout>
+        </Border>
+
+        <Border Style="{StaticResource Card}" Padding="0" IsVisible="{Binding IsGranted}">
+            <Grid RowDefinitions="Auto,Auto,Auto,*">
+
+                <!-- Toolbar -->
+                <Grid Grid.Row="0" ColumnDefinitions="*,Auto,Auto" ColumnSpacing="8" Padding="16,12">
+                    <Border Grid.Column="0" Style="{StaticResource FieldFrame}" MaximumWidthRequest="320" HorizontalOptions="Start">
+                        <Entry Text="{Binding SearchText}" Placeholder="Search action, actor or detail" WidthRequest="290" />
+                    </Border>
+
+                    <Label Grid.Column="1"
+                           Style="{StaticResource Muted}"
+                           Text="{Binding ResultSummary}"
+                           VerticalOptions="Center" />
+
+                    <Button Grid.Column="2"
+                            Style="{StaticResource SecondaryButton}"
+                            Text="Refresh"
+                            Command="{Binding RefreshCommand}" />
+                </Grid>
+
+                <BoxView Grid.Row="1" Style="{StaticResource Divider}" />
+
+                <!-- Column headers -->
+                <Grid Grid.Row="2"
+                      ColumnDefinitions="160,190,150,*"
+                      ColumnSpacing="12"
+                      Padding="16,8"
+                      BackgroundColor="{AppThemeBinding Light={StaticResource SurfaceAltLight}, Dark={StaticResource SurfaceAltDark}}">
+                    <Label Grid.Column="0" Style="{StaticResource TableHeader}" Text="WHEN" />
+                    <Label Grid.Column="1" Style="{StaticResource TableHeader}" Text="ACTION" />
+                    <Label Grid.Column="2" Style="{StaticResource TableHeader}" Text="ACTOR" />
+                    <Label Grid.Column="3" Style="{StaticResource TableHeader}" Text="DETAIL" />
+                </Grid>
+
+                <CollectionView Grid.Row="3" ItemsSource="{Binding Entries}" SelectionMode="None">
+                    <CollectionView.ItemTemplate>
+                        <DataTemplate x:DataType="models:AuditEntry">
+                            <Grid ColumnDefinitions="160,190,150,*" ColumnSpacing="12" Padding="16,7">
+                                <Label Grid.Column="0"
+                                       Style="{StaticResource Muted}"
+                                       Text="{Binding TimestampLocal, StringFormat='{0:dd MMM yyyy h:mm:ss tt}'}" />
+                                <Label Grid.Column="1"
+                                       FontSize="11"
+                                       FontAttributes="Bold"
+                                       LineBreakMode="TailTruncation"
+                                       Text="{Binding Action}"
+                                       TextColor="{AppThemeBinding Light={StaticResource TextLight}, Dark={StaticResource TextDark}}" />
+                                <Label Grid.Column="2"
+                                       Style="{StaticResource Muted}"
+                                       LineBreakMode="TailTruncation"
+                                       Text="{Binding Actor}" />
+                                <Label Grid.Column="3"
+                                       Style="{StaticResource Muted}"
+                                       Text="{Binding Details}" />
+
+                                <BoxView Grid.ColumnSpan="4" VerticalOptions="End" Style="{StaticResource Divider}" />
+                            </Grid>
+                        </DataTemplate>
+                    </CollectionView.ItemTemplate>
+                </CollectionView>
+            </Grid>
+        </Border>
+    </Grid>
+
+</ContentView>

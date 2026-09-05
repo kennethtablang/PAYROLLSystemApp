@@ -1,0 +1,1464 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentView xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:vm="clr-namespace:PAYROLLSystemApp.ViewModels"
+             xmlns:controls="clr-namespace:PAYROLLSystemApp.Views.Controls"
+             x:Class="PAYROLLSystemApp.Views.Sections.PayrollSetupView"
+             x:DataType="vm:PayrollSetupViewModel">
+
+    <Grid x:Name="RootGrid">
+
+        <Grid Padding="20">
+
+            <!-- FR-002: the section re-checks the permission on load. -->
+            <Border Style="{StaticResource Card}"
+                    IsVisible="{Binding IsDenied}"
+                    Padding="28"
+                    VerticalOptions="Center"
+                    HorizontalOptions="Center">
+                <VerticalStackLayout Spacing="4">
+                    <Label Style="{StaticResource SectionHeading}" Text="Access denied" HorizontalTextAlignment="Center" />
+                    <Label Style="{StaticResource Muted}" Text="You do not have permission to change the payroll configuration." />
+                </VerticalStackLayout>
+            </Border>
+
+            <Grid IsVisible="{Binding IsGranted}" RowDefinitions="Auto,Auto,*" RowSpacing="10">
+
+                <!-- ============ PANEL SWITCH ============
+                     Five subjects that are set up together and edited apart. -->
+                <Grid Grid.Row="0" ColumnDefinitions="Auto,*,Auto" ColumnSpacing="10">
+
+                    <HorizontalStackLayout Grid.Column="0" Spacing="4">
+
+                        <Grid RowDefinitions="Auto,2">
+                            <Button Grid.Row="0"
+                                    Style="{StaticResource GhostButton}"
+                                    Text="Pay calendar"
+                                    Command="{Binding ShowCalendarCommand}" />
+                            <BoxView Grid.Row="1" Color="{StaticResource Brand}" IsVisible="{Binding IsCalendar}" />
+                        </Grid>
+
+                        <Grid RowDefinitions="Auto,2">
+                            <Button Grid.Row="0"
+                                    Style="{StaticResource GhostButton}"
+                                    Text="Earnings &amp; deductions"
+                                    Command="{Binding ShowComponentsCommand}" />
+                            <BoxView Grid.Row="1" Color="{StaticResource Brand}" IsVisible="{Binding IsComponents}" />
+                        </Grid>
+
+                        <Grid RowDefinitions="Auto,2">
+                            <Button Grid.Row="0"
+                                    Style="{StaticResource GhostButton}"
+                                    Text="Premium rates"
+                                    Command="{Binding ShowPremiumsCommand}" />
+                            <BoxView Grid.Row="1" Color="{StaticResource Brand}" IsVisible="{Binding IsPremiums}" />
+                        </Grid>
+
+                        <Grid RowDefinitions="Auto,2">
+                            <Button Grid.Row="0"
+                                    Style="{StaticResource GhostButton}"
+                                    Text="Statutory tables"
+                                    Command="{Binding ShowStatutoryCommand}" />
+                            <BoxView Grid.Row="1" Color="{StaticResource Brand}" IsVisible="{Binding IsStatutory}" />
+                        </Grid>
+
+                        <Grid RowDefinitions="Auto,2">
+                            <Button Grid.Row="0"
+                                    Style="{StaticResource GhostButton}"
+                                    Text="Company &amp; rules"
+                                    Command="{Binding ShowCompanyCommand}" />
+                            <BoxView Grid.Row="1" Color="{StaticResource Brand}" IsVisible="{Binding IsCompany}" />
+                        </Grid>
+                    </HorizontalStackLayout>
+
+                    <Button Grid.Column="2"
+                            Style="{StaticResource SecondaryButton}"
+                            Text="Refresh"
+                            VerticalOptions="Center"
+                            Command="{Binding RefreshCommand}" />
+                </Grid>
+
+                <!-- Inline result banner (NFR-023) -->
+                <Label Grid.Row="1"
+                       FontSize="12"
+                       TextColor="{StaticResource Success}"
+                       Text="{Binding StatusMessage}"
+                       IsVisible="{Binding HasStatus}" />
+
+                <Label Grid.Row="1"
+                       Style="{StaticResource ErrorText}"
+                       Text="{Binding ErrorMessage}"
+                       IsVisible="{Binding HasError}" />
+
+                <!-- ==================================================== -->
+                <!-- =================  PAY CALENDAR  =================== -->
+                <!-- ==================================================== -->
+                <Border Grid.Row="2"
+                        Style="{StaticResource Card}"
+                        Padding="0"
+                        IsVisible="{Binding IsCalendar}">
+
+                    <Grid RowDefinitions="Auto,Auto,Auto,*">
+
+                        <Grid Grid.Row="0" ColumnDefinitions="Auto,Auto,*,Auto,Auto" ColumnSpacing="8" Padding="16,12">
+
+                            <Label Grid.Column="0"
+                                   Style="{StaticResource FieldLabel}"
+                                   VerticalOptions="Center"
+                                   Text="YEAR" />
+
+                            <Border Grid.Column="1" Style="{StaticResource FieldFrame}">
+                                <Picker ItemsSource="{Binding CalendarYears}"
+                                        SelectedItem="{Binding SelectedCalendarYear}"
+                                        ItemDisplayBinding="{Binding Label, x:DataType=vm:LookupOption}"
+                                        WidthRequest="110" />
+                            </Border>
+
+                            <VerticalStackLayout Grid.Column="2" Spacing="1" Padding="8,0" VerticalOptions="Center">
+                                <Label Style="{StaticResource SectionHeading}" Text="Pay periods" />
+                                <Label Style="{StaticResource Faint}"
+                                       LineBreakMode="TailTruncation"
+                                       Text="{Binding CalendarSummary}" />
+                            </VerticalStackLayout>
+
+                            <Button Grid.Column="3"
+                                    Style="{StaticResource SecondaryButton}"
+                                    Text="Generate year"
+                                    VerticalOptions="Center"
+                                    Command="{Binding OpenGenerateYearCommand}" />
+
+                            <Button Grid.Column="4"
+                                    Style="{StaticResource PrimaryButton}"
+                                    Text="+  New"
+                                    VerticalOptions="Center"
+                                    Command="{Binding OpenCreatePeriodCommand}" />
+                        </Grid>
+
+                        <!-- FR-040: three dates, and the reason they differ. -->
+                        <Label Grid.Row="1"
+                               Style="{StaticResource Faint}"
+                               Padding="16,0,16,10"
+                               Text="A period covers the days being paid for; its cut-off is the attendance the run is allowed to read, which usually closes earlier so payroll can be processed; the pay date is when the money lands, and decides which statutory tables the run uses." />
+
+                        <Grid Grid.Row="2"
+                              ColumnDefinitions="90,*,170,150,110,Auto"
+                              ColumnSpacing="10"
+                              Padding="16,8"
+                              BackgroundColor="{AppThemeBinding Light={StaticResource SurfaceAltLight}, Dark={StaticResource SurfaceAltDark}}">
+                            <Label Grid.Column="0" Style="{StaticResource TableHeader}" Text="CODE" />
+                            <Label Grid.Column="1" Style="{StaticResource TableHeader}" Text="PERIOD" />
+                            <Label Grid.Column="2" Style="{StaticResource TableHeader}" Text="ATTENDANCE CUT-OFF" />
+                            <Label Grid.Column="3" Style="{StaticResource TableHeader}" Text="PAY DATE" />
+                            <Label Grid.Column="4" Style="{StaticResource TableHeader}" Text="STATE" />
+                            <Label Grid.Column="5" Style="{StaticResource TableHeader}" Text="ACTIONS" WidthRequest="132" />
+                        </Grid>
+
+                        <Grid Grid.Row="3">
+                            <CollectionView ItemsSource="{Binding Periods}" SelectionMode="None">
+                                <CollectionView.ItemTemplate>
+                                    <DataTemplate x:DataType="vm:PayPeriodRow">
+                                        <Grid ColumnDefinitions="90,*,170,150,110,Auto"
+                                              ColumnSpacing="10"
+                                              Padding="16,9">
+
+                                            <Label Grid.Column="0"
+                                                   Text="{Binding Code}"
+                                                   FontSize="12"
+                                                   FontAttributes="Bold"
+                                                   VerticalOptions="Center"
+                                                   TextColor="{StaticResource Brand}" />
+
+                                            <VerticalStackLayout Grid.Column="1" Spacing="0" VerticalOptions="Center">
+                                                <Label Text="{Binding RangeDisplay}"
+                                                       FontSize="12.5"
+                                                       LineBreakMode="TailTruncation"
+                                                       TextColor="{AppThemeBinding Light={StaticResource TextLight}, Dark={StaticResource TextDark}}" />
+                                                <Label Style="{StaticResource Faint}"
+                                                       LineBreakMode="TailTruncation"
+                                                       Text="{Binding Detail}" />
+                                            </VerticalStackLayout>
+
+                                            <Label Grid.Column="2"
+                                                   Style="{StaticResource Body}"
+                                                   VerticalOptions="Center"
+                                                   Text="{Binding CutOffDisplay}" />
+
+                                            <Label Grid.Column="3"
+                                                   Style="{StaticResource Body}"
+                                                   VerticalOptions="Center"
+                                                   Text="{Binding PayDateDisplay}" />
+
+                                            <Label Grid.Column="4"
+                                                   FontSize="11.5"
+                                                   FontAttributes="Bold"
+                                                   VerticalOptions="Center"
+                                                   Text="{Binding StatusDisplay}"
+                                                   TextColor="{Binding StatusColor}" />
+
+                                            <HorizontalStackLayout Grid.Column="5"
+                                                                   Spacing="6"
+                                                                   WidthRequest="132"
+                                                                   VerticalOptions="Center">
+                                                <Button Style="{StaticResource RowAction}"
+                                                        Text="Edit"
+                                                        Command="{Binding Source={RelativeSource AncestorType={x:Type vm:PayrollSetupViewModel}}, Path=OpenEditPeriodCommand}"
+                                                        CommandParameter="{Binding .}" />
+                                                <Button Style="{StaticResource RowAction}"
+                                                        Text="{Binding ActionText}"
+                                                        Command="{Binding Source={RelativeSource AncestorType={x:Type vm:PayrollSetupViewModel}}, Path=OpenTogglePeriodCommand}"
+                                                        CommandParameter="{Binding .}" />
+                                            </HorizontalStackLayout>
+
+                                            <BoxView Grid.ColumnSpan="6" VerticalOptions="End" Style="{StaticResource Divider}" />
+                                        </Grid>
+                                    </DataTemplate>
+                                </CollectionView.ItemTemplate>
+                            </CollectionView>
+
+                            <VerticalStackLayout IsVisible="{Binding HasNoPeriods}"
+                                                 Spacing="4"
+                                                 Padding="24"
+                                                 VerticalOptions="Center">
+                                <Label Style="{StaticResource SectionHeading}"
+                                       Text="No pay periods yet"
+                                       HorizontalTextAlignment="Center" />
+                                <Label Style="{StaticResource Muted}"
+                                       HorizontalTextAlignment="Center"
+                                       Text="Generate the year from the payroll settings, or add a period by hand." />
+                            </VerticalStackLayout>
+                        </Grid>
+                    </Grid>
+                </Border>
+
+                <!-- ==================================================== -->
+                <!-- ===========  EARNINGS AND DEDUCTIONS  ============== -->
+                <!-- ==================================================== -->
+                <Grid Grid.Row="2"
+                      RowDefinitions="Auto,*"
+                      RowSpacing="10"
+                      IsVisible="{Binding IsComponents}">
+
+                    <Grid Grid.Row="0" ColumnDefinitions="Auto,Auto,*" ColumnSpacing="10">
+                        <Label Grid.Column="0"
+                               Style="{StaticResource Muted}"
+                               VerticalOptions="Center"
+                               LineBreakMode="NoWrap"
+                               Text="Show retired" />
+
+                        <Switch Grid.Column="1"
+                                IsToggled="{Binding ShowRetired}"
+                                WidthRequest="46"
+                                VerticalOptions="Center"
+                                OnColor="{StaticResource Brand}" />
+
+                        <Label Grid.Column="2"
+                               Style="{StaticResource Faint}"
+                               VerticalOptions="Center"
+                               Text="A component is retired, never deleted — a payslip already issued has to keep meaning what it meant." />
+                    </Grid>
+
+                    <Grid Grid.Row="1" ColumnDefinitions="*,*" ColumnSpacing="14">
+
+                        <!-- ================== EARNINGS ================== -->
+                        <Border Grid.Column="0" Style="{StaticResource Card}" Padding="0">
+                            <Grid RowDefinitions="Auto,Auto,Auto,*">
+
+                                <Grid Grid.Row="0" ColumnDefinitions="*,Auto" Padding="16,12">
+                                    <VerticalStackLayout Grid.Column="0" Spacing="1">
+                                        <Label Style="{StaticResource SectionHeading}" Text="Earnings" />
+                                        <Label Style="{StaticResource Faint}"
+                                               LineBreakMode="TailTruncation"
+                                               Text="{Binding EarningSummary}" />
+                                    </VerticalStackLayout>
+
+                                    <Button Grid.Column="1"
+                                            Style="{StaticResource PrimaryButton}"
+                                            Text="+  New"
+                                            VerticalOptions="Center"
+                                            Command="{Binding OpenCreateEarningCommand}" />
+                                </Grid>
+
+                                <BoxView Grid.Row="1" Style="{StaticResource Divider}" />
+
+                                <Grid Grid.Row="2"
+                                      ColumnDefinitions="*,Auto"
+                                      Padding="16,8"
+                                      BackgroundColor="{AppThemeBinding Light={StaticResource SurfaceAltLight}, Dark={StaticResource SurfaceAltDark}}">
+                                    <Label Grid.Column="0" Style="{StaticResource TableHeader}" Text="EARNING" />
+                                    <Label Grid.Column="1" Style="{StaticResource TableHeader}" Text="ACTIONS" WidthRequest="132" />
+                                </Grid>
+
+                                <CollectionView Grid.Row="3" ItemsSource="{Binding Earnings}" SelectionMode="None">
+                                    <CollectionView.ItemTemplate>
+                                        <DataTemplate x:DataType="vm:EarningTypeRow">
+                                            <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="10" Padding="16,9">
+
+                                                <Border Grid.Column="0"
+                                                        Style="{StaticResource Pill}"
+                                                        VerticalOptions="Center"
+                                                        BackgroundColor="{AppThemeBinding Light={StaticResource BrandSoftLight}, Dark={StaticResource BrandSoftDark}}">
+                                                    <Label Text="{Binding Code}"
+                                                           FontSize="10.5"
+                                                           FontAttributes="Bold"
+                                                           TextColor="{StaticResource Brand}" />
+                                                </Border>
+
+                                                <VerticalStackLayout Grid.Column="1" Spacing="0" VerticalOptions="Center">
+                                                    <Label Text="{Binding Name}"
+                                                           FontSize="12.5"
+                                                           FontAttributes="Bold"
+                                                           LineBreakMode="TailTruncation"
+                                                           TextColor="{AppThemeBinding Light={StaticResource TextLight}, Dark={StaticResource TextDark}}" />
+                                                    <Label Style="{StaticResource Faint}"
+                                                           LineBreakMode="TailTruncation"
+                                                           Text="{Binding Detail}" />
+                                                </VerticalStackLayout>
+
+                                                <HorizontalStackLayout Grid.Column="2"
+                                                                       Spacing="6"
+                                                                       WidthRequest="132"
+                                                                       VerticalOptions="Center">
+                                                    <Button Style="{StaticResource RowAction}"
+                                                            Text="Edit"
+                                                            Command="{Binding Source={RelativeSource AncestorType={x:Type vm:PayrollSetupViewModel}}, Path=OpenEditEarningCommand}"
+                                                            CommandParameter="{Binding .}" />
+                                                    <Button Style="{StaticResource RowAction}"
+                                                            Text="{Binding ActionText}"
+                                                            IsVisible="{Binding IsRetirable}"
+                                                            Command="{Binding Source={RelativeSource AncestorType={x:Type vm:PayrollSetupViewModel}}, Path=OpenToggleEarningCommand}"
+                                                            CommandParameter="{Binding .}" />
+                                                </HorizontalStackLayout>
+
+                                                <BoxView Grid.ColumnSpan="3" VerticalOptions="End" Style="{StaticResource Divider}" />
+                                            </Grid>
+                                        </DataTemplate>
+                                    </CollectionView.ItemTemplate>
+                                </CollectionView>
+                            </Grid>
+                        </Border>
+
+                        <!-- ================= DEDUCTIONS ================= -->
+                        <Border Grid.Column="1" Style="{StaticResource Card}" Padding="0">
+                            <Grid RowDefinitions="Auto,Auto,Auto,*">
+
+                                <Grid Grid.Row="0" ColumnDefinitions="*,Auto" Padding="16,12">
+                                    <VerticalStackLayout Grid.Column="0" Spacing="1">
+                                        <Label Style="{StaticResource SectionHeading}" Text="Deductions" />
+                                        <Label Style="{StaticResource Faint}"
+                                               LineBreakMode="TailTruncation"
+                                               Text="{Binding DeductionSummary}" />
+                                    </VerticalStackLayout>
+
+                                    <Button Grid.Column="1"
+                                            Style="{StaticResource PrimaryButton}"
+                                            Text="+  New"
+                                            VerticalOptions="Center"
+                                            Command="{Binding OpenCreateDeductionCommand}" />
+                                </Grid>
+
+                                <BoxView Grid.Row="1" Style="{StaticResource Divider}" />
+
+                                <Grid Grid.Row="2"
+                                      ColumnDefinitions="*,Auto"
+                                      Padding="16,8"
+                                      BackgroundColor="{AppThemeBinding Light={StaticResource SurfaceAltLight}, Dark={StaticResource SurfaceAltDark}}">
+                                    <Label Grid.Column="0" Style="{StaticResource TableHeader}" Text="DEDUCTION" />
+                                    <Label Grid.Column="1" Style="{StaticResource TableHeader}" Text="ACTIONS" WidthRequest="132" />
+                                </Grid>
+
+                                <CollectionView Grid.Row="3" ItemsSource="{Binding Deductions}" SelectionMode="None">
+                                    <CollectionView.ItemTemplate>
+                                        <DataTemplate x:DataType="vm:DeductionTypeRow">
+                                            <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="10" Padding="16,9">
+
+                                                <Border Grid.Column="0"
+                                                        Style="{StaticResource Pill}"
+                                                        VerticalOptions="Center"
+                                                        BackgroundColor="{AppThemeBinding Light={StaticResource BrandSoftLight}, Dark={StaticResource BrandSoftDark}}">
+                                                    <Label Text="{Binding Code}"
+                                                           FontSize="10.5"
+                                                           FontAttributes="Bold"
+                                                           TextColor="{StaticResource Brand}" />
+                                                </Border>
+
+                                                <VerticalStackLayout Grid.Column="1" Spacing="0" VerticalOptions="Center">
+                                                    <Label Text="{Binding Name}"
+                                                           FontSize="12.5"
+                                                           FontAttributes="Bold"
+                                                           LineBreakMode="TailTruncation"
+                                                           TextColor="{AppThemeBinding Light={StaticResource TextLight}, Dark={StaticResource TextDark}}" />
+                                                    <Label Style="{StaticResource Faint}"
+                                                           LineBreakMode="TailTruncation"
+                                                           Text="{Binding Detail}" />
+                                                </VerticalStackLayout>
+
+                                                <HorizontalStackLayout Grid.Column="2"
+                                                                       Spacing="6"
+                                                                       WidthRequest="132"
+                                                                       VerticalOptions="Center">
+                                                    <Button Style="{StaticResource RowAction}"
+                                                            Text="Edit"
+                                                            Command="{Binding Source={RelativeSource AncestorType={x:Type vm:PayrollSetupViewModel}}, Path=OpenEditDeductionCommand}"
+                                                            CommandParameter="{Binding .}" />
+                                                    <Button Style="{StaticResource RowAction}"
+                                                            Text="{Binding ActionText}"
+                                                            IsVisible="{Binding IsRetirable}"
+                                                            Command="{Binding Source={RelativeSource AncestorType={x:Type vm:PayrollSetupViewModel}}, Path=OpenToggleDeductionCommand}"
+                                                            CommandParameter="{Binding .}" />
+                                                </HorizontalStackLayout>
+
+                                                <BoxView Grid.ColumnSpan="3" VerticalOptions="End" Style="{StaticResource Divider}" />
+                                            </Grid>
+                                        </DataTemplate>
+                                    </CollectionView.ItemTemplate>
+                                </CollectionView>
+                            </Grid>
+                        </Border>
+                    </Grid>
+                </Grid>
+
+                <!-- ==================================================== -->
+                <!-- ================  PREMIUM MATRIX  ================== -->
+                <!-- ==================================================== -->
+                <Border Grid.Row="2"
+                        Style="{StaticResource Card}"
+                        Padding="0"
+                        IsVisible="{Binding IsPremiums}">
+
+                    <Grid RowDefinitions="Auto,Auto,Auto,Auto,*">
+
+                        <VerticalStackLayout Grid.Row="0" Spacing="1" Padding="16,12">
+                            <Label Style="{StaticResource SectionHeading}" Text="DOLE premium pay matrix" />
+                            <Label Style="{StaticResource Faint}" Text="{Binding PremiumSummary}" />
+                        </VerticalStackLayout>
+
+                        <Label Grid.Row="1"
+                               Style="{StaticResource Faint}"
+                               Padding="16,0,16,10"
+                               Text="Each cell multiplies the hourly rate for an hour worked in that combination. These are the statutory minima under Arts. 87, 93 and 94 — a company may pay more, never less. Changing a multiplier that is already in force creates a new row from a later date rather than overwriting the old one, so a payslip computed last month can still be explained." />
+
+                        <Border Grid.Row="2"
+                                Style="{StaticResource Pill}"
+                                Margin="16,0,16,10"
+                                Padding="10,7"
+                                HorizontalOptions="Fill"
+                                IsVisible="{Binding HasPremiumWarning}"
+                                BackgroundColor="{AppThemeBinding Light={StaticResource DangerSoftLight}, Dark={StaticResource DangerSoftDark}}">
+                            <Label FontSize="11.5"
+                                   TextColor="{StaticResource Danger}"
+                                   Text="{Binding PremiumWarning}" />
+                        </Border>
+
+                        <Grid Grid.Row="3"
+                              ColumnDefinitions="90,*,240,Auto"
+                              ColumnSpacing="10"
+                              Padding="16,8"
+                              BackgroundColor="{AppThemeBinding Light={StaticResource SurfaceAltLight}, Dark={StaticResource SurfaceAltDark}}">
+                            <Label Grid.Column="0" Style="{StaticResource TableHeader}" Text="RATE" />
+                            <Label Grid.Column="1" Style="{StaticResource TableHeader}" Text="CELL" />
+                            <Label Grid.Column="2" Style="{StaticResource TableHeader}" Text="APPLIES TO" />
+                            <Label Grid.Column="3" Style="{StaticResource TableHeader}" Text="ACTIONS" WidthRequest="70" />
+                        </Grid>
+
+                        <CollectionView Grid.Row="4" ItemsSource="{Binding Premiums}" SelectionMode="None">
+                            <CollectionView.ItemTemplate>
+                                <DataTemplate x:DataType="vm:PremiumRateRow">
+                                    <Grid ColumnDefinitions="90,*,240,Auto" ColumnSpacing="10" Padding="16,9">
+
+                                        <Label Grid.Column="0"
+                                               Text="{Binding MultiplierDisplay}"
+                                               FontSize="14"
+                                               FontAttributes="Bold"
+                                               VerticalOptions="Center"
+                                               TextColor="{Binding MultiplierColor}" />
+
+                                        <VerticalStackLayout Grid.Column="1" Spacing="0" VerticalOptions="Center">
+                                            <Label Text="{Binding Name}"
+                                                   FontSize="12.5"
+                                                   FontAttributes="Bold"
+                                                   LineBreakMode="TailTruncation"
+                                                   TextColor="{AppThemeBinding Light={StaticResource TextLight}, Dark={StaticResource TextDark}}" />
+                                            <Label Style="{StaticResource Faint}"
+                                                   LineBreakMode="TailTruncation"
+                                                   Text="{Binding Detail}" />
+                                        </VerticalStackLayout>
+
+                                        <Label Grid.Column="2"
+                                               Style="{StaticResource Body}"
+                                               VerticalOptions="Center"
+                                               LineBreakMode="TailTruncation"
+                                               Text="{Binding ConditionDisplay}" />
+
+                                        <Button Grid.Column="3"
+                                                Style="{StaticResource RowAction}"
+                                                Text="Edit"
+                                                WidthRequest="70"
+                                                VerticalOptions="Center"
+                                                Command="{Binding Source={RelativeSource AncestorType={x:Type vm:PayrollSetupViewModel}}, Path=OpenEditPremiumCommand}"
+                                                CommandParameter="{Binding .}" />
+
+                                        <BoxView Grid.ColumnSpan="4" VerticalOptions="End" Style="{StaticResource Divider}" />
+                                    </Grid>
+                                </DataTemplate>
+                            </CollectionView.ItemTemplate>
+                        </CollectionView>
+                    </Grid>
+                </Border>
+
+                <!-- ==================================================== -->
+                <!-- ===============  STATUTORY TABLES  ================= -->
+                <!-- ==================================================== -->
+                <Grid Grid.Row="2"
+                      RowDefinitions="Auto,*"
+                      RowSpacing="10"
+                      IsVisible="{Binding IsStatutory}">
+
+                    <!-- The one thing the application cannot check for itself. -->
+                    <Border Grid.Row="0"
+                            Style="{StaticResource Pill}"
+                            Padding="12,9"
+                            HorizontalOptions="Fill"
+                            IsVisible="{Binding HasStatutoryWarning}"
+                            BackgroundColor="{AppThemeBinding Light={StaticResource WarningSoftLight}, Dark={StaticResource WarningSoftDark}}">
+                        <Label FontSize="11.5"
+                               TextColor="{StaticResource Warning}"
+                               Text="{Binding StatutoryWarning}" />
+                    </Border>
+
+                    <Grid Grid.Row="1" ColumnDefinitions="*,*" ColumnSpacing="14">
+
+                        <!-- ============ SSS ============ -->
+                        <Border Grid.Column="0" Style="{StaticResource Card}" Padding="0">
+                            <Grid RowDefinitions="Auto,Auto,Auto,*">
+
+                                <VerticalStackLayout Grid.Row="0" Spacing="1" Padding="16,12">
+                                    <Label Style="{StaticResource SectionHeading}" Text="SSS contribution schedule" />
+                                    <Label Style="{StaticResource Faint}" Text="{Binding SssSummary}" />
+                                </VerticalStackLayout>
+
+                                <Label Grid.Row="1"
+                                       Style="{StaticResource Faint}"
+                                       Padding="16,0,16,10"
+                                       Text="The contribution is a percentage of the salary credit, not of the salary — which is why the whole schedule is stored. A new circular is entered as a schedule with a later effective date; this one is kept so historical runs stay explainable." />
+
+                                <Grid Grid.Row="2"
+                                      ColumnDefinitions="*,90,90,90"
+                                      ColumnSpacing="8"
+                                      Padding="16,8"
+                                      BackgroundColor="{AppThemeBinding Light={StaticResource SurfaceAltLight}, Dark={StaticResource SurfaceAltDark}}">
+                                    <Label Grid.Column="0" Style="{StaticResource TableHeader}" Text="MONTHLY COMPENSATION" />
+                                    <Label Grid.Column="1" Style="{StaticResource TableHeader}" Text="CREDIT" />
+                                    <Label Grid.Column="2" Style="{StaticResource TableHeader}" Text="EMPLOYEE" />
+                                    <Label Grid.Column="3" Style="{StaticResource TableHeader}" Text="EMPLOYER" />
+                                </Grid>
+
+                                <CollectionView Grid.Row="3" ItemsSource="{Binding SssSchedule}" SelectionMode="None">
+                                    <CollectionView.ItemTemplate>
+                                        <DataTemplate x:DataType="vm:SssBracketRow">
+                                            <Grid ColumnDefinitions="*,90,90,90" ColumnSpacing="8" Padding="16,7">
+
+                                                <VerticalStackLayout Grid.Column="0" Spacing="0" VerticalOptions="Center">
+                                                    <Label Text="{Binding RangeDisplay}"
+                                                           FontSize="12"
+                                                           LineBreakMode="TailTruncation"
+                                                           TextColor="{AppThemeBinding Light={StaticResource TextLight}, Dark={StaticResource TextDark}}" />
+                                                    <Label Style="{StaticResource Faint}" Text="{Binding SplitDisplay}" />
+                                                </VerticalStackLayout>
+
+                                                <Label Grid.Column="1" Style="{StaticResource Body}" VerticalOptions="Center" Text="{Binding MscDisplay}" />
+                                                <Label Grid.Column="2" Style="{StaticResource Body}" VerticalOptions="Center" Text="{Binding EmployeeDisplay}" />
+                                                <Label Grid.Column="3" Style="{StaticResource Body}" VerticalOptions="Center" Text="{Binding EmployerDisplay}" />
+
+                                                <BoxView Grid.ColumnSpan="4" VerticalOptions="End" Style="{StaticResource Divider}" />
+                                            </Grid>
+                                        </DataTemplate>
+                                    </CollectionView.ItemTemplate>
+                                </CollectionView>
+                            </Grid>
+                        </Border>
+
+                        <!-- ==== PHILHEALTH, PAG-IBIG AND TAX ==== -->
+                        <Grid Grid.Column="1" RowDefinitions="Auto,Auto,*" RowSpacing="14">
+
+                            <Border Grid.Row="0" Style="{StaticResource Card}">
+                                <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10">
+                                    <VerticalStackLayout Grid.Column="0" Spacing="2">
+                                        <Label Style="{StaticResource SectionHeading}" Text="PhilHealth" />
+                                        <Label Style="{StaticResource Body}" Text="{Binding PhilHealthSummary}" />
+                                        <Label Style="{StaticResource Faint}"
+                                               Text="Computed on monthly basic salary, split equally. The employer pays the remainder of the premium rather than a second rounded half, so the two shares always add back exactly." />
+                                    </VerticalStackLayout>
+
+                                    <Button Grid.Column="1"
+                                            Style="{StaticResource SecondaryButton}"
+                                            Text="New schedule"
+                                            VerticalOptions="Center"
+                                            Command="{Binding OpenEditPhilHealthCommand}" />
+                                </Grid>
+                            </Border>
+
+                            <Border Grid.Row="1" Style="{StaticResource Card}">
+                                <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10">
+                                    <VerticalStackLayout Grid.Column="0" Spacing="2">
+                                        <Label Style="{StaticResource SectionHeading}" Text="Pag-IBIG" />
+                                        <Label Style="{StaticResource Body}" Text="{Binding PagIbigSummary}" />
+                                        <Label Style="{StaticResource Faint}"
+                                               Text="The rate is chosen on the employee's actual compensation, but applied to the capped fund salary." />
+                                    </VerticalStackLayout>
+
+                                    <Button Grid.Column="1"
+                                            Style="{StaticResource SecondaryButton}"
+                                            Text="New schedule"
+                                            VerticalOptions="Center"
+                                            Command="{Binding OpenEditPagIbigCommand}" />
+                                </Grid>
+                            </Border>
+
+                            <Border Grid.Row="2" Style="{StaticResource Card}" Padding="0">
+                                <Grid RowDefinitions="Auto,Auto,Auto,Auto,*">
+
+                                    <Grid Grid.Row="0" ColumnDefinitions="*,Auto" ColumnSpacing="10" Padding="16,12">
+                                        <VerticalStackLayout Grid.Column="0" Spacing="1">
+                                            <Label Style="{StaticResource SectionHeading}" Text="Withholding tax" />
+                                            <Label Style="{StaticResource Faint}"
+                                                   LineBreakMode="TailTruncation"
+                                                   Text="{Binding TaxSummary}" />
+                                        </VerticalStackLayout>
+
+                                        <Border Grid.Column="1" Style="{StaticResource FieldFrame}">
+                                            <Picker ItemsSource="{Binding TaxScopeOptions}"
+                                                    SelectedItem="{Binding SelectedTaxScope}"
+                                                    ItemDisplayBinding="{Binding Label, x:DataType=vm:LookupOption}"
+                                                    WidthRequest="200" />
+                                        </Border>
+                                    </Grid>
+
+                                    <Label Grid.Row="1"
+                                           Style="{StaticResource Faint}"
+                                           Padding="16,0,16,10"
+                                           Text="The per-period table is what a run withholds against; the annual one is what the year-end adjustment settles the year against." />
+
+                                    <Border Grid.Row="2"
+                                            Style="{StaticResource Pill}"
+                                            Margin="16,0,16,10"
+                                            Padding="10,7"
+                                            HorizontalOptions="Fill"
+                                            IsVisible="{Binding HasTaxWarning}"
+                                            BackgroundColor="{AppThemeBinding Light={StaticResource WarningSoftLight}, Dark={StaticResource WarningSoftDark}}">
+                                        <Label FontSize="11.5"
+                                               TextColor="{StaticResource Warning}"
+                                               Text="{Binding TaxWarning}" />
+                                    </Border>
+
+                                    <Grid Grid.Row="3"
+                                          ColumnDefinitions="170,*,Auto"
+                                          ColumnSpacing="10"
+                                          Padding="16,8"
+                                          BackgroundColor="{AppThemeBinding Light={StaticResource SurfaceAltLight}, Dark={StaticResource SurfaceAltDark}}">
+                                        <Label Grid.Column="0" Style="{StaticResource TableHeader}" Text="TAXABLE INCOME" />
+                                        <Label Grid.Column="1" Style="{StaticResource TableHeader}" Text="TAX" />
+                                        <Label Grid.Column="2" Style="{StaticResource TableHeader}" Text="ACTIONS" WidthRequest="70" />
+                                    </Grid>
+
+                                    <CollectionView Grid.Row="4" ItemsSource="{Binding TaxBands}" SelectionMode="None">
+                                        <CollectionView.ItemTemplate>
+                                            <DataTemplate x:DataType="vm:TaxBracketRow">
+                                                <Grid ColumnDefinitions="170,*,Auto" ColumnSpacing="10" Padding="16,8">
+
+                                                    <Label Grid.Column="0"
+                                                           Text="{Binding RangeDisplay}"
+                                                           FontSize="12"
+                                                           VerticalOptions="Center"
+                                                           TextColor="{AppThemeBinding Light={StaticResource TextLight}, Dark={StaticResource TextDark}}" />
+
+                                                    <VerticalStackLayout Grid.Column="1" Spacing="0" VerticalOptions="Center">
+                                                        <Label Style="{StaticResource Body}"
+                                                               LineBreakMode="TailTruncation"
+                                                               Text="{Binding TaxDisplay}" />
+                                                        <Label Style="{StaticResource Faint}" Text="{Binding EffectiveDisplay}" />
+                                                    </VerticalStackLayout>
+
+                                                    <Button Grid.Column="2"
+                                                            Style="{StaticResource RowAction}"
+                                                            Text="Edit"
+                                                            WidthRequest="70"
+                                                            VerticalOptions="Center"
+                                                            Command="{Binding Source={RelativeSource AncestorType={x:Type vm:PayrollSetupViewModel}}, Path=OpenEditTaxBandCommand}"
+                                                            CommandParameter="{Binding .}" />
+
+                                                    <BoxView Grid.ColumnSpan="3" VerticalOptions="End" Style="{StaticResource Divider}" />
+                                                </Grid>
+                                            </DataTemplate>
+                                        </CollectionView.ItemTemplate>
+                                    </CollectionView>
+                                </Grid>
+                            </Border>
+                        </Grid>
+                    </Grid>
+                </Grid>
+
+                <!-- ==================================================== -->
+                <!-- ============  COMPANY PROFILE AND RULES  =========== -->
+                <!-- ==================================================== -->
+                <ScrollView Grid.Row="2" IsVisible="{Binding IsCompany}">
+                    <Grid ColumnDefinitions="*,*" ColumnSpacing="14">
+
+                        <!-- ============ COMPANY PROFILE (FR-045) ============ -->
+                        <Border Grid.Column="0" Style="{StaticResource Card}" VerticalOptions="Start">
+                            <VerticalStackLayout Spacing="12">
+
+                                <VerticalStackLayout Spacing="1">
+                                    <Label Style="{StaticResource SectionHeading}" Text="Company profile" />
+                                    <Label Style="{StaticResource Faint}"
+                                           Text="Printed on every payslip, remittance report and certificate." />
+                                </VerticalStackLayout>
+
+                                <Border Style="{StaticResource Pill}"
+                                        Padding="10,7"
+                                        HorizontalOptions="Fill"
+                                        IsVisible="{Binding HasCompanyWarning}"
+                                        BackgroundColor="{AppThemeBinding Light={StaticResource WarningSoftLight}, Dark={StaticResource WarningSoftDark}}">
+                                    <Label FontSize="11.5"
+                                           TextColor="{StaticResource Warning}"
+                                           Text="{Binding CompanyWarning}" />
+                                </Border>
+
+                                <controls:FormEntry Label="REGISTERED NAME"
+                                                    Text="{Binding CompanyName}"
+                                                    Placeholder="As registered with the SEC or DTI" />
+
+                                <controls:FormEntry Label="TRADE NAME"
+                                                    Text="{Binding CompanyTradeName}"
+                                                    Placeholder="If it differs from the registered name" />
+
+                                <controls:FormEntry Label="ADDRESS"
+                                                    Text="{Binding CompanyAddress}"
+                                                    Placeholder="Principal place of business" />
+
+                                <Grid ColumnDefinitions="*,*" ColumnSpacing="10">
+                                    <controls:FormEntry Grid.Column="0"
+                                                        Label="EMPLOYER TIN"
+                                                        Text="{Binding CompanyTin}"
+                                                        Placeholder="000-000-000-000" />
+
+                                    <controls:FormEntry Grid.Column="1"
+                                                        Label="RDO CODE"
+                                                        Text="{Binding CompanyRdo}"
+                                                        Placeholder="e.g. 050" />
+                                </Grid>
+
+                                <Label Style="{StaticResource Faint}"
+                                       Text="The employer registration numbers below are recorded as the agencies issued them — an employer number is not the same shape as a member's, so they are not reformatted." />
+
+                                <Grid ColumnDefinitions="*,*,*" ColumnSpacing="10">
+                                    <controls:FormEntry Grid.Column="0"
+                                                        Label="SSS EMPLOYER NO."
+                                                        Text="{Binding CompanySssNumber}" />
+
+                                    <controls:FormEntry Grid.Column="1"
+                                                        Label="PHILHEALTH NO."
+                                                        Text="{Binding CompanyPhilHealthNumber}" />
+
+                                    <controls:FormEntry Grid.Column="2"
+                                                        Label="PAG-IBIG NO."
+                                                        Text="{Binding CompanyPagIbigNumber}" />
+                                </Grid>
+
+                                <Grid ColumnDefinitions="*,*" ColumnSpacing="10">
+                                    <controls:FormEntry Grid.Column="0"
+                                                        Label="CONTACT NUMBER"
+                                                        Text="{Binding CompanyContact}" />
+
+                                    <controls:FormEntry Grid.Column="1"
+                                                        Label="EMAIL"
+                                                        Text="{Binding CompanyEmail}" />
+                                </Grid>
+
+                                <Grid ColumnDefinitions="*,*" ColumnSpacing="10">
+                                    <controls:FormEntry Grid.Column="0"
+                                                        Label="AUTHORISED SIGNATORY"
+                                                        Text="{Binding CompanySignatory}" />
+
+                                    <controls:FormEntry Grid.Column="1"
+                                                        Label="POSITION"
+                                                        Text="{Binding CompanySignatoryPosition}" />
+                                </Grid>
+
+                                <Button Style="{StaticResource PrimaryButton}"
+                                        Text="Save company profile"
+                                        HorizontalOptions="End"
+                                        Command="{Binding SaveCompanyCommand}" />
+                            </VerticalStackLayout>
+                        </Border>
+
+                        <!-- ============ PAYROLL RULES ============ -->
+                        <Border Grid.Column="1" Style="{StaticResource Card}" VerticalOptions="Start">
+                            <VerticalStackLayout Spacing="12">
+
+                                <VerticalStackLayout Spacing="1">
+                                    <Label Style="{StaticResource SectionHeading}" Text="Payroll rules" />
+                                    <Label Style="{StaticResource Faint}"
+                                           Text="How a salary becomes a rate, how the calendar is laid out, and where a month's contributions are taken." />
+                                </VerticalStackLayout>
+
+                                <VerticalStackLayout Spacing="0">
+                                    <Label Style="{StaticResource FieldLabel}" Text="PAY FREQUENCY" />
+                                    <Border Style="{StaticResource FieldFrame}">
+                                        <Picker ItemsSource="{Binding FrequencyOptions}"
+                                                SelectedItem="{Binding SettingsFrequency}"
+                                                ItemDisplayBinding="{Binding Label, x:DataType=vm:EnumOption}" />
+                                    </Border>
+                                </VerticalStackLayout>
+
+                                <Grid ColumnDefinitions="*,*" ColumnSpacing="10">
+                                    <controls:FormEntry Grid.Column="0"
+                                                        Label="WORKING-DAYS FACTOR"
+                                                        Text="{Binding SettingsFactor}"
+                                                        Placeholder="313" />
+
+                                    <controls:FormEntry Grid.Column="1"
+                                                        Label="STANDARD HOURS A DAY"
+                                                        Text="{Binding SettingsHoursPerDay}"
+                                                        Placeholder="8" />
+                                </Grid>
+
+                                <Label Style="{StaticResource Faint}"
+                                       Text="313 is 365 days less 52 Sundays, and means a monthly salary already covers regular holidays; 261 counts weekdays only; 365 counts every day. Art. 83 fixes the normal day at eight hours — beyond that is overtime, not a longer day." />
+
+                                <!-- The arithmetic, recomputed as it is typed, so a
+                                     factor that reprices the company is visible
+                                     before it is saved. -->
+                                <Border Style="{StaticResource Pill}"
+                                        Padding="10,7"
+                                        HorizontalOptions="Fill"
+                                        BackgroundColor="{AppThemeBinding Light={StaticResource BrandSoftLight}, Dark={StaticResource BrandSoftDark}}">
+                                    <Label FontSize="11.5"
+                                           TextColor="{StaticResource Brand}"
+                                           Text="{Binding RatePreview}" />
+                                </Border>
+
+                                <Grid ColumnDefinitions="*,*" ColumnSpacing="10">
+                                    <controls:FormEntry Grid.Column="0"
+                                                        Label="CUT-OFF CLOSES (DAYS EARLY)"
+                                                        Text="{Binding SettingsCutOffLead}"
+                                                        Placeholder="5" />
+
+                                    <controls:FormEntry Grid.Column="1"
+                                                        Label="PAY DATE (DAYS AFTER)"
+                                                        Text="{Binding SettingsPayDateLag}"
+                                                        Placeholder="0" />
+                                </Grid>
+
+                                <VerticalStackLayout Spacing="0">
+                                    <Label Style="{StaticResource FieldLabel}" Text="WHERE A MONTH'S CONTRIBUTIONS ARE TAKEN" />
+                                    <Border Style="{StaticResource FieldFrame}">
+                                        <Picker ItemsSource="{Binding ContributionOptions}"
+                                                SelectedItem="{Binding SettingsContribution}"
+                                                ItemDisplayBinding="{Binding Label, x:DataType=vm:EnumOption}" />
+                                    </Border>
+                                </VerticalStackLayout>
+
+                                <Label Style="{StaticResource Faint}"
+                                       Text="SSS, PhilHealth and Pag-IBIG are all computed monthly. Whichever option is set, they sum to exactly one month across the month's runs — which is what keeps the remittance reconciling with what was deducted." />
+
+                                <Grid ColumnDefinitions="*,Auto" Margin="0,4,0,0">
+                                    <VerticalStackLayout Grid.Column="0" Spacing="1">
+                                        <Label Style="{StaticResource Body}" Text="Settle the year's tax on the final run" />
+                                        <Label Style="{StaticResource Faint}"
+                                               Text="RR 11-2018 §2.79(B)(5). The period table is an estimate applied twenty-four times; the year-end adjustment is the settlement. Turn off only if the company squares up outside payroll." />
+                                    </VerticalStackLayout>
+                                    <Switch Grid.Column="1"
+                                            IsToggled="{Binding SettingsAnnualiseTax}"
+                                            WidthRequest="46"
+                                            HorizontalOptions="End"
+                                            VerticalOptions="Center"
+                                            OnColor="{StaticResource Brand}" />
+                                </Grid>
+
+                                <Grid ColumnDefinitions="*,Auto">
+                                    <VerticalStackLayout Grid.Column="0" Spacing="1">
+                                        <Label Style="{StaticResource Body}" Text="Pay unworked regular holidays" />
+                                        <Label Style="{StaticResource Faint}"
+                                               Text="Art. 94, for daily-paid staff — conditioned on being present the preceding workday. Monthly-paid staff are already covered by the factor." />
+                                    </VerticalStackLayout>
+                                    <Switch Grid.Column="1"
+                                            IsToggled="{Binding SettingsPayUnworkedHoliday}"
+                                            WidthRequest="46"
+                                            HorizontalOptions="End"
+                                            VerticalOptions="Center"
+                                            OnColor="{StaticResource Brand}" />
+                                </Grid>
+
+                                <Grid ColumnDefinitions="*,Auto">
+                                    <VerticalStackLayout Grid.Column="0" Spacing="1">
+                                        <Label Style="{StaticResource Body}" Text="Flag a negative net pay for review" />
+                                        <Label Style="{StaticResource Faint}"
+                                               Text="FR-056. A run that would pay less than nothing is stopped for a human rather than truncated to zero, which would hide an over-deduction." />
+                                    </VerticalStackLayout>
+                                    <Switch Grid.Column="1"
+                                            IsToggled="{Binding SettingsFlagNegativeNet}"
+                                            WidthRequest="46"
+                                            HorizontalOptions="End"
+                                            VerticalOptions="Center"
+                                            OnColor="{StaticResource Brand}" />
+                                </Grid>
+
+                                <Button Style="{StaticResource PrimaryButton}"
+                                        Text="Save payroll rules"
+                                        HorizontalOptions="End"
+                                        Command="{Binding SaveSettingsCommand}" />
+                            </VerticalStackLayout>
+                        </Border>
+                    </Grid>
+                </ScrollView>
+            </Grid>
+        </Grid>
+
+        <!--
+            Lifted out of this view by MainPage at load time so the scrim covers
+            the whole window. See MainPage.ShowSectionAsync.
+        -->
+        <Grid x:Name="ModalLayer" IsVisible="{Binding IsAnyModalOpen}">
+
+        <!-- ================ PAY PERIOD FORM ================ -->
+        <controls:ModalHost IsOpen="{Binding IsPeriodFormOpen}"
+                            Title="{Binding PeriodFormTitle}"
+                            Subtitle="The days paid for, the attendance read, and the date the money lands"
+                            ModalWidth="520"
+                            PrimaryText="Save period"
+                            PrimaryCommand="{Binding SubmitPeriodCommand}"
+                            SecondaryCommand="{Binding ClosePeriodFormCommand}"
+                            DismissCommand="{Binding ClosePeriodFormCommand}"
+                            ErrorText="{Binding ModalError}">
+            <controls:ModalHost.Body>
+                <VerticalStackLayout Spacing="12">
+
+                    <Grid ColumnDefinitions="*,2*" ColumnSpacing="10">
+                        <controls:FormEntry Grid.Column="0"
+                                            Label="CODE"
+                                            Text="{Binding PeriodCode}"
+                                            Placeholder="2026-09-2" />
+
+                        <controls:FormEntry Grid.Column="1"
+                                            Label="NAME"
+                                            Text="{Binding PeriodName}"
+                                            Placeholder="September 2026 · 16–30" />
+                    </Grid>
+
+                    <Grid ColumnDefinitions="*,*" ColumnSpacing="10">
+                        <VerticalStackLayout Grid.Column="0" Spacing="0">
+                            <Label Style="{StaticResource FieldLabel}" Text="PERIOD STARTS" />
+                            <Border Style="{StaticResource FieldFrame}">
+                                <DatePicker Date="{Binding PeriodStart}" Format="dd MMM yyyy" />
+                            </Border>
+                        </VerticalStackLayout>
+
+                        <VerticalStackLayout Grid.Column="1" Spacing="0">
+                            <Label Style="{StaticResource FieldLabel}" Text="PERIOD ENDS" />
+                            <Border Style="{StaticResource FieldFrame}">
+                                <DatePicker Date="{Binding PeriodEnd}" Format="dd MMM yyyy" />
+                            </Border>
+                        </VerticalStackLayout>
+                    </Grid>
+
+                    <Grid ColumnDefinitions="*,*" ColumnSpacing="10">
+                        <VerticalStackLayout Grid.Column="0" Spacing="0">
+                            <Label Style="{StaticResource FieldLabel}" Text="CUT-OFF FROM" />
+                            <Border Style="{StaticResource FieldFrame}">
+                                <DatePicker Date="{Binding PeriodCutOffStart}" Format="dd MMM yyyy" />
+                            </Border>
+                        </VerticalStackLayout>
+
+                        <VerticalStackLayout Grid.Column="1" Spacing="0">
+                            <Label Style="{StaticResource FieldLabel}" Text="CUT-OFF TO" />
+                            <Border Style="{StaticResource FieldFrame}">
+                                <DatePicker Date="{Binding PeriodCutOffEnd}" Format="dd MMM yyyy" />
+                            </Border>
+                        </VerticalStackLayout>
+                    </Grid>
+
+                    <VerticalStackLayout Spacing="0">
+                        <Label Style="{StaticResource FieldLabel}" Text="PAY DATE" />
+                        <Border Style="{StaticResource FieldFrame}">
+                            <DatePicker Date="{Binding PeriodPayDate}" Format="ddd, dd MMM yyyy" />
+                        </Border>
+                    </VerticalStackLayout>
+
+                    <Label Style="{StaticResource Faint}"
+                           Text="The pay date decides which SSS schedule and which tax brackets the run reads, so a period paid in January uses January's tables even when it covers December." />
+
+                    <controls:FormEntry Label="REMARKS"
+                                        Text="{Binding PeriodRemarks}"
+                                        Placeholder="Optional" />
+
+                    <Border Style="{StaticResource Pill}"
+                            Padding="10,7"
+                            HorizontalOptions="Fill"
+                            BackgroundColor="{AppThemeBinding Light={StaticResource BrandSoftLight}, Dark={StaticResource BrandSoftDark}}">
+                        <Label FontSize="11.5"
+                               TextColor="{StaticResource Brand}"
+                               Text="{Binding PeriodPreview}" />
+                    </Border>
+                </VerticalStackLayout>
+            </controls:ModalHost.Body>
+        </controls:ModalHost>
+
+        <!-- ================ EARNING FORM ================ -->
+        <controls:ModalHost IsOpen="{Binding IsEarningFormOpen}"
+                            Title="{Binding EarningFormTitle}"
+                            Subtitle="A kind of money that adds to gross pay"
+                            ModalWidth="480"
+                            PrimaryText="Save earning"
+                            PrimaryCommand="{Binding SubmitEarningCommand}"
+                            SecondaryCommand="{Binding CloseEarningFormCommand}"
+                            DismissCommand="{Binding CloseEarningFormCommand}"
+                            ErrorText="{Binding ModalError}">
+            <controls:ModalHost.Body>
+                <VerticalStackLayout Spacing="12">
+
+                    <Border Style="{StaticResource Pill}"
+                            Padding="10,7"
+                            HorizontalOptions="Fill"
+                            IsVisible="{Binding EarningIsSystem}"
+                            BackgroundColor="{AppThemeBinding Light={StaticResource SurfaceAltLight}, Dark={StaticResource SurfaceAltDark}}">
+                        <Label Style="{StaticResource Faint}"
+                               Text="The payroll engine produces this line and finds it by code, so the code, category and method are fixed. The name and the tax treatment are yours to change." />
+                    </Border>
+
+                    <Grid ColumnDefinitions="*,2*" ColumnSpacing="10">
+                        <controls:FormEntry Grid.Column="0"
+                                            Label="CODE"
+                                            Text="{Binding EarningCode}"
+                                            IsFieldEnabled="{Binding EarningIsEditableShape}"
+                                            Placeholder="ALW_RICE" />
+
+                        <controls:FormEntry Grid.Column="1"
+                                            Label="NAME"
+                                            Text="{Binding EarningName}"
+                                            Placeholder="Rice allowance" />
+                    </Grid>
+
+                    <controls:FormEntry Label="DESCRIPTION"
+                                        Text="{Binding EarningDescription}"
+                                        Placeholder="What it is, and any cap that applies" />
+
+                    <Grid ColumnDefinitions="*,*" ColumnSpacing="10">
+                        <VerticalStackLayout Grid.Column="0" Spacing="0">
+                            <Label Style="{StaticResource FieldLabel}" Text="CATEGORY" />
+                            <Border Style="{StaticResource FieldFrame}">
+                                <Picker ItemsSource="{Binding CategoryOptions}"
+                                        SelectedItem="{Binding EarningCategoryOption}"
+                                        IsEnabled="{Binding EarningIsEditableShape}"
+                                        ItemDisplayBinding="{Binding Label, x:DataType=vm:EnumOption}" />
+                            </Border>
+                        </VerticalStackLayout>
+
+                        <VerticalStackLayout Grid.Column="1" Spacing="0">
+                            <Label Style="{StaticResource FieldLabel}" Text="COMPUTED AS" />
+                            <Border Style="{StaticResource FieldFrame}">
+                                <Picker ItemsSource="{Binding MethodOptions}"
+                                        SelectedItem="{Binding EarningMethod}"
+                                        IsEnabled="{Binding EarningIsEditableShape}"
+                                        ItemDisplayBinding="{Binding Label, x:DataType=vm:EnumOption}" />
+                            </Border>
+                        </VerticalStackLayout>
+                    </Grid>
+
+                    <controls:FormEntry Label="AMOUNT OR RATE"
+                                        Text="{Binding EarningAmount}"
+                                        Placeholder="Leave blank where the figure comes from attendance" />
+
+                    <Grid ColumnDefinitions="*,Auto" Margin="0,4,0,0">
+                        <VerticalStackLayout Grid.Column="0" Spacing="1">
+                            <Label Style="{StaticResource Body}" Text="Taxable" />
+                            <Label Style="{StaticResource Faint}"
+                                   Text="Taxable earnings enter the withholding base. A non-taxable one still appears on the payslip and in the reports." />
+                        </VerticalStackLayout>
+                        <Switch Grid.Column="1"
+                                IsToggled="{Binding EarningIsTaxable}"
+                                WidthRequest="46"
+                                HorizontalOptions="End"
+                                VerticalOptions="Center"
+                                OnColor="{StaticResource Brand}" />
+                    </Grid>
+
+                    <Grid ColumnDefinitions="*,Auto">
+                        <VerticalStackLayout Grid.Column="0" Spacing="1">
+                            <Label Style="{StaticResource Body}" Text="Counts towards SSS and Pag-IBIG" />
+                            <Label Style="{StaticResource Faint}"
+                                   Text="Added to monthly compensation before the schedules are read. PhilHealth is computed on basic salary alone and ignores this." />
+                        </VerticalStackLayout>
+                        <Switch Grid.Column="1"
+                                IsToggled="{Binding EarningInContributionBase}"
+                                WidthRequest="46"
+                                HorizontalOptions="End"
+                                VerticalOptions="Center"
+                                OnColor="{StaticResource Brand}" />
+                    </Grid>
+
+                    <Grid ColumnDefinitions="*,Auto">
+                        <VerticalStackLayout Grid.Column="0" Spacing="1">
+                            <Label Style="{StaticResource Body}" Text="Counts towards 13th month pay" />
+                            <Label Style="{StaticResource Faint}"
+                                   Text="PD 851 computes on basic salary. Overtime, night differential and allowances are excluded." />
+                        </VerticalStackLayout>
+                        <Switch Grid.Column="1"
+                                IsToggled="{Binding EarningInThirteenthMonth}"
+                                WidthRequest="46"
+                                HorizontalOptions="End"
+                                VerticalOptions="Center"
+                                OnColor="{StaticResource Brand}" />
+                    </Grid>
+
+                    <Grid ColumnDefinitions="*,Auto">
+                        <VerticalStackLayout Grid.Column="0" Spacing="1">
+                            <Label Style="{StaticResource Body}" Text="Paid every period" />
+                            <Label Style="{StaticResource Faint}"
+                                   Text="A recurring earning is applied without being asked for. A one-off is added on the run instead." />
+                        </VerticalStackLayout>
+                        <Switch Grid.Column="1"
+                                IsToggled="{Binding EarningIsRecurring}"
+                                WidthRequest="46"
+                                HorizontalOptions="End"
+                                VerticalOptions="Center"
+                                OnColor="{StaticResource Brand}" />
+                    </Grid>
+                </VerticalStackLayout>
+            </controls:ModalHost.Body>
+        </controls:ModalHost>
+
+        <!-- ================ DEDUCTION FORM ================ -->
+        <controls:ModalHost IsOpen="{Binding IsDeductionFormOpen}"
+                            Title="{Binding DeductionFormTitle}"
+                            Subtitle="A kind of money that comes off gross pay"
+                            ModalWidth="480"
+                            PrimaryText="Save deduction"
+                            PrimaryCommand="{Binding SubmitDeductionCommand}"
+                            SecondaryCommand="{Binding CloseDeductionFormCommand}"
+                            DismissCommand="{Binding CloseDeductionFormCommand}"
+                            ErrorText="{Binding ModalError}">
+            <controls:ModalHost.Body>
+                <VerticalStackLayout Spacing="12">
+
+                    <Border Style="{StaticResource Pill}"
+                            Padding="10,7"
+                            HorizontalOptions="Fill"
+                            IsVisible="{Binding DeductionIsSystem}"
+                            BackgroundColor="{AppThemeBinding Light={StaticResource SurfaceAltLight}, Dark={StaticResource SurfaceAltDark}}">
+                        <Label Style="{StaticResource Faint}"
+                               Text="A statutory deduction the payroll engine produces. Its code, category, method and tax treatment are fixed — moving a statutory share out of the tax base would under-withhold tax the employer is liable for." />
+                    </Border>
+
+                    <Grid ColumnDefinitions="*,2*" ColumnSpacing="10">
+                        <controls:FormEntry Grid.Column="0"
+                                            Label="CODE"
+                                            Text="{Binding DeductionCode}"
+                                            IsFieldEnabled="{Binding DeductionIsEditableShape}"
+                                            Placeholder="CO_LOAN" />
+
+                        <controls:FormEntry Grid.Column="1"
+                                            Label="NAME"
+                                            Text="{Binding DeductionName}"
+                                            Placeholder="Company loan" />
+                    </Grid>
+
+                    <controls:FormEntry Label="DESCRIPTION"
+                                        Text="{Binding DeductionDescription}"
+                                        Placeholder="What it is, and what authorises it" />
+
+                    <Grid ColumnDefinitions="*,*" ColumnSpacing="10">
+                        <VerticalStackLayout Grid.Column="0" Spacing="0">
+                            <Label Style="{StaticResource FieldLabel}" Text="CATEGORY" />
+                            <Border Style="{StaticResource FieldFrame}">
+                                <Picker ItemsSource="{Binding DeductionCategoryOptions}"
+                                        SelectedItem="{Binding DeductionCategoryOption}"
+                                        IsEnabled="{Binding DeductionIsEditableShape}"
+                                        ItemDisplayBinding="{Binding Label, x:DataType=vm:EnumOption}" />
+                            </Border>
+                        </VerticalStackLayout>
+
+                        <VerticalStackLayout Grid.Column="1" Spacing="0">
+                            <Label Style="{StaticResource FieldLabel}" Text="COMPUTED AS" />
+                            <Border Style="{StaticResource FieldFrame}">
+                                <Picker ItemsSource="{Binding MethodOptions}"
+                                        SelectedItem="{Binding DeductionMethod}"
+                                        IsEnabled="{Binding DeductionIsEditableShape}"
+                                        ItemDisplayBinding="{Binding Label, x:DataType=vm:EnumOption}" />
+                            </Border>
+                        </VerticalStackLayout>
+                    </Grid>
+
+                    <controls:FormEntry Label="AMOUNT OR RATE"
+                                        Text="{Binding DeductionAmount}"
+                                        Placeholder="Leave blank where the figure comes from a table" />
+
+                    <Grid ColumnDefinitions="*,Auto" Margin="0,4,0,0">
+                        <VerticalStackLayout Grid.Column="0" Spacing="1">
+                            <Label Style="{StaticResource Body}" Text="Reduces taxable income" />
+                            <Label Style="{StaticResource Faint}"
+                                   Text="True for the statutory employee shares, and for a union due where the company treats it that way. Setting it on the wrong row under-withholds tax." />
+                        </VerticalStackLayout>
+                        <Switch Grid.Column="1"
+                                IsToggled="{Binding DeductionReducesTax}"
+                                IsEnabled="{Binding DeductionIsEditableShape}"
+                                WidthRequest="46"
+                                HorizontalOptions="End"
+                                VerticalOptions="Center"
+                                OnColor="{StaticResource Brand}" />
+                    </Grid>
+
+                    <Grid ColumnDefinitions="*,Auto">
+                        <VerticalStackLayout Grid.Column="0" Spacing="1">
+                            <Label Style="{StaticResource Body}" Text="Carries an outstanding balance" />
+                            <Label Style="{StaticResource Faint}"
+                                   Text="An amortised deduction is decremented each period and stops when the balance reaches zero, rather than being taken indefinitely." />
+                        </VerticalStackLayout>
+                        <Switch Grid.Column="1"
+                                IsToggled="{Binding DeductionIsAmortised}"
+                                WidthRequest="46"
+                                HorizontalOptions="End"
+                                VerticalOptions="Center"
+                                OnColor="{StaticResource Brand}" />
+                    </Grid>
+                </VerticalStackLayout>
+            </controls:ModalHost.Body>
+        </controls:ModalHost>
+
+        <!-- ================ PREMIUM RATE FORM ================ -->
+        <controls:ModalHost IsOpen="{Binding IsPremiumFormOpen}"
+                            Title="{Binding PremiumFormTitle}"
+                            Subtitle="One cell of the DOLE premium matrix"
+                            ModalWidth="460"
+                            PrimaryText="Save multiplier"
+                            PrimaryCommand="{Binding SubmitPremiumCommand}"
+                            SecondaryCommand="{Binding ClosePremiumFormCommand}"
+                            DismissCommand="{Binding ClosePremiumFormCommand}"
+                            ErrorText="{Binding ModalError}">
+            <controls:ModalHost.Body>
+                <VerticalStackLayout Spacing="12">
+
+                    <Grid ColumnDefinitions="Auto,*" ColumnSpacing="10">
+                        <Border Grid.Column="0"
+                                Style="{StaticResource Pill}"
+                                VerticalOptions="Center"
+                                BackgroundColor="{AppThemeBinding Light={StaticResource BrandSoftLight}, Dark={StaticResource BrandSoftDark}}">
+                            <Label Text="{Binding PremiumCodeDisplay}"
+                                   FontSize="10.5"
+                                   FontAttributes="Bold"
+                                   TextColor="{StaticResource Brand}" />
+                        </Border>
+
+                        <Label Grid.Column="1"
+                               Style="{StaticResource Body}"
+                               VerticalOptions="Center"
+                               Text="{Binding PremiumConditionDisplay}" />
+                    </Grid>
+
+                    <controls:FormEntry Label="NAME"
+                                        Text="{Binding PremiumName}" />
+
+                    <controls:FormEntry Label="MULTIPLIER"
+                                        Text="{Binding PremiumMultiplier}"
+                                        Placeholder="1.25" />
+
+                    <VerticalStackLayout Spacing="0">
+                        <Label Style="{StaticResource FieldLabel}" Text="EFFECTIVE FROM" />
+                        <Border Style="{StaticResource FieldFrame}">
+                            <DatePicker Date="{Binding PremiumEffectiveFrom}" Format="dd MMM yyyy" />
+                        </Border>
+                    </VerticalStackLayout>
+
+                    <Border Style="{StaticResource Pill}"
+                            Padding="10,7"
+                            HorizontalOptions="Fill"
+                            IsVisible="{Binding PremiumWasInForce}"
+                            BackgroundColor="{AppThemeBinding Light={StaticResource WarningSoftLight}, Dark={StaticResource WarningSoftDark}}">
+                        <Label FontSize="11.5"
+                               TextColor="{StaticResource Warning}"
+                               Text="This rate has already been in force and may have priced payslips. Changing the multiplier adds a new row from the date above and keeps the old one, so runs before that date are unaffected." />
+                    </Border>
+
+                    <controls:FormEntry Label="NOTE"
+                                        Text="{Binding PremiumDescription}"
+                                        Placeholder="What authorises the rate" />
+                </VerticalStackLayout>
+            </controls:ModalHost.Body>
+        </controls:ModalHost>
+
+        <!-- ================ PHILHEALTH FORM ================ -->
+        <controls:ModalHost IsOpen="{Binding IsPhilHealthFormOpen}"
+                            Title="{Binding PhilHealthFormTitle}"
+                            Subtitle="Superseding the schedule; the current one is kept"
+                            ModalWidth="460"
+                            PrimaryText="Save schedule"
+                            PrimaryCommand="{Binding SubmitPhilHealthCommand}"
+                            SecondaryCommand="{Binding ClosePhilHealthFormCommand}"
+                            DismissCommand="{Binding ClosePhilHealthFormCommand}"
+                            ErrorText="{Binding ModalError}">
+            <controls:ModalHost.Body>
+                <VerticalStackLayout Spacing="12">
+
+                    <controls:FormEntry Label="PREMIUM RATE (% OF BASIC SALARY)"
+                                        Text="{Binding PhilHealthRateText}"
+                                        Placeholder="5" />
+
+                    <Grid ColumnDefinitions="*,*" ColumnSpacing="10">
+                        <controls:FormEntry Grid.Column="0"
+                                            Label="SALARY FLOOR"
+                                            Text="{Binding PhilHealthFloor}"
+                                            Placeholder="10000" />
+
+                        <controls:FormEntry Grid.Column="1"
+                                            Label="SALARY CEILING"
+                                            Text="{Binding PhilHealthCeiling}"
+                                            Placeholder="100000" />
+                    </Grid>
+
+                    <VerticalStackLayout Spacing="0">
+                        <Label Style="{StaticResource FieldLabel}" Text="EFFECTIVE FROM" />
+                        <Border Style="{StaticResource FieldFrame}">
+                            <DatePicker Date="{Binding PhilHealthEffectiveFrom}" Format="dd MMM yyyy" />
+                        </Border>
+                    </VerticalStackLayout>
+
+                    <controls:FormEntry Label="CIRCULAR OR NOTE"
+                                        Text="{Binding PhilHealthRemarks}"
+                                        Placeholder="Which issuance this comes from" />
+
+                    <Label Style="{StaticResource Faint}"
+                           Text="A schedule is never edited once it is in force — it is superseded from a later date, so a payslip computed under the old premium can still be explained." />
+                </VerticalStackLayout>
+            </controls:ModalHost.Body>
+        </controls:ModalHost>
+
+        <!-- ================ PAG-IBIG FORM ================ -->
+        <controls:ModalHost IsOpen="{Binding IsPagIbigFormOpen}"
+                            Title="{Binding PagIbigFormTitle}"
+                            Subtitle="Superseding the schedule; the current one is kept"
+                            ModalWidth="480"
+                            PrimaryText="Save schedule"
+                            PrimaryCommand="{Binding SubmitPagIbigCommand}"
+                            SecondaryCommand="{Binding ClosePagIbigFormCommand}"
+                            DismissCommand="{Binding ClosePagIbigFormCommand}"
+                            ErrorText="{Binding ModalError}">
+            <controls:ModalHost.Body>
+                <VerticalStackLayout Spacing="12">
+
+                    <controls:FormEntry Label="LOWER-RATE THRESHOLD"
+                                        Text="{Binding PagIbigThreshold}"
+                                        Placeholder="1500" />
+
+                    <Grid ColumnDefinitions="*,*" ColumnSpacing="10">
+                        <controls:FormEntry Grid.Column="0"
+                                            Label="EMPLOYEE % AT OR BELOW"
+                                            Text="{Binding PagIbigEmployeeLow}"
+                                            Placeholder="1" />
+
+                        <controls:FormEntry Grid.Column="1"
+                                            Label="EMPLOYEE % ABOVE"
+                                            Text="{Binding PagIbigEmployeeHigh}"
+                                            Placeholder="2" />
+                    </Grid>
+
+                    <Grid ColumnDefinitions="*,*" ColumnSpacing="10">
+                        <controls:FormEntry Grid.Column="0"
+                                            Label="EMPLOYER %"
+                                            Text="{Binding PagIbigEmployer}"
+                                            Placeholder="2" />
+
+                        <controls:FormEntry Grid.Column="1"
+                                            Label="FUND SALARY CAP"
+                                            Text="{Binding PagIbigCap}"
+                                            Placeholder="10000" />
+                    </Grid>
+
+                    <VerticalStackLayout Spacing="0">
+                        <Label Style="{StaticResource FieldLabel}" Text="EFFECTIVE FROM" />
+                        <Border Style="{StaticResource FieldFrame}">
+                            <DatePicker Date="{Binding PagIbigEffectiveFrom}" Format="dd MMM yyyy" />
+                        </Border>
+                    </VerticalStackLayout>
+
+                    <controls:FormEntry Label="CIRCULAR OR NOTE"
+                                        Text="{Binding PagIbigRemarks}"
+                                        Placeholder="Which issuance this comes from" />
+                </VerticalStackLayout>
+            </controls:ModalHost.Body>
+        </controls:ModalHost>
+
+        <!-- ================ TAX BAND FORM ================ -->
+        <controls:ModalHost IsOpen="{Binding IsTaxFormOpen}"
+                            Title="{Binding TaxFormTitle}"
+                            Subtitle="One band of the withholding table"
+                            ModalWidth="460"
+                            PrimaryText="Save band"
+                            PrimaryCommand="{Binding SubmitTaxBandCommand}"
+                            SecondaryCommand="{Binding CloseTaxFormCommand}"
+                            DismissCommand="{Binding CloseTaxFormCommand}"
+                            ErrorText="{Binding ModalError}">
+            <controls:ModalHost.Body>
+                <VerticalStackLayout Spacing="12">
+
+                    <Grid ColumnDefinitions="*,*" ColumnSpacing="10">
+                        <controls:FormEntry Grid.Column="0"
+                                            Label="FROM"
+                                            Text="{Binding TaxLowerLimit}" />
+
+                        <controls:FormEntry Grid.Column="1"
+                                            Label="TO"
+                                            Text="{Binding TaxUpperLimit}"
+                                            Placeholder="Blank for the top band" />
+                    </Grid>
+
+                    <Grid ColumnDefinitions="*,*" ColumnSpacing="10">
+                        <controls:FormEntry Grid.Column="0"
+                                            Label="BASE TAX"
+                                            Text="{Binding TaxBaseAmount}" />
+
+                        <controls:FormEntry Grid.Column="1"
+                                            Label="% ON THE EXCESS"
+                                            Text="{Binding TaxRate}" />
+                    </Grid>
+
+                    <VerticalStackLayout Spacing="0">
+                        <Label Style="{StaticResource FieldLabel}" Text="EFFECTIVE FROM" />
+                        <Border Style="{StaticResource FieldFrame}">
+                            <DatePicker Date="{Binding TaxEffectiveFrom}" Format="dd MMM yyyy" />
+                        </Border>
+                    </VerticalStackLayout>
+
+                    <Label Style="{StaticResource Faint}"
+                           Text="The base tax is the tax due at the bottom of the band — it should equal the tax at the top of the band below, or the table takes a step and the withholding jumps." />
+
+                    <Border Style="{StaticResource Pill}"
+                            Padding="10,7"
+                            HorizontalOptions="Fill"
+                            IsVisible="{Binding TaxWasInForce}"
+                            BackgroundColor="{AppThemeBinding Light={StaticResource WarningSoftLight}, Dark={StaticResource WarningSoftDark}}">
+                        <Label FontSize="11.5"
+                               TextColor="{StaticResource Warning}"
+                               Text="This table is in force and may have withheld tax already. Give the change a later effective date rather than editing what history was computed from." />
+                    </Border>
+                </VerticalStackLayout>
+            </controls:ModalHost.Body>
+        </controls:ModalHost>
+
+        <!-- ================ CONFIRMATION ================ -->
+        <controls:ModalHost IsOpen="{Binding IsConfirmOpen}"
+                            Title="{Binding ConfirmTitle}"
+                            ModalWidth="460"
+                            PrimaryText="{Binding ConfirmAction}"
+                            PrimaryCommand="{Binding SubmitConfirmCommand}"
+                            SecondaryCommand="{Binding CloseConfirmCommand}"
+                            DismissCommand="{Binding CloseConfirmCommand}"
+                            IsDestructive="{Binding IsConfirmDestructive}"
+                            ErrorText="{Binding ModalError}">
+            <controls:ModalHost.Body>
+                <Label Style="{StaticResource Body}" Text="{Binding ConfirmMessage}" />
+            </controls:ModalHost.Body>
+        </controls:ModalHost>
+
+        </Grid>
+    </Grid>
+
+</ContentView>

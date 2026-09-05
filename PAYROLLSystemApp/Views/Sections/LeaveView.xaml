@@ -1,0 +1,767 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentView xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:vm="clr-namespace:PAYROLLSystemApp.ViewModels"
+             xmlns:controls="clr-namespace:PAYROLLSystemApp.Views.Controls"
+             x:Class="PAYROLLSystemApp.Views.Sections.LeaveView"
+             x:DataType="vm:LeaveViewModel">
+
+    <Grid x:Name="RootGrid">
+
+        <Grid Padding="20">
+
+            <!-- FR-002: the section re-checks the permission on load. -->
+            <Border Style="{StaticResource Card}"
+                    IsVisible="{Binding IsDenied}"
+                    Padding="28"
+                    VerticalOptions="Center"
+                    HorizontalOptions="Center">
+                <VerticalStackLayout Spacing="4">
+                    <Label Style="{StaticResource SectionHeading}" Text="Access denied" HorizontalTextAlignment="Center" />
+                    <Label Style="{StaticResource Muted}" Text="You do not have permission to manage leave." />
+                </VerticalStackLayout>
+            </Border>
+
+            <Grid IsVisible="{Binding IsGranted}" RowDefinitions="Auto,Auto,*" RowSpacing="10">
+
+                <!-- ============ PANEL SWITCH ============
+                     The queue is the daily work; the balances answer the
+                     question every filing raises; the types decide what a
+                     balance means. -->
+                <Grid Grid.Row="0" ColumnDefinitions="Auto,*,Auto,Auto,Auto,Auto" ColumnSpacing="8">
+
+                    <HorizontalStackLayout Grid.Column="0" Spacing="4">
+
+                        <Grid RowDefinitions="Auto,2">
+                            <Button Grid.Row="0"
+                                    Style="{StaticResource GhostButton}"
+                                    Text="Requests"
+                                    Command="{Binding ShowRequestsCommand}" />
+                            <BoxView Grid.Row="1"
+                                     Color="{StaticResource Brand}"
+                                     IsVisible="{Binding IsRequests}" />
+                        </Grid>
+
+                        <Grid RowDefinitions="Auto,2">
+                            <Button Grid.Row="0"
+                                    Style="{StaticResource GhostButton}"
+                                    Text="Balances"
+                                    Command="{Binding ShowBalancesCommand}" />
+                            <BoxView Grid.Row="1"
+                                     Color="{StaticResource Brand}"
+                                     IsVisible="{Binding IsBalances}" />
+                        </Grid>
+
+                        <Grid RowDefinitions="Auto,2">
+                            <Button Grid.Row="0"
+                                    Style="{StaticResource GhostButton}"
+                                    Text="Leave types"
+                                    Command="{Binding ShowTypesCommand}" />
+                            <BoxView Grid.Row="1"
+                                     Color="{StaticResource Brand}"
+                                     IsVisible="{Binding IsTypes}" />
+                        </Grid>
+                    </HorizontalStackLayout>
+
+                    <!-- The year governs all three panels, so it sits above them
+                         rather than inside any one of them. -->
+                    <Button Grid.Column="2"
+                            Style="{StaticResource SecondaryButton}"
+                            Text="◀"
+                            WidthRequest="36"
+                            VerticalOptions="Center"
+                            Command="{Binding PreviousYearCommand}" />
+
+                    <Label Grid.Column="3"
+                           Style="{StaticResource SectionHeading}"
+                           VerticalOptions="Center"
+                           WidthRequest="56"
+                           HorizontalTextAlignment="Center"
+                           Text="{Binding YearDisplay}" />
+
+                    <Button Grid.Column="4"
+                            Style="{StaticResource SecondaryButton}"
+                            Text="▶"
+                            WidthRequest="36"
+                            VerticalOptions="Center"
+                            Command="{Binding NextYearCommand}" />
+
+                    <Button Grid.Column="5"
+                            Style="{StaticResource SecondaryButton}"
+                            Text="Refresh"
+                            VerticalOptions="Center"
+                            Command="{Binding RefreshCommand}" />
+                </Grid>
+
+                <!-- Inline result banner (NFR-023) -->
+                <Label Grid.Row="1"
+                       FontSize="12"
+                       TextColor="{StaticResource Success}"
+                       Text="{Binding StatusMessage}"
+                       IsVisible="{Binding HasStatus}" />
+
+                <Label Grid.Row="1"
+                       Style="{StaticResource ErrorText}"
+                       Text="{Binding ErrorMessage}"
+                       IsVisible="{Binding HasError}" />
+
+                <!-- ==================================================== -->
+                <!-- ==================  THE QUEUE  ===================== -->
+                <!-- ==================================================== -->
+                <Border Grid.Row="2"
+                        Style="{StaticResource Card}"
+                        Padding="0"
+                        IsVisible="{Binding IsRequests}">
+
+                    <Grid RowDefinitions="Auto,Auto,Auto,Auto,*">
+
+                        <Grid Grid.Row="0" ColumnDefinitions="Auto,*,Auto" ColumnSpacing="8" Padding="16,12">
+
+                            <Border Grid.Column="0" Style="{StaticResource FieldFrame}">
+                                <Picker ItemsSource="{Binding StatusFilters}"
+                                        SelectedItem="{Binding SelectedStatusFilter}"
+                                        ItemDisplayBinding="{Binding Display, x:DataType=vm:LeaveStatusOption}"
+                                        WidthRequest="210" />
+                            </Border>
+
+                            <Button Grid.Column="2"
+                                    Style="{StaticResource PrimaryButton}"
+                                    Text="+  File leave"
+                                    Command="{Binding OpenFileCommand}" />
+                        </Grid>
+
+                        <HorizontalStackLayout Grid.Row="1" Margin="16,0,16,10" Spacing="8">
+                            <Label Style="{StaticResource Faint}" Text="{Binding RequestSummary}" />
+                        </HorizontalStackLayout>
+
+                        <BoxView Grid.Row="2" Style="{StaticResource Divider}" />
+
+                        <Grid Grid.Row="3"
+                              ColumnDefinitions="2*,Auto,Auto,Auto,Auto"
+                              ColumnSpacing="10"
+                              Padding="16,8"
+                              BackgroundColor="{AppThemeBinding Light={StaticResource SurfaceAltLight}, Dark={StaticResource SurfaceAltDark}}">
+                            <Label Grid.Column="0" Style="{StaticResource TableHeader}" Text="EMPLOYEE" />
+                            <Label Grid.Column="1" Style="{StaticResource TableHeader}" Text="LEAVE TYPE" WidthRequest="170" />
+                            <Label Grid.Column="2" Style="{StaticResource TableHeader}" Text="DATES"      WidthRequest="190" />
+                            <Label Grid.Column="3" Style="{StaticResource TableHeader}" Text="DAYS"       WidthRequest="80" />
+                            <Label Grid.Column="4" Style="{StaticResource TableHeader}" Text="STATUS"     WidthRequest="196" />
+                        </Grid>
+
+                        <Grid Grid.Row="4">
+                            <CollectionView ItemsSource="{Binding Requests}" SelectionMode="None">
+                                <CollectionView.ItemTemplate>
+                                    <DataTemplate x:DataType="vm:LeaveRequestRow">
+                                        <Grid ColumnDefinitions="2*,Auto,Auto,Auto,Auto"
+                                              ColumnSpacing="10"
+                                              Padding="16,9">
+
+                                            <VerticalStackLayout Grid.Column="0" Spacing="0" VerticalOptions="Center">
+                                                <Label Text="{Binding EmployeeName}"
+                                                       FontSize="12.5"
+                                                       FontAttributes="Bold"
+                                                       LineBreakMode="TailTruncation"
+                                                       TextColor="{AppThemeBinding Light={StaticResource TextLight}, Dark={StaticResource TextDark}}" />
+                                                <Label Style="{StaticResource Faint}"
+                                                       LineBreakMode="TailTruncation"
+                                                       Text="{Binding Detail}" />
+                                            </VerticalStackLayout>
+
+                                            <Label Grid.Column="1" Style="{StaticResource Body}" WidthRequest="170"
+                                                   VerticalOptions="Center" LineBreakMode="TailTruncation"
+                                                   Text="{Binding TypeName}" />
+                                            <Label Grid.Column="2" Style="{StaticResource Muted}" WidthRequest="190"
+                                                   VerticalOptions="Center" Text="{Binding PeriodDisplay}" />
+                                            <Label Grid.Column="3" Style="{StaticResource Body}" WidthRequest="80"
+                                                   VerticalOptions="Center" Text="{Binding DaysDisplay}" />
+
+                                            <HorizontalStackLayout Grid.Column="4"
+                                                                   Spacing="6"
+                                                                   WidthRequest="196"
+                                                                   VerticalOptions="Center">
+                                                <Border Style="{StaticResource Pill}" VerticalOptions="Center">
+                                                    <Label Text="{Binding StatusDisplay}"
+                                                           FontSize="10.5"
+                                                           FontAttributes="Bold"
+                                                           TextColor="{Binding StatusColor}" />
+                                                </Border>
+
+                                                <!-- FR-031: only a pending filing can be decided. -->
+                                                <Button Style="{StaticResource RowAction}"
+                                                        Text="Decide"
+                                                        IsVisible="{Binding IsPending}"
+                                                        Command="{Binding Source={RelativeSource AncestorType={x:Type vm:LeaveViewModel}}, Path=OpenDecisionCommand}"
+                                                        CommandParameter="{Binding .}" />
+
+                                                <Button Style="{StaticResource RowAction}"
+                                                        Text="Cancel"
+                                                        IsVisible="{Binding IsCancellable}"
+                                                        Command="{Binding Source={RelativeSource AncestorType={x:Type vm:LeaveViewModel}}, Path=OpenCancelCommand}"
+                                                        CommandParameter="{Binding .}" />
+                                            </HorizontalStackLayout>
+
+                                            <BoxView Grid.ColumnSpan="5" VerticalOptions="End" Style="{StaticResource Divider}" />
+                                        </Grid>
+                                    </DataTemplate>
+                                </CollectionView.ItemTemplate>
+                            </CollectionView>
+
+                            <VerticalStackLayout IsVisible="{Binding HasNoRequests}"
+                                                 Spacing="4"
+                                                 Padding="24"
+                                                 VerticalOptions="Center">
+                                <Label Style="{StaticResource SectionHeading}"
+                                       Text="Nothing to show"
+                                       HorizontalTextAlignment="Center" />
+                                <Label Style="{StaticResource Muted}"
+                                       HorizontalTextAlignment="Center"
+                                       Text="No leave matches that filter for this year." />
+                            </VerticalStackLayout>
+                        </Grid>
+                    </Grid>
+                </Border>
+
+                <!-- ==================================================== -->
+                <!-- ==================  BALANCES  ====================== -->
+                <!-- ==================================================== -->
+                <Border Grid.Row="2"
+                        Style="{StaticResource Card}"
+                        Padding="0"
+                        IsVisible="{Binding IsBalances}">
+
+                    <Grid RowDefinitions="Auto,Auto,Auto,Auto,*">
+
+                        <Grid Grid.Row="0" ColumnDefinitions="Auto,*,Auto" ColumnSpacing="8" Padding="16,12">
+
+                            <Border Grid.Column="0" Style="{StaticResource FieldFrame}">
+                                <Picker ItemsSource="{Binding EmployeeOptions}"
+                                        SelectedItem="{Binding SelectedEmployee}"
+                                        ItemDisplayBinding="{Binding Display, x:DataType=vm:EmployeeOption}"
+                                        WidthRequest="300" />
+                            </Border>
+
+                            <Button Grid.Column="2"
+                                    Style="{StaticResource PrimaryButton}"
+                                    Text="+  File leave"
+                                    Command="{Binding OpenFileCommand}" />
+                        </Grid>
+
+                        <HorizontalStackLayout Grid.Row="1" Margin="16,0,16,10" Spacing="8">
+                            <Label Style="{StaticResource Faint}" Text="{Binding BalanceSummary}" />
+                        </HorizontalStackLayout>
+
+                        <BoxView Grid.Row="2" Style="{StaticResource Divider}" />
+
+                        <Grid Grid.Row="3"
+                              ColumnDefinitions="*,Auto,Auto,Auto,Auto"
+                              ColumnSpacing="10"
+                              Padding="16,8"
+                              BackgroundColor="{AppThemeBinding Light={StaticResource SurfaceAltLight}, Dark={StaticResource SurfaceAltDark}}">
+                            <Label Grid.Column="0" Style="{StaticResource TableHeader}" Text="LEAVE TYPE" />
+                            <Label Grid.Column="1" Style="{StaticResource TableHeader}" Text="GRANTED"   WidthRequest="90" />
+                            <Label Grid.Column="2" Style="{StaticResource TableHeader}" Text="USED"      WidthRequest="90" />
+                            <Label Grid.Column="3" Style="{StaticResource TableHeader}" Text="REMAINING" WidthRequest="100" />
+                            <Label Grid.Column="4" Style="{StaticResource TableHeader}" Text="ACTIONS"   WidthRequest="90" />
+                        </Grid>
+
+                        <Grid Grid.Row="4">
+                            <CollectionView ItemsSource="{Binding Balances}" SelectionMode="None">
+                                <CollectionView.ItemTemplate>
+                                    <DataTemplate x:DataType="vm:LeaveBalanceRow">
+                                        <Grid ColumnDefinitions="*,Auto,Auto,Auto,Auto"
+                                              ColumnSpacing="10"
+                                              Padding="16,9">
+
+                                            <VerticalStackLayout Grid.Column="0" Spacing="0" VerticalOptions="Center">
+                                                <Label Text="{Binding TypeName}"
+                                                       FontSize="12.5"
+                                                       FontAttributes="Bold"
+                                                       LineBreakMode="TailTruncation"
+                                                       TextColor="{AppThemeBinding Light={StaticResource TextLight}, Dark={StaticResource TextDark}}" />
+                                                <Label Style="{StaticResource Faint}"
+                                                       LineBreakMode="TailTruncation"
+                                                       Text="{Binding Detail}" />
+                                            </VerticalStackLayout>
+
+                                            <Label Grid.Column="1" Style="{StaticResource Muted}" WidthRequest="90"
+                                                   VerticalOptions="Center" Text="{Binding TotalDisplay}" />
+                                            <Label Grid.Column="2" Style="{StaticResource Muted}" WidthRequest="90"
+                                                   VerticalOptions="Center" Text="{Binding UsedDisplay}" />
+
+                                            <Label Grid.Column="3"
+                                                   FontSize="15"
+                                                   FontAttributes="Bold"
+                                                   WidthRequest="100"
+                                                   VerticalOptions="Center"
+                                                   TextColor="{Binding RemainingColor}"
+                                                   Text="{Binding RemainingDisplay}" />
+
+                                            <HorizontalStackLayout Grid.Column="4"
+                                                                   Spacing="6"
+                                                                   WidthRequest="90"
+                                                                   VerticalOptions="Center">
+                                                <Button Style="{StaticResource RowAction}"
+                                                        Text="Adjust"
+                                                        Command="{Binding Source={RelativeSource AncestorType={x:Type vm:LeaveViewModel}}, Path=OpenAdjustCommand}"
+                                                        CommandParameter="{Binding .}" />
+                                            </HorizontalStackLayout>
+
+                                            <BoxView Grid.ColumnSpan="5" VerticalOptions="End" Style="{StaticResource Divider}" />
+                                        </Grid>
+                                    </DataTemplate>
+                                </CollectionView.ItemTemplate>
+                            </CollectionView>
+
+                            <VerticalStackLayout IsVisible="{Binding HasNoBalances}"
+                                                 Spacing="4"
+                                                 Padding="24"
+                                                 VerticalOptions="Center">
+                                <Label Style="{StaticResource SectionHeading}"
+                                       Text="No leave credits"
+                                       HorizontalTextAlignment="Center" />
+                                <Label Style="{StaticResource Muted}"
+                                       HorizontalTextAlignment="Center"
+                                       Text="Choose an employee, or add a leave type first." />
+                            </VerticalStackLayout>
+                        </Grid>
+                    </Grid>
+                </Border>
+
+                <!-- ==================================================== -->
+                <!-- ================  LEAVE TYPES  ===================== -->
+                <!-- ==================================================== -->
+                <Border Grid.Row="2"
+                        Style="{StaticResource Card}"
+                        Padding="0"
+                        IsVisible="{Binding IsTypes}">
+
+                    <Grid RowDefinitions="Auto,Auto,Auto,Auto,*">
+
+                        <Grid Grid.Row="0" ColumnDefinitions="Auto,Auto,*,Auto" ColumnSpacing="8" Padding="16,12">
+
+                            <Label Grid.Column="0"
+                                   Style="{StaticResource Muted}"
+                                   VerticalOptions="Center"
+                                   LineBreakMode="NoWrap"
+                                   Text="Show retired" />
+
+                            <Switch Grid.Column="1"
+                                    IsToggled="{Binding ShowRetired}"
+                                    WidthRequest="46"
+                                    VerticalOptions="Center"
+                                    OnColor="{StaticResource Brand}" />
+
+                            <Button Grid.Column="3"
+                                    Style="{StaticResource PrimaryButton}"
+                                    Text="+  New leave type"
+                                    Command="{Binding OpenCreateTypeCommand}" />
+                        </Grid>
+
+                        <HorizontalStackLayout Grid.Row="1" Margin="16,0,16,10" Spacing="8">
+                            <Label Style="{StaticResource Faint}" Text="{Binding TypeSummary}" />
+                            <Label Style="{StaticResource Faint}" Text="·" />
+                            <Label Style="{StaticResource Faint}"
+                                   Text="Credits and the paid flag are policy, not law — only the statutory minima are fixed." />
+                        </HorizontalStackLayout>
+
+                        <BoxView Grid.Row="2" Style="{StaticResource Divider}" />
+
+                        <Grid Grid.Row="3"
+                              ColumnDefinitions="*,Auto,Auto,Auto"
+                              ColumnSpacing="10"
+                              Padding="16,8"
+                              BackgroundColor="{AppThemeBinding Light={StaticResource SurfaceAltLight}, Dark={StaticResource SurfaceAltDark}}">
+                            <Label Grid.Column="0" Style="{StaticResource TableHeader}" Text="LEAVE TYPE" />
+                            <Label Grid.Column="1" Style="{StaticResource TableHeader}" Text="ANNUAL CREDITS" WidthRequest="200" />
+                            <Label Grid.Column="2" Style="{StaticResource TableHeader}" Text="TREATMENT" WidthRequest="90" />
+                            <Label Grid.Column="3" Style="{StaticResource TableHeader}" Text="ACTIONS" WidthRequest="132" />
+                        </Grid>
+
+                        <Grid Grid.Row="4">
+                            <CollectionView ItemsSource="{Binding Types}" SelectionMode="None">
+                                <CollectionView.ItemTemplate>
+                                    <DataTemplate x:DataType="vm:LeaveTypeRow">
+                                        <Grid ColumnDefinitions="*,Auto,Auto,Auto" ColumnSpacing="10" Padding="16,9">
+
+                                            <VerticalStackLayout Grid.Column="0" Spacing="0" VerticalOptions="Center">
+                                                <Label Text="{Binding Name}"
+                                                       FontSize="12.5"
+                                                       FontAttributes="Bold"
+                                                       LineBreakMode="TailTruncation"
+                                                       TextColor="{AppThemeBinding Light={StaticResource TextLight}, Dark={StaticResource TextDark}}" />
+                                                <Label Style="{StaticResource Faint}"
+                                                       LineBreakMode="TailTruncation"
+                                                       Text="{Binding Detail}" />
+                                            </VerticalStackLayout>
+
+                                            <Label Grid.Column="1" Style="{StaticResource Muted}" WidthRequest="200"
+                                                   VerticalOptions="Center" LineBreakMode="TailTruncation"
+                                                   Text="{Binding CreditsDisplay}" />
+
+                                            <Label Grid.Column="2"
+                                                   FontSize="11.5"
+                                                   FontAttributes="Bold"
+                                                   WidthRequest="90"
+                                                   VerticalOptions="Center"
+                                                   TextColor="{Binding PayColor}"
+                                                   Text="{Binding PayDisplay}" />
+
+                                            <HorizontalStackLayout Grid.Column="3"
+                                                                   Spacing="6"
+                                                                   WidthRequest="132"
+                                                                   VerticalOptions="Center">
+                                                <Button Style="{StaticResource RowAction}"
+                                                        Text="Edit"
+                                                        Command="{Binding Source={RelativeSource AncestorType={x:Type vm:LeaveViewModel}}, Path=OpenEditTypeCommand}"
+                                                        CommandParameter="{Binding .}" />
+                                                <Button Style="{StaticResource RowAction}"
+                                                        Text="{Binding ActionText}"
+                                                        Command="{Binding Source={RelativeSource AncestorType={x:Type vm:LeaveViewModel}}, Path=OpenToggleTypeCommand}"
+                                                        CommandParameter="{Binding .}" />
+                                            </HorizontalStackLayout>
+
+                                            <BoxView Grid.ColumnSpan="4" VerticalOptions="End" Style="{StaticResource Divider}" />
+                                        </Grid>
+                                    </DataTemplate>
+                                </CollectionView.ItemTemplate>
+                            </CollectionView>
+
+                            <VerticalStackLayout IsVisible="{Binding HasNoTypes}"
+                                                 Spacing="4"
+                                                 Padding="24"
+                                                 VerticalOptions="Center">
+                                <Label Style="{StaticResource SectionHeading}"
+                                       Text="No leave types"
+                                       HorizontalTextAlignment="Center" />
+                                <Label Style="{StaticResource Muted}"
+                                       HorizontalTextAlignment="Center"
+                                       Text="Add one, or switch on Show retired." />
+                            </VerticalStackLayout>
+                        </Grid>
+                    </Grid>
+                </Border>
+            </Grid>
+        </Grid>
+
+        <!--
+            Lifted out of this view by MainPage at load time so the scrim covers
+            the whole window. See MainPage.ShowSectionAsync.
+        -->
+        <Grid x:Name="ModalLayer" IsVisible="{Binding IsAnyModalOpen}">
+
+            <!-- ================ FILE LEAVE (FR-031) ================ -->
+            <controls:ModalHost IsOpen="{Binding IsFileOpen}"
+                                Title="File leave"
+                                Subtitle="Working days only — rest days and holidays are not counted"
+                                ModalWidth="520"
+                                PrimaryText="File request"
+                                PrimaryCommand="{Binding SubmitFileCommand}"
+                                SecondaryCommand="{Binding CloseFileCommand}"
+                                DismissCommand="{Binding CloseFileCommand}"
+                                ErrorText="{Binding ModalError}">
+                <controls:ModalHost.Body>
+                    <VerticalStackLayout Spacing="12">
+
+                        <VerticalStackLayout Spacing="0">
+                            <Label Style="{StaticResource FieldLabel}" Text="EMPLOYEE" />
+                            <Border Style="{StaticResource FieldFrame}">
+                                <Picker ItemsSource="{Binding EmployeeOptions}"
+                                        SelectedItem="{Binding FileEmployee}"
+                                        ItemDisplayBinding="{Binding Display, x:DataType=vm:EmployeeOption}" />
+                            </Border>
+                        </VerticalStackLayout>
+
+                        <VerticalStackLayout Spacing="0">
+                            <Label Style="{StaticResource FieldLabel}" Text="LEAVE TYPE" />
+                            <Border Style="{StaticResource FieldFrame}">
+                                <Picker ItemsSource="{Binding TypeOptions}"
+                                        SelectedItem="{Binding FileType}"
+                                        ItemDisplayBinding="{Binding Display, x:DataType=vm:LeaveTypeOption}" />
+                            </Border>
+                            <Label Style="{StaticResource ErrorText}"
+                                   Margin="0,3,0,0"
+                                   Text="{Binding ErrFileType}" />
+                        </VerticalStackLayout>
+
+                        <Grid ColumnDefinitions="*,*" ColumnSpacing="10">
+                            <VerticalStackLayout Grid.Column="0" Spacing="0">
+                                <Label Style="{StaticResource FieldLabel}" Text="FROM" />
+                                <Border Style="{StaticResource FieldFrame}">
+                                    <DatePicker Date="{Binding FileStart}" Format="dd MMM yyyy" />
+                                </Border>
+                            </VerticalStackLayout>
+
+                            <VerticalStackLayout Grid.Column="1" Spacing="0">
+                                <Label Style="{StaticResource FieldLabel}" Text="TO" />
+                                <Border Style="{StaticResource FieldFrame}">
+                                    <DatePicker Date="{Binding FileEnd}" Format="dd MMM yyyy" />
+                                </Border>
+                            </VerticalStackLayout>
+                        </Grid>
+
+                        <Label Style="{StaticResource ErrorText}" Text="{Binding ErrFileDates}" />
+
+                        <Grid ColumnDefinitions="*,Auto">
+                            <VerticalStackLayout Grid.Column="0" Spacing="1">
+                                <Label Style="{StaticResource Body}" Text="Half day" />
+                                <Label Style="{StaticResource Faint}"
+                                       Text="Counts as 0.5 of a day. Applies to a single date only — across a range there is no answer to which half." />
+                            </VerticalStackLayout>
+                            <Switch Grid.Column="1"
+                                    IsToggled="{Binding FileIsHalfDay}"
+                                    WidthRequest="46"
+                                    HorizontalOptions="End"
+                                    VerticalOptions="Center"
+                                    OnColor="{StaticResource Brand}" />
+                        </Grid>
+
+                        <!-- What the range actually costs, worked out by the
+                             service before anyone commits to it. -->
+                        <Border Style="{StaticResource Pill}"
+                                Padding="10,7"
+                                HorizontalOptions="Fill"
+                                BackgroundColor="{AppThemeBinding Light={StaticResource BrandSoftLight}, Dark={StaticResource BrandSoftDark}}">
+                            <Label FontSize="11.5"
+                                   TextColor="{StaticResource Brand}"
+                                   Text="{Binding FilePreview}" />
+                        </Border>
+
+                        <VerticalStackLayout Spacing="0">
+                            <Label Style="{StaticResource FieldLabel}" Text="REASON" />
+                            <Border Style="{StaticResource FieldFrame}">
+                                <Entry Text="{Binding FileReason}"
+                                       Placeholder="e.g. family matter; medical appointment" />
+                            </Border>
+                            <Label Style="{StaticResource ErrorText}"
+                                   Margin="0,3,0,0"
+                                   Text="{Binding ErrFileReason}" />
+                        </VerticalStackLayout>
+
+                        <Label Style="{StaticResource Faint}"
+                               Text="Filing reserves nothing. Credits are spent only when an approver grants the request." />
+                    </VerticalStackLayout>
+                </controls:ModalHost.Body>
+            </controls:ModalHost>
+
+            <!-- ============ DECIDE (FR-031, FR-034) ============
+                 Two outcomes, so the dialog's own primary button approves and
+                 its secondary refuses; there is no plain "cancel" because
+                 dismissing the dialog already does that. -->
+            <controls:ModalHost IsOpen="{Binding IsDecisionOpen}"
+                                Title="{Binding DecisionTitle}"
+                                ModalWidth="500"
+                                PrimaryText="Approve"
+                                PrimaryCommand="{Binding ApproveCommand}"
+                                SecondaryText="Reject"
+                                SecondaryCommand="{Binding RejectCommand}"
+                                DismissCommand="{Binding CloseDecisionCommand}"
+                                ErrorText="{Binding ModalError}">
+                <controls:ModalHost.Body>
+                    <VerticalStackLayout Spacing="12">
+
+                        <Label Style="{StaticResource Body}" Text="{Binding DecisionMessage}" />
+
+                        <Border Style="{StaticResource Pill}"
+                                Padding="10,7"
+                                HorizontalOptions="Fill"
+                                BackgroundColor="{AppThemeBinding Light={StaticResource BrandSoftLight}, Dark={StaticResource BrandSoftDark}}">
+                            <Label FontSize="11.5"
+                                   TextColor="{StaticResource Brand}"
+                                   Text="{Binding DecisionBalanceNote}" />
+                        </Border>
+
+                        <!-- FR-034: the override appears only when the credits
+                             are actually short, so it is never idle noise. -->
+                        <Grid ColumnDefinitions="*,Auto" IsVisible="{Binding ShowUnpaidOverride}">
+                            <VerticalStackLayout Grid.Column="0" Spacing="1">
+                                <Label Style="{StaticResource Body}" Text="Grant it as unpaid leave" />
+                                <Label Style="{StaticResource Faint}"
+                                       Text="The only way to approve leave beyond the available credits. The days are authorised but not paid, and no credits are deducted." />
+                            </VerticalStackLayout>
+                            <Switch Grid.Column="1"
+                                    IsToggled="{Binding GrantAsUnpaid}"
+                                    WidthRequest="46"
+                                    HorizontalOptions="End"
+                                    VerticalOptions="Center"
+                                    OnColor="{StaticResource Brand}" />
+                        </Grid>
+
+                        <VerticalStackLayout Spacing="0">
+                            <Label Style="{StaticResource FieldLabel}" Text="REMARKS" />
+                            <Border Style="{StaticResource FieldFrame}">
+                                <Entry Text="{Binding DecisionRemarks}"
+                                       Placeholder="Required when refusing" />
+                            </Border>
+                            <Label Style="{StaticResource ErrorText}"
+                                   Margin="0,3,0,0"
+                                   Text="{Binding ErrDecisionRemarks}" />
+                        </VerticalStackLayout>
+
+                        <Label Style="{StaticResource Faint}"
+                               Text="Approving spends the credits and marks the days as leave on attendance, so payroll treats them correctly (FR-033)." />
+                    </VerticalStackLayout>
+                </controls:ModalHost.Body>
+            </controls:ModalHost>
+
+            <!-- ================ CANCEL A FILING ================ -->
+            <controls:ModalHost IsOpen="{Binding IsCancelOpen}"
+                                Title="Withdraw this request"
+                                ModalWidth="470"
+                                PrimaryText="Withdraw"
+                                PrimaryCommand="{Binding SubmitCancelCommand}"
+                                SecondaryCommand="{Binding CloseCancelCommand}"
+                                DismissCommand="{Binding CloseCancelCommand}"
+                                IsDestructive="True"
+                                ErrorText="{Binding ModalError}">
+                <controls:ModalHost.Body>
+                    <VerticalStackLayout Spacing="12">
+                        <Label Style="{StaticResource Body}" Text="{Binding CancelMessage}" />
+
+                        <controls:FormEntry Label="REASON"
+                                            Text="{Binding CancelReason}"
+                                            Placeholder="Why it is being withdrawn"
+                                            ErrorText="{Binding ErrCancelReason}" />
+                    </VerticalStackLayout>
+                </controls:ModalHost.Body>
+            </controls:ModalHost>
+
+            <!-- ================ ADJUST CREDITS (FR-032) ================ -->
+            <controls:ModalHost IsOpen="{Binding IsAdjustOpen}"
+                                Title="{Binding AdjustTitle}"
+                                ModalWidth="470"
+                                PrimaryText="Apply adjustment"
+                                PrimaryCommand="{Binding SubmitAdjustCommand}"
+                                SecondaryCommand="{Binding CloseAdjustCommand}"
+                                DismissCommand="{Binding CloseAdjustCommand}"
+                                ErrorText="{Binding ModalError}">
+                <controls:ModalHost.Body>
+                    <VerticalStackLayout Spacing="12">
+                        <Label Style="{StaticResource Body}" Text="{Binding AdjustMessage}" />
+
+                        <controls:FormEntry Label="DAYS TO ADD OR TAKE AWAY"
+                                            Text="{Binding AdjustDays}"
+                                            Placeholder="e.g. 2.5, or -1"
+                                            ErrorText="{Binding ErrAdjustDays}" />
+
+                        <controls:FormEntry Label="REASON"
+                                            Text="{Binding AdjustReason}"
+                                            Placeholder="e.g. carried forward from last year"
+                                            ErrorText="{Binding ErrAdjustReason}" />
+                    </VerticalStackLayout>
+                </controls:ModalHost.Body>
+            </controls:ModalHost>
+
+            <!-- ================ LEAVE TYPE FORM (FR-030) ================ -->
+            <controls:ModalHost IsOpen="{Binding IsTypeFormOpen}"
+                                Title="{Binding TypeFormTitle}"
+                                Subtitle="What it grants, and whether those days are paid"
+                                ModalWidth="520"
+                                PrimaryText="Save leave type"
+                                PrimaryCommand="{Binding SubmitTypeCommand}"
+                                SecondaryCommand="{Binding CloseTypeFormCommand}"
+                                DismissCommand="{Binding CloseTypeFormCommand}"
+                                ErrorText="{Binding ModalError}">
+                <controls:ModalHost.Body>
+                    <VerticalStackLayout Spacing="12">
+
+                        <Grid ColumnDefinitions="Auto,*" ColumnSpacing="10">
+                            <controls:FormEntry Grid.Column="0"
+                                                Label="CODE"
+                                                Text="{Binding TypeCode}"
+                                                Placeholder="VL"
+                                                WidthRequest="120"
+                                                ErrorText="{Binding ErrTypeCode}" />
+
+                            <controls:FormEntry Grid.Column="1"
+                                                Label="NAME"
+                                                Text="{Binding TypeName}"
+                                                Placeholder="Vacation Leave"
+                                                ErrorText="{Binding ErrTypeName}" />
+                        </Grid>
+
+                        <controls:FormEntry Label="DESCRIPTION"
+                                            Text="{Binding TypeDescription}"
+                                            Placeholder="What this leave is for, and the law behind it if any" />
+
+                        <Grid ColumnDefinitions="*,*" ColumnSpacing="10">
+                            <controls:FormEntry Grid.Column="0"
+                                                Label="ANNUAL CREDITS (DAYS)"
+                                                Text="{Binding TypeCredits}"
+                                                Placeholder="10" />
+
+                            <VerticalStackLayout Grid.Column="1" Spacing="0">
+                                <Label Style="{StaticResource FieldLabel}" Text="AVAILABLE TO" />
+                                <Border Style="{StaticResource FieldFrame}">
+                                    <Picker ItemsSource="{Binding Applicabilities}"
+                                            SelectedItem="{Binding TypeAppliesTo}"
+                                            ItemDisplayBinding="{Binding Display, x:DataType=vm:LeaveApplicabilityOption}" />
+                                </Border>
+                            </VerticalStackLayout>
+                        </Grid>
+
+                        <BoxView Style="{StaticResource Divider}" />
+
+                        <Grid ColumnDefinitions="*,Auto">
+                            <VerticalStackLayout Grid.Column="0" Spacing="1">
+                                <Label Style="{StaticResource Body}" Text="Paid" />
+                                <Label Style="{StaticResource Faint}"
+                                       Text="FR-033: paid leave is compensated as though the day were worked. An unpaid type draws on no credits, so its annual credits must be zero." />
+                            </VerticalStackLayout>
+                            <Switch Grid.Column="1"
+                                    IsToggled="{Binding TypeIsPaid}"
+                                    WidthRequest="46"
+                                    HorizontalOptions="End"
+                                    VerticalOptions="Center"
+                                    OnColor="{StaticResource Brand}" />
+                        </Grid>
+
+                        <Grid ColumnDefinitions="*,Auto">
+                            <VerticalStackLayout Grid.Column="0" Spacing="1">
+                                <Label Style="{StaticResource Body}" Text="Accrues monthly" />
+                                <Label Style="{StaticResource Faint}"
+                                       Text="Earned a twelfth at a time rather than granted whole on 1 January. Service Incentive Leave works this way; most company leave does not." />
+                            </VerticalStackLayout>
+                            <Switch Grid.Column="1"
+                                    IsToggled="{Binding TypeAccruesMonthly}"
+                                    WidthRequest="46"
+                                    HorizontalOptions="End"
+                                    VerticalOptions="Center"
+                                    OnColor="{StaticResource Brand}" />
+                        </Grid>
+
+                        <Grid ColumnDefinitions="*,Auto">
+                            <VerticalStackLayout Grid.Column="0" Spacing="1">
+                                <Label Style="{StaticResource Body}" Text="Convertible to cash" />
+                                <Label Style="{StaticResource Faint}"
+                                       Text="Art. 95: unused days are paid out at year end and on separation. Read by final pay, not by an ordinary run." />
+                            </VerticalStackLayout>
+                            <Switch Grid.Column="1"
+                                    IsToggled="{Binding TypeIsConvertible}"
+                                    WidthRequest="46"
+                                    HorizontalOptions="End"
+                                    VerticalOptions="Center"
+                                    OnColor="{StaticResource Brand}" />
+                        </Grid>
+                    </VerticalStackLayout>
+                </controls:ModalHost.Body>
+            </controls:ModalHost>
+
+            <!-- ================ RETIRE / RESTORE (NFR-022) ================ -->
+            <controls:ModalHost IsOpen="{Binding IsConfirmOpen}"
+                                Title="{Binding ConfirmTitle}"
+                                ModalWidth="460"
+                                PrimaryText="{Binding ConfirmAction}"
+                                PrimaryCommand="{Binding SubmitConfirmCommand}"
+                                SecondaryCommand="{Binding CloseConfirmCommand}"
+                                DismissCommand="{Binding CloseConfirmCommand}"
+                                IsDestructive="{Binding IsConfirmDestructive}"
+                                ErrorText="{Binding ModalError}">
+                <controls:ModalHost.Body>
+                    <Label Style="{StaticResource Body}" Text="{Binding ConfirmMessage}" />
+                </controls:ModalHost.Body>
+            </controls:ModalHost>
+
+        </Grid>
+    </Grid>
+
+</ContentView>
