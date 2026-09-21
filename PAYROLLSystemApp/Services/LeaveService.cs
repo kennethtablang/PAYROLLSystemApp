@@ -375,6 +375,16 @@ public sealed class LeaveService : ILeaveService
         var balance = entitlement.Balance;
         var before = balance.Remaining;
 
+        // Taking away more than is left is a slipped digit, not a policy: a
+        // negative balance cannot be spent, and it hides every later grant.
+        // Leave beyond the credits is authorised as unpaid on the request instead.
+        if (before + delta < 0m)
+        {
+            return SaveResult<LeaveBalance>.Fail(
+                $"Only {before:0.##} day(s) of {entitlement.Type.Name} remain, so at most " +
+                $"{before:0.##} can be taken away.");
+        }
+
         balance.AdjustmentCredits += delta;
         balance.UpdatedUtc = DateTime.UtcNow;
 

@@ -106,8 +106,13 @@ public sealed class TimesheetService : ITimesheetService
 
         var detachments = await _detachments.GetAllAsync(includeInactive: true).ConfigureAwait(false);
 
+        // Only the people on the run. The engine pays the run's roster and
+        // nobody else, so a row offered for anyone outside it would be keyed,
+        // saved, and silently never paid.
+        var members = await RosterAsync(connection, runId).ConfigureAwait(false);
+
         var employees = (await connection.Table<Employee>().ToListAsync().ConfigureAwait(false))
-            .Where(e => e.IsActive && !e.IsArchived && e.DetachmentId.HasValue)
+            .Where(e => members.Contains(e.Id) && e.DetachmentId.HasValue)
             .ToList();
 
         var byDetachment = employees
@@ -161,6 +166,9 @@ public sealed class TimesheetService : ITimesheetService
 
         var connection = await _database.GetConnectionAsync().ConfigureAwait(false);
 
+        if (await CheckRunAsync(connection, sheet.RunId, [sheet.EmployeeId]).ConfigureAwait(false) is { } refused)
+            return SaveResult<PeriodTimesheet>.Fail(refused);
+
         var saved = await UpsertAsync(connection, sheet, performedBy).ConfigureAwait(false);
 
         await _audit.WriteAsync(AuditActions.TimesheetKeyed, nameof(PeriodTimesheet), saved.Id, true,
@@ -185,6 +193,16 @@ public sealed class TimesheetService : ITimesheetService
         }
 
         var connection = await _database.GetConnectionAsync().ConfigureAwait(false);
+
+        // Checked for every run the batch touches before anything is written,
+        // so a refused row cannot leave half a sheet saved.
+        foreach (var run in sheets.GroupBy(s => s.RunId))
+        {
+            var ids = run.Select(s => s.EmployeeId).ToList();
+
+            if (await CheckRunAsync(connection, run.Key, ids).ConfigureAwait(false) is { } refused)
+                return SaveResult<IReadOnlyList<PeriodTimesheet>>.Fail(refused);
+        }
 
         foreach (var sheet in sheets)
             await UpsertAsync(connection, sheet, performedBy).ConfigureAwait(false);
@@ -218,6 +236,9 @@ public sealed class TimesheetService : ITimesheetService
 
         if (existing is null)
             return SaveResult<PeriodTimesheet>.Fail("Nothing is keyed for that employee on this run.");
+
+        if (await CheckRunAsync(connection, runId, [employeeId]).ConfigureAwait(false) is { } refused)
+            return SaveResult<PeriodTimesheet>.Fail(refused);
 
         await connection.DeleteAsync(existing).ConfigureAwait(false);
 
@@ -277,6 +298,52 @@ public sealed class TimesheetService : ITimesheetService
 
         return null;
     }
+
+    /// <summary>
+    /// A sheet may only be keyed against a draft run, and only for someone on
+    /// it. Once a run is submitted the approver is looking at figures computed
+    /// from these rows, so they must not move underneath them — the Timesheets
+    /// screen lists draft runs only, but that is presentation, not the rule.
+    /// </summary>
+    private static async Task<string?> CheckRunAsync(
+        SQLite.SQLiteAsyncConnection connection, int runId, IReadOnlyCollection<int> employeeIds)
+    {
+        var run = await connection.Table<PayrollRun>()
+            .Where(r => r.Id == runId)
+            .FirstOrDefaultAsync()
+            .ConfigureAwait(false);
+
+        if (run is null)
+            return "That payroll run no longer exists.";
+
+        if (run.Status != PayrollRunStatus.Draft)
+        {
+            return $"{run.ReferenceNumber} is {PayrollEnumNames.Display(run.Status).ToLowerInvariant()}. " +
+                   "Only a draft run can be keyed — return it to draft first.";
+        }
+
+        var members = await RosterAsync(connection, runId).ConfigureAwait(false);
+        var outsiders = employeeIds.Where(id => !members.Contains(id)).Distinct().ToList();
+
+        if (outsiders.Count > 0)
+        {
+            return outsiders.Count == 1
+                ? $"That employee is not on {run.ReferenceNumber}, so nothing keyed for them would be paid."
+                : $"{outsiders.Count} of these employees are not on {run.ReferenceNumber}, " +
+                  "so nothing keyed for them would be paid.";
+        }
+
+        return null;
+    }
+
+    /// <summary>The run's roster, held as its payslip rows from the moment it is created.</summary>
+    private static async Task<HashSet<int>> RosterAsync(SQLite.SQLiteAsyncConnection connection, int runId) =>
+        (await connection.Table<Payslip>()
+            .Where(p => p.PayrollRunId == runId)
+            .ToListAsync()
+            .ConfigureAwait(false))
+        .Select(p => p.EmployeeId)
+        .ToHashSet();
 
     private static async Task<PeriodTimesheet> UpsertAsync(
         SQLite.SQLiteAsyncConnection connection, PeriodTimesheet sheet, User performedBy)

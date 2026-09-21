@@ -509,6 +509,7 @@ public sealed class PayrollRunService : IPayrollRunService
         PayrollRun run, IReadOnlyList<int> employeeIds)
     {
         var connection = await _database.GetConnectionAsync().ConfigureAwait(false);
+        var settings = await _config.GetSettingsAsync().ConfigureAwait(false);
 
         var everyone = await _employees.GetAllAsync().ConfigureAwait(false);
         var employees = everyone.Where(e => employeeIds.Contains(e.Id)).ToList();
@@ -568,7 +569,7 @@ public sealed class PayrollRunService : IPayrollRunService
                 : null;
 
             var convertible = run.RunType == PayrollRunType.FinalPay
-                ? await ConvertibleLeaveDaysAsync(employee, year).ConfigureAwait(false)
+                ? await ConvertibleLeaveDaysAsync(employee, year, settings).ConfigureAwait(false)
                 : 0m;
 
             inputs.Add(new EmployeePayrollInput
@@ -610,13 +611,22 @@ public sealed class PayrollRunService : IPayrollRunService
             .ToList();
     }
 
-    /// <summary>FR-062. Unused credits on the leave types that convert to cash.</summary>
-    private async Task<decimal> ConvertibleLeaveDaysAsync(Employee employee, int year)
+    /// <summary>
+    /// FR-062. Unused credits on the leave types that convert to cash.
+    ///
+    /// <para>Service incentive leave is left out while it is being accrued into
+    /// every payslip as 5Days Inc.: those payslips have already paid the
+    /// entitlement, and converting the credits on separation would pay the same
+    /// five days a second time.</para>
+    /// </summary>
+    private async Task<decimal> ConvertibleLeaveDaysAsync(Employee employee, int year, PayrollSettings settings)
     {
         var entitlements = await _leave.GetEntitlementsAsync(employee, year).ConfigureAwait(false);
 
         return entitlements
             .Where(e => e.Type.IsConvertibleToCash && e.Remaining > 0m)
+            .Where(e => !(settings.AccrueServiceIncentiveLeave &&
+                          string.Equals(e.Type.Code, LeaveType.ServiceIncentiveLeaveCode, StringComparison.OrdinalIgnoreCase)))
             .Sum(e => e.Remaining);
     }
 
@@ -1229,6 +1239,17 @@ public sealed class PayrollRunService : IPayrollRunService
 
         if (deduction is null)
             return SaveResult<EmployeeLoan>.Fail($"There is no deduction type with the code {loan.DeductionCode}.");
+
+        // Only an amortised type stops when its balance runs out. A loan booked
+        // under any other deduction would be taken every period with nothing to
+        // end it — the Loans screen offers amortised types only, but that is
+        // presentation, not the rule.
+        if (!deduction.IsAmortised)
+        {
+            return SaveResult<EmployeeLoan>.Fail(
+                $"{deduction.Name} does not carry a balance, so it cannot hold a loan. Use a deduction " +
+                "flagged as amortised on Payroll Setup, or record this as a standing deduction.");
+        }
 
         loan.DeductionName = deduction.Name;
 

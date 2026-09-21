@@ -484,7 +484,7 @@ public sealed partial class PayrollDatabase
         {
             new LeaveType
             {
-                Code = "SIL", Name = "Service Incentive Leave",
+                Code = LeaveType.ServiceIncentiveLeaveCode, Name = "Service Incentive Leave",
                 Description = "Art. 95: five days a year after one year of service, convertible to cash.",
                 DefaultAnnualCredits = 5m,
                 IsPaid = true, AccruesMonthly = true, IsConvertibleToCash = true

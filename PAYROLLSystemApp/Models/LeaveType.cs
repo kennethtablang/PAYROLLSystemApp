@@ -19,6 +19,14 @@ namespace PAYROLLSystemApp.Models;
 [Table("leave_types")]
 public class LeaveType
 {
+    /// <summary>
+    /// Art. 95 service incentive leave. Named because payroll has to recognise
+    /// it: when <c>PayrollSettings.AccrueServiceIncentiveLeave</c> is on, the
+    /// entitlement is already paid a slice at a time as 5Days Inc., and cashing
+    /// the credits out as well would pay it twice.
+    /// </summary>
+    public const string ServiceIncentiveLeaveCode = "SIL";
+
     [PrimaryKey, AutoIncrement]
     public int Id { get; set; }
 

@@ -634,7 +634,64 @@ public sealed class EmployeeService : IEmployeeService
         AddIdError(errors, GovernmentIdKind.PagIbig, employee.PagIbigNumber, nameof(Employee.PagIbigNumber));
         AddIdError(errors, GovernmentIdKind.Tin, employee.Tin, nameof(Employee.Tin));
 
+        await AddDuplicateIdErrorsAsync(connection, employee, errors).ConfigureAwait(false);
+
         return errors;
+    }
+
+    /// <summary>
+    /// One person, one set of agency numbers. Two records sharing an SSS number
+    /// are remitted twice under a single member, and the agency posts both to
+    /// one account. The identifiers are already digits only (see
+    /// <see cref="Normalise"/>), so punctuation cannot hide a clash.
+    ///
+    /// <para>Archived records are ignored: archiving is how a record entered by
+    /// mistake is retired, and the corrected one must be able to take its
+    /// numbers. A separated employee still holds theirs — someone returning is
+    /// reinstated, not entered again.</para>
+    /// </summary>
+    private static async Task AddDuplicateIdErrorsAsync(
+        SQLite.SQLiteAsyncConnection connection, Employee employee, List<FieldError> errors)
+    {
+        if (employee.SssNumber.Length == 0 && employee.PhilHealthNumber.Length == 0 &&
+            employee.PagIbigNumber.Length == 0 && employee.Tin.Length == 0)
+        {
+            return;
+        }
+
+        var id = employee.Id;
+
+        var others = await connection.Table<Employee>()
+            .Where(e => e.Id != id && !e.IsArchived)
+            .ToListAsync()
+            .ConfigureAwait(false);
+
+        void Check(string value, Func<Employee, string> of, string field, Func<string, string>? key = null)
+        {
+            if (value.Length == 0)
+                return;
+
+            key ??= v => v;
+            var mine = key(value);
+
+            var clash = others.FirstOrDefault(o => of(o).Length > 0 && key(of(o)) == mine);
+
+            if (clash is not null)
+            {
+                errors.Add(new FieldError(field,
+                    $"Already recorded for {clash.FullName} ({clash.EmployeeNumber}). " +
+                    "If this is the same person returning, reinstate that record instead."));
+            }
+        }
+
+        Check(employee.SssNumber, e => e.SssNumber, nameof(Employee.SssNumber));
+        Check(employee.PhilHealthNumber, e => e.PhilHealthNumber, nameof(Employee.PhilHealthNumber));
+        Check(employee.PagIbigNumber, e => e.PagIbigNumber, nameof(Employee.PagIbigNumber));
+
+        // A TIN is nine digits; the optional last three are a branch code, which
+        // is the employer's business, not the person's. 123-456-789 and
+        // 123-456-789-000 are the same taxpayer.
+        Check(employee.Tin, e => e.Tin, nameof(Employee.Tin), v => v.Length > 9 ? v[..9] : v);
     }
 
     private static void AddIdError(List<FieldError> errors, GovernmentIdKind kind, string value, string field)

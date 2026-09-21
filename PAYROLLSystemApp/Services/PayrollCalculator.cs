@@ -60,9 +60,8 @@ public static class PayrollCalculator
             // row in the detachment's rate table.
             blockers.Add(
                 !employee.UsesOwnRate && employee.DetachmentId is not null
-                    ? $"No daily rate is posted for {employee.FullName}'s position at their " +
-                      $"detachment on {run.PayDate:dd MMM yyyy}. Set it on Detachments, or put them " +
-                      "on their own rate."
+                    ? $"No daily rate is posted for {employee.FullName}'s detachment on " +
+                      $"{run.PayDate:dd MMM yyyy}. Set it on Detachments, or put them on their own rate."
                     : $"{employee.FullName} has no basic rate set, so nothing can be computed for them.");
         }
 
@@ -206,9 +205,15 @@ public static class PayrollCalculator
         // The posted rate for the post, unless this employee is on their own. A
         // detachment rate is always a *daily* one: that is the unit a regional
         // wage order is published in.
-        if (!employee.UsesOwnRate &&
-            ctx.DetachmentRates.DailyRateFor(employee.DetachmentId) is { } posted)
+        if (!employee.UsesOwnRate && employee.DetachmentId is not null)
         {
+            // No posted rate is a blocker, never a fallback. The employee's own
+            // BasicRate survives on the record from before they were posted here
+            // and is locked out of the form, so paying it would pay a figure
+            // nobody is looking at — silently, and usually the wrong one.
+            if (ctx.DetachmentRates.DailyRateFor(employee.DetachmentId) is not { } posted)
+                return new Rates(0m, 0m, 0m, 0m, FromDetachment: true);
+
             var postedMonthly = PayrollRounding.Rate(posted * settings.WorkingDaysFactor / 12m);
 
             return new Rates(
