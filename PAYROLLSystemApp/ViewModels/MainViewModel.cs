@@ -28,7 +28,6 @@ public sealed partial class NavItemViewModel : ObservableObject
     [RelayCommand]
     private void Select()
     {
-        _session.Touch();
         _navigator.NavigateTo(Section);
     }
 
@@ -74,19 +73,16 @@ public sealed partial class MainViewModel : BaseViewModel, IDisposable
 {
     private readonly IAppNavigator _navigator;
     private readonly IDialogService _dialogs;
-    private readonly AuthOptions _options;
     private IDispatcherTimer? _clock;
 
     public MainViewModel(
         ISessionService session,
         IAppNavigator navigator,
-        IDialogService dialogs,
-        AuthOptions options)
+        IDialogService dialogs)
         : base(session)
     {
         _navigator = navigator;
         _dialogs = dialogs;
-        _options = options;
 
         UserName = string.Empty;
         UserRole = string.Empty;
@@ -181,8 +177,7 @@ public sealed partial class MainViewModel : BaseViewModel, IDisposable
             UserInitials = Initials(UserName);
         }
 
-        FooterStatus =
-            $"Signed in as {UserName} · auto sign-out after {_options.InactivityTimeout.TotalMinutes:0} min idle";
+        FooterStatus = $"Signed in as {UserName} · {UserRole}";
 
         Tick();
 

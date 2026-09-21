@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8" ?>
+﻿<?xml version="1.0" encoding="utf-8" ?>
 <ContentView xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
              xmlns:vm="clr-namespace:PAYROLLSystemApp.ViewModels"
@@ -26,7 +26,7 @@
             <Grid IsVisible="{Binding IsGranted}" RowDefinitions="Auto,Auto,*" RowSpacing="10">
 
                 <!-- ============ PANEL SWITCH ============ -->
-                <Grid Grid.Row="0" ColumnDefinitions="Auto,Auto,Auto,*,Auto,Auto" ColumnSpacing="8">
+                <Grid Grid.Row="0" ColumnDefinitions="Auto,Auto,Auto,Auto,*,Auto,Auto" ColumnSpacing="8">
 
                     <Grid Grid.Column="0" RowDefinitions="Auto,2">
                         <Button Grid.Row="0"
@@ -44,7 +44,15 @@
                         <BoxView Grid.Row="1" Color="{StaticResource Brand}" IsVisible="{Binding IsLoans}" />
                     </Grid>
 
-                    <Border Grid.Column="2"
+                    <Grid Grid.Column="2" RowDefinitions="Auto,2">
+                        <Button Grid.Row="0"
+                                Style="{StaticResource GhostButton}"
+                                Text="Standing deductions"
+                                Command="{Binding ShowStandingCommand}" />
+                        <BoxView Grid.Row="1" Color="{StaticResource Brand}" IsVisible="{Binding IsStanding}" />
+                    </Grid>
+
+                    <Border Grid.Column="3"
                             Style="{StaticResource FieldFrame}"
                             IsVisible="{Binding IsRuns}"
                             VerticalOptions="Center">
@@ -54,13 +62,13 @@
                                 WidthRequest="110" />
                     </Border>
 
-                    <Button Grid.Column="4"
+                    <Button Grid.Column="5"
                             Style="{StaticResource SecondaryButton}"
                             Text="Refresh"
                             VerticalOptions="Center"
                             Command="{Binding RefreshCommand}" />
 
-                    <Button Grid.Column="5"
+                    <Button Grid.Column="6"
                             Style="{StaticResource PrimaryButton}"
                             Text="+  New run"
                             VerticalOptions="Center"
@@ -437,6 +445,101 @@
                         </CollectionView>
                     </Grid>
                 </Border>
+
+                <!-- ==================================================== -->
+                <!-- ==========  STANDING DEDUCTIONS  =================== -->
+                <!-- ==================================================== -->
+                <Border Grid.Row="2"
+                        Style="{StaticResource Card}"
+                        Padding="0"
+                        IsVisible="{Binding IsStanding}">
+
+                    <Grid RowDefinitions="Auto,Auto,Auto,*">
+
+                        <Grid Grid.Row="0" ColumnDefinitions="*,Auto,Auto,Auto" ColumnSpacing="8" Padding="16,12">
+                            <VerticalStackLayout Grid.Column="0" Spacing="1">
+                                <Label Style="{StaticResource SectionHeading}" Text="Standing deductions" />
+                                <Label Style="{StaticResource Faint}"
+                                       LineBreakMode="TailTruncation"
+                                       Text="{Binding StandingSummary}" />
+                            </VerticalStackLayout>
+
+                            <Label Grid.Column="1"
+                                   Style="{StaticResource Muted}"
+                                   VerticalOptions="Center"
+                                   LineBreakMode="NoWrap"
+                                   Text="Show stopped" />
+
+                            <Switch Grid.Column="2"
+                                    IsToggled="{Binding ShowStoppedStanding}"
+                                    WidthRequest="46"
+                                    VerticalOptions="Center"
+                                    OnColor="{StaticResource Brand}" />
+
+                            <Button Grid.Column="3"
+                                    Style="{StaticResource PrimaryButton}"
+                                    Text="+  New"
+                                    VerticalOptions="Center"
+                                    Command="{Binding OpenCreateStandingCommand}" />
+                        </Grid>
+
+                        <Label Grid.Row="1"
+                               Style="{StaticResource Faint}"
+                               Padding="16,0,16,10"
+                               Text="The insurance premium, the performance bond, the processing fee — taken in full every period the dates cover, and stopped by a date rather than by a balance running out. A deduction that carries a balance belongs on Loans &amp; advances instead." />
+
+                        <Grid Grid.Row="2"
+                              ColumnDefinitions="*,140,Auto"
+                              ColumnSpacing="10"
+                              Padding="16,8"
+                              BackgroundColor="{AppThemeBinding Light={StaticResource SurfaceAltLight}, Dark={StaticResource SurfaceAltDark}}">
+                            <Label Grid.Column="0" Style="{StaticResource TableHeader}" Text="DEDUCTION" />
+                            <Label Grid.Column="1" Style="{StaticResource TableHeader}" Text="PER PERIOD" />
+                            <Label Grid.Column="2" Style="{StaticResource TableHeader}" Text="ACTIONS" WidthRequest="150" />
+                        </Grid>
+
+                        <CollectionView Grid.Row="3" ItemsSource="{Binding Standing}" SelectionMode="None">
+                            <CollectionView.ItemTemplate>
+                                <DataTemplate x:DataType="vm:StandingRow">
+                                    <Grid ColumnDefinitions="*,140,Auto" ColumnSpacing="10" Padding="16,9">
+
+                                        <VerticalStackLayout Grid.Column="0" Spacing="0" VerticalOptions="Center">
+                                            <Label Text="{Binding Name}"
+                                                   FontSize="12.5"
+                                                   FontAttributes="Bold"
+                                                   LineBreakMode="TailTruncation"
+                                                   TextColor="{AppThemeBinding Light={StaticResource TextLight}, Dark={StaticResource TextDark}}" />
+                                            <Label Style="{StaticResource Faint}"
+                                                   LineBreakMode="TailTruncation"
+                                                   Text="{Binding Detail}" />
+                                        </VerticalStackLayout>
+
+                                        <Label Grid.Column="1"
+                                               Style="{StaticResource Body}"
+                                               VerticalOptions="Center"
+                                               Text="{Binding AmountDisplay}" />
+
+                                        <HorizontalStackLayout Grid.Column="2"
+                                                               Spacing="6"
+                                                               WidthRequest="150"
+                                                               VerticalOptions="Center">
+                                            <Button Style="{StaticResource RowAction}"
+                                                    Text="Edit"
+                                                    Command="{Binding Source={RelativeSource AncestorType={x:Type vm:PayrollRunsViewModel}}, Path=OpenEditStandingCommand}"
+                                                    CommandParameter="{Binding .}" />
+                                            <Button Style="{StaticResource RowAction}"
+                                                    Text="{Binding ActionText}"
+                                                    Command="{Binding Source={RelativeSource AncestorType={x:Type vm:PayrollRunsViewModel}}, Path=OpenToggleStandingCommand}"
+                                                    CommandParameter="{Binding .}" />
+                                        </HorizontalStackLayout>
+
+                                        <BoxView Grid.ColumnSpan="3" VerticalOptions="End" Style="{StaticResource Divider}" />
+                                    </Grid>
+                                </DataTemplate>
+                            </CollectionView.ItemTemplate>
+                        </CollectionView>
+                    </Grid>
+                </Border>
             </Grid>
         </Grid>
 
@@ -743,6 +846,86 @@
                                         Placeholder="Optional" />
 
                     <Label Style="{StaticResource Faint}" Text="{Binding LoanBalanceNote}" />
+                </VerticalStackLayout>
+            </controls:ModalHost.Body>
+        </controls:ModalHost>
+
+
+        <!-- ================ STANDING DEDUCTION ================ -->
+        <controls:ModalHost IsOpen="{Binding IsStandingFormOpen}"
+                            Title="{Binding StandingFormTitle}"
+                            Subtitle="Taken every period until its end date, or until it is stopped"
+                            ModalWidth="500"
+                            PrimaryText="Save deduction"
+                            PrimaryCommand="{Binding SubmitStandingCommand}"
+                            SecondaryCommand="{Binding CloseStandingFormCommand}"
+                            DismissCommand="{Binding CloseStandingFormCommand}"
+                            ErrorText="{Binding ModalError}">
+            <controls:ModalHost.Body>
+                <VerticalStackLayout Spacing="12">
+
+                    <VerticalStackLayout Spacing="0">
+                        <Label Style="{StaticResource FieldLabel}" Text="EMPLOYEE" />
+                        <Border Style="{StaticResource FieldFrame}">
+                            <Picker ItemsSource="{Binding EmployeeOptions}"
+                                    SelectedItem="{Binding StandingEmployee}"
+                                    ItemDisplayBinding="{Binding Label, x:DataType=vm:LookupOption}" />
+                        </Border>
+                    </VerticalStackLayout>
+
+                    <VerticalStackLayout Spacing="0">
+                        <Label Style="{StaticResource FieldLabel}" Text="TAKEN UNDER" />
+                        <Border Style="{StaticResource FieldFrame}">
+                            <Picker ItemsSource="{Binding StandingDeductionOptions}"
+                                    SelectedItem="{Binding StandingDeduction}"
+                                    ItemDisplayBinding="{Binding Label, x:DataType=vm:LookupOption}" />
+                        </Border>
+                        <Label Style="{StaticResource Faint}"
+                               Text="Only deductions that carry no balance are offered. An amortised one belongs on the loan ledger, where the balance is what stops it." />
+                    </VerticalStackLayout>
+
+                    <Grid ColumnDefinitions="*,*" ColumnSpacing="10">
+                        <controls:FormEntry Grid.Column="0"
+                                            Label="TAKEN EACH PERIOD"
+                                            Text="{Binding StandingAmount}"
+                                            Placeholder="0.00" />
+
+                        <controls:FormEntry Grid.Column="1"
+                                            Label="REFERENCE"
+                                            Text="{Binding StandingReference}"
+                                            Placeholder="Policy or bond number" />
+                    </Grid>
+
+                    <Grid ColumnDefinitions="*,*" ColumnSpacing="10">
+                        <VerticalStackLayout Grid.Column="0" Spacing="0">
+                            <Label Style="{StaticResource FieldLabel}" Text="FIRST TAKEN FROM" />
+                            <Border Style="{StaticResource FieldFrame}">
+                                <DatePicker Date="{Binding StandingStartDate}" Format="dd MMM yyyy" />
+                            </Border>
+                        </VerticalStackLayout>
+
+                        <VerticalStackLayout Grid.Column="1" Spacing="0">
+                            <Label Style="{StaticResource FieldLabel}" Text="LAST TAKEN ON" />
+                            <Border Style="{StaticResource FieldFrame}" IsVisible="{Binding HasStandingEnd}">
+                                <DatePicker Date="{Binding StandingEndDate}" Format="dd MMM yyyy" />
+                            </Border>
+                            <HorizontalStackLayout Spacing="8">
+                                <Switch IsToggled="{Binding StandingEnds}"
+                                        WidthRequest="46"
+                                        OnColor="{StaticResource Brand}" />
+                                <Label Style="{StaticResource Faint}"
+                                       VerticalOptions="Center"
+                                       Text="Has an agreed end" />
+                            </HorizontalStackLayout>
+                        </VerticalStackLayout>
+                    </Grid>
+
+                    <controls:FormEntry Label="REMARKS"
+                                        Text="{Binding StandingRemarks}"
+                                        Placeholder="Optional" />
+
+                    <Label Style="{StaticResource Faint}"
+                           Text="The figure is what one cut-off takes — it is not divided across the month's runs. A premium agreed at a monthly rate is entered here as its per-period share." />
                 </VerticalStackLayout>
             </controls:ModalHost.Body>
         </controls:ModalHost>

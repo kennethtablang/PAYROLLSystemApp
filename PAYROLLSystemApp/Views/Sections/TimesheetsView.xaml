@@ -1,0 +1,383 @@
+﻿<?xml version="1.0" encoding="utf-8" ?>
+<ContentView xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:vm="clr-namespace:PAYROLLSystemApp.ViewModels"
+             xmlns:controls="clr-namespace:PAYROLLSystemApp.Views.Controls"
+             x:Class="PAYROLLSystemApp.Views.Sections.TimesheetsView"
+             x:DataType="vm:TimesheetsViewModel">
+
+    <ContentView.Resources>
+        <!--
+            One definition for the header and every row, so a column can never
+            drift out of line with its heading. The order is the paper's order.
+        -->
+        <x:String x:Key="SheetColumns">96,*,62,62,62,62,62,84,84,96,34</x:String>
+
+        <Style x:Key="Cell" TargetType="Entry">
+            <Setter Property="FontSize" Value="12" />
+            <Setter Property="HorizontalTextAlignment" Value="End" />
+            <Setter Property="Keyboard" Value="Numeric" />
+            <Setter Property="HeightRequest" Value="30" />
+            <Setter Property="Margin" Value="0" />
+        </Style>
+
+        <Style x:Key="Priced" TargetType="Label">
+            <Setter Property="FontSize" Value="10.5" />
+            <Setter Property="HorizontalTextAlignment" Value="End" />
+            <Setter Property="TextColor" Value="{StaticResource Brand}" />
+            <Setter Property="LineBreakMode" Value="NoWrap" />
+        </Style>
+    </ContentView.Resources>
+
+    <Grid x:Name="RootGrid">
+
+        <Grid Padding="20">
+
+            <!-- FR-002: the section re-checks the permission on load. -->
+            <Border Style="{StaticResource Card}"
+                    IsVisible="{Binding IsDenied}"
+                    Padding="28"
+                    VerticalOptions="Center"
+                    HorizontalOptions="Center">
+                <VerticalStackLayout Spacing="4">
+                    <Label Style="{StaticResource SectionHeading}" Text="Access denied" HorizontalTextAlignment="Center" />
+                    <Label Style="{StaticResource Muted}" Text="You do not have permission to key a timesheet." />
+                </VerticalStackLayout>
+            </Border>
+
+            <Grid IsVisible="{Binding IsGranted}" RowDefinitions="Auto,Auto,Auto,*" RowSpacing="10">
+
+                <!-- ================== RUN PICKER ================== -->
+                <Border Grid.Row="0" Style="{StaticResource Card}" Padding="16,12">
+                    <Grid ColumnDefinitions="Auto,*,Auto,Auto" ColumnSpacing="12">
+
+                        <Label Grid.Column="0"
+                               Style="{StaticResource FieldLabel}"
+                               VerticalOptions="Center"
+                               LineBreakMode="NoWrap"
+                               Text="PERIOD COVERED" />
+
+                        <Border Grid.Column="1" Style="{StaticResource FieldFrame}" VerticalOptions="Center">
+                            <Picker ItemsSource="{Binding Runs}"
+                                    SelectedItem="{Binding SelectedRun}"
+                                    ItemDisplayBinding="{Binding Label, x:DataType=vm:RunOption}" />
+                        </Border>
+
+                        <Button Grid.Column="2"
+                                Style="{StaticResource SecondaryButton}"
+                                Text="Discard changes"
+                                VerticalOptions="Center"
+                                IsEnabled="{Binding HasChanges}"
+                                Command="{Binding DiscardCommand}" />
+
+                        <Button Grid.Column="3"
+                                Style="{StaticResource PrimaryButton}"
+                                Text="Save sheet"
+                                VerticalOptions="Center"
+                                Command="{Binding SaveCommand}" />
+                    </Grid>
+                </Border>
+
+                <!-- ================== MESSAGES =================== -->
+                <Grid Grid.Row="1">
+                    <Label FontSize="12"
+                           TextColor="{StaticResource Success}"
+                           Text="{Binding StatusMessage}"
+                           IsVisible="{Binding HasStatus}" />
+
+                    <Label Style="{StaticResource ErrorText}"
+                           Text="{Binding ErrorMessage}"
+                           IsVisible="{Binding HasError}" />
+                </Grid>
+
+                <!-- ================== SHEET HEAD ================= -->
+                <Grid Grid.Row="2" ColumnDefinitions="*,Auto" ColumnSpacing="12">
+                    <VerticalStackLayout Grid.Column="0" Spacing="1">
+                        <Label Style="{StaticResource SectionHeading}" Text="{Binding SheetTitle}" />
+                        <Label Style="{StaticResource Faint}"
+                               LineBreakMode="TailTruncation"
+                               Text="{Binding SheetSubtitle}" />
+                    </VerticalStackLayout>
+
+                    <Label Grid.Column="1"
+                           Style="{StaticResource Muted}"
+                           VerticalOptions="Center"
+                           LineBreakMode="NoWrap"
+                           Text="{Binding TotalsLine}" />
+                </Grid>
+
+                <!-- ==================== SHEET ==================== -->
+                <Border Grid.Row="3" Style="{StaticResource Card}" Padding="0">
+                    <Grid>
+
+                        <ScrollView Orientation="Both" IsVisible="{Binding HasBands}">
+                            <VerticalStackLayout MinimumWidthRequest="880">
+
+                                <!-- Column headings, in the paper's own words. -->
+                                <Grid ColumnDefinitions="{StaticResource SheetColumns}"
+                                      ColumnSpacing="6"
+                                      Padding="14,9"
+                                      BackgroundColor="{AppThemeBinding Light={StaticResource SurfaceAltLight}, Dark={StaticResource SurfaceAltDark}}">
+                                    <Label Grid.Column="0" Style="{StaticResource TableHeader}" Text="CODE" />
+                                    <Label Grid.Column="1" Style="{StaticResource TableHeader}" Text="NAME OF PERSONNEL" />
+                                    <Label Grid.Column="2" Style="{StaticResource TableHeader}" Text="# DAYS" HorizontalTextAlignment="End" />
+                                    <Label Grid.Column="3" Style="{StaticResource TableHeader}" Text="REG OT" HorizontalTextAlignment="End" />
+                                    <Label Grid.Column="4" Style="{StaticResource TableHeader}" Text="SPCL OT" HorizontalTextAlignment="End" />
+                                    <Label Grid.Column="5" Style="{StaticResource TableHeader}" Text="LEG OT" HorizontalTextAlignment="End" />
+                                    <Label Grid.Column="6" Style="{StaticResource TableHeader}" Text="NIGHT" HorizontalTextAlignment="End" />
+                                    <Label Grid.Column="7" Style="{StaticResource TableHeader}" Text="COMP LOAN" HorizontalTextAlignment="End" />
+                                    <Label Grid.Column="8" Style="{StaticResource TableHeader}" Text="LATE" HorizontalTextAlignment="End" />
+                                    <Label Grid.Column="9" Style="{StaticResource TableHeader}" Text="GROSS" HorizontalTextAlignment="End" />
+                                    <Label Grid.Column="10" Style="{StaticResource TableHeader}" Text="" />
+                                </Grid>
+
+                                <BoxView Style="{StaticResource Divider}" />
+
+                                <VerticalStackLayout BindableLayout.ItemsSource="{Binding Bands}">
+                                    <BindableLayout.ItemTemplate>
+                                        <DataTemplate x:DataType="vm:TimesheetBand">
+                                            <VerticalStackLayout>
+
+                                                <!-- The band line, as the sheet writes it:
+                                                     "CS75  (600.00 per day)". -->
+                                                <Grid ColumnDefinitions="*,Auto,Auto"
+                                                      ColumnSpacing="10"
+                                                      Padding="14,7"
+                                                      BackgroundColor="{AppThemeBinding Light=#DCE9F5, Dark=#1E3245}">
+
+                                                    <Label Grid.Column="0"
+                                                           Text="{Binding Banner}"
+                                                           FontSize="12.5"
+                                                           FontAttributes="Bold"
+                                                           VerticalOptions="Center"
+                                                           TextColor="{AppThemeBinding Light={StaticResource TextLight}, Dark={StaticResource TextDark}}" />
+
+                                                    <Label Grid.Column="1"
+                                                           Style="{StaticResource Faint}"
+                                                           VerticalOptions="Center"
+                                                           LineBreakMode="NoWrap"
+                                                           Text="{Binding Client}" />
+
+                                                    <Label Grid.Column="2"
+                                                           Style="{StaticResource Faint}"
+                                                           VerticalOptions="Center"
+                                                           LineBreakMode="NoWrap"
+                                                           WidthRequest="130"
+                                                           HorizontalTextAlignment="End"
+                                                           Text="{Binding Progress}" />
+                                                </Grid>
+
+                                                <!-- A post with no rate cannot be priced, and saying so
+                                                     here is cheaper than a run that fails later. -->
+                                                <Label IsVisible="{Binding HasNoRate}"
+                                                       Style="{StaticResource ErrorText}"
+                                                       Padding="14,6"
+                                                       Text="No daily rate is posted for this detachment on the run's pay date. Post one on Detachments — figures keyed here cannot be priced until you do." />
+
+                                                <VerticalStackLayout BindableLayout.ItemsSource="{Binding Rows}">
+                                                    <BindableLayout.ItemTemplate>
+                                                        <DataTemplate x:DataType="vm:TimesheetRow">
+                                                            <Grid ColumnDefinitions="{StaticResource SheetColumns}"
+                                                                  ColumnSpacing="6"
+                                                                  Padding="14,4">
+
+                                                                <Label Grid.Column="0"
+                                                                       Text="{Binding EmployeeNumber}"
+                                                                       FontSize="12"
+                                                                       VerticalOptions="Center"
+                                                                       LineBreakMode="TailTruncation"
+                                                                       TextColor="{AppThemeBinding Light={StaticResource TextLight}, Dark={StaticResource TextDark}}" />
+
+                                                                <VerticalStackLayout Grid.Column="1" Spacing="0" VerticalOptions="Center">
+                                                                    <Label Text="{Binding Name}"
+                                                                           FontSize="12"
+                                                                           LineBreakMode="TailTruncation"
+                                                                           TextColor="{AppThemeBinding Light={StaticResource TextLight}, Dark={StaticResource TextDark}}" />
+                                                                    <Label Style="{StaticResource ErrorText}"
+                                                                           FontSize="10"
+                                                                           Text="{Binding Problem}"
+                                                                           IsVisible="{Binding HasProblem}" />
+                                                                </VerticalStackLayout>
+
+                                                                <!-- Each figure over the money it makes: the
+                                                                     check the keyer reads as they type. -->
+                                                                <VerticalStackLayout Grid.Column="2" Spacing="0">
+                                                                    <Entry Style="{StaticResource Cell}" Text="{Binding Days}" />
+                                                                    <Label Style="{StaticResource Priced}" Text="{Binding BasicDisplay}" />
+                                                                </VerticalStackLayout>
+
+                                                                <VerticalStackLayout Grid.Column="3" Spacing="0">
+                                                                    <Entry Style="{StaticResource Cell}" Text="{Binding RegularOt}" />
+                                                                    <Label Style="{StaticResource Priced}" Text="{Binding RegularOtDisplay}" />
+                                                                </VerticalStackLayout>
+
+                                                                <VerticalStackLayout Grid.Column="4" Spacing="0">
+                                                                    <Entry Style="{StaticResource Cell}" Text="{Binding SpecialOt}" />
+                                                                    <Label Style="{StaticResource Priced}" Text="{Binding SpecialOtDisplay}" />
+                                                                </VerticalStackLayout>
+
+                                                                <VerticalStackLayout Grid.Column="5" Spacing="0">
+                                                                    <Entry Style="{StaticResource Cell}" Text="{Binding LegalOt}" />
+                                                                    <Label Style="{StaticResource Priced}" Text="{Binding LegalOtDisplay}" />
+                                                                </VerticalStackLayout>
+
+                                                                <VerticalStackLayout Grid.Column="6" Spacing="0">
+                                                                    <Entry Style="{StaticResource Cell}" Text="{Binding NightShift}" />
+                                                                    <Label Style="{StaticResource Priced}" Text="{Binding NightDisplay}" />
+                                                                </VerticalStackLayout>
+
+                                                                <Entry Grid.Column="7"
+                                                                       Style="{StaticResource Cell}"
+                                                                       VerticalOptions="Start"
+                                                                       Text="{Binding CompanyLoan}" />
+
+                                                                <Entry Grid.Column="8"
+                                                                       Style="{StaticResource Cell}"
+                                                                       VerticalOptions="Start"
+                                                                       Text="{Binding Late}" />
+
+                                                                <Label Grid.Column="9"
+                                                                       Text="{Binding GrossDisplay}"
+                                                                       FontSize="12"
+                                                                       FontAttributes="Bold"
+                                                                       VerticalOptions="Start"
+                                                                       Margin="0,7,0,0"
+                                                                       HorizontalTextAlignment="End"
+                                                                       TextColor="{AppThemeBinding Light={StaticResource TextLight}, Dark={StaticResource TextDark}}" />
+
+                                                                <Button Grid.Column="10"
+                                                                        Style="{StaticResource RowAction}"
+                                                                        Text="…"
+                                                                        WidthRequest="34"
+                                                                        VerticalOptions="Start"
+                                                                        Command="{Binding Source={RelativeSource AncestorType={x:Type vm:TimesheetsViewModel}}, Path=OpenCardCommand}"
+                                                                        CommandParameter="{Binding .}" />
+
+                                                                <BoxView Grid.ColumnSpan="11" VerticalOptions="End" Style="{StaticResource Divider}" />
+                                                            </Grid>
+                                                        </DataTemplate>
+                                                    </BindableLayout.ItemTemplate>
+                                                </VerticalStackLayout>
+                                            </VerticalStackLayout>
+                                        </DataTemplate>
+                                    </BindableLayout.ItemTemplate>
+                                </VerticalStackLayout>
+
+                                <BoxView HeightRequest="24" Color="Transparent" />
+                            </VerticalStackLayout>
+                        </ScrollView>
+
+                        <VerticalStackLayout IsVisible="{Binding HasNoBands}"
+                                             Spacing="6"
+                                             Padding="24"
+                                             VerticalOptions="Center">
+                            <Label Style="{StaticResource Muted}"
+                                   HorizontalTextAlignment="Center"
+                                   Text="Nothing to key." />
+                            <Label Style="{StaticResource Faint}"
+                                   HorizontalTextAlignment="Center"
+                                   Text="{Binding SheetSubtitle}" />
+                        </VerticalStackLayout>
+                    </Grid>
+                </Border>
+            </Grid>
+        </Grid>
+
+        <!--
+            Lifted out of this view by MainPage at load time so the scrim covers
+            the whole window. See MainPage.ShowSectionAsync.
+        -->
+        <Grid x:Name="ModalLayer" IsVisible="{Binding IsAnyModalOpen}">
+
+            <!-- ===================== THE CARD ===================== -->
+            <controls:ModalHost IsOpen="{Binding IsCardOpen}"
+                                Title="{Binding CardTitle}"
+                                Subtitle="{Binding CardSubtitle}"
+                                ModalWidth="460"
+                                PrimaryText="Done"
+                                PrimaryCommand="{Binding CloseCardCommand}"
+                                SecondaryCommand="{Binding CloseCardCommand}"
+                                DismissCommand="{Binding CloseCardCommand}"
+                                ErrorText="{Binding ModalError}">
+                <controls:ModalHost.Body>
+                    <VerticalStackLayout Spacing="10" BindingContext="{Binding CardRow}" x:DataType="vm:TimesheetRow">
+
+                        <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="10" RowSpacing="7"
+                              RowDefinitions="Auto,Auto,Auto,Auto,Auto">
+
+                            <Label Grid.Row="0" Grid.Column="0" Style="{StaticResource Muted}" VerticalOptions="Center" Text="# of Days" />
+                            <Entry Grid.Row="0" Grid.Column="1" Style="{StaticResource Cell}" Text="{Binding Days}" />
+                            <Label Grid.Row="0" Grid.Column="2" Style="{StaticResource Priced}" FontSize="12.5" WidthRequest="100" VerticalOptions="Center" Text="{Binding BasicDisplay}" />
+
+                            <Label Grid.Row="1" Grid.Column="0" Style="{StaticResource Muted}" VerticalOptions="Center" Text="Regular OT" />
+                            <Entry Grid.Row="1" Grid.Column="1" Style="{StaticResource Cell}" Text="{Binding RegularOt}" />
+                            <Label Grid.Row="1" Grid.Column="2" Style="{StaticResource Priced}" FontSize="12.5" WidthRequest="100" VerticalOptions="Center" Text="{Binding RegularOtDisplay}" />
+
+                            <Label Grid.Row="2" Grid.Column="0" Style="{StaticResource Muted}" VerticalOptions="Center" Text="Special hol. OT" />
+                            <Entry Grid.Row="2" Grid.Column="1" Style="{StaticResource Cell}" Text="{Binding SpecialOt}" />
+                            <Label Grid.Row="2" Grid.Column="2" Style="{StaticResource Priced}" FontSize="12.5" WidthRequest="100" VerticalOptions="Center" Text="{Binding SpecialOtDisplay}" />
+
+                            <Label Grid.Row="3" Grid.Column="0" Style="{StaticResource Muted}" VerticalOptions="Center" Text="Legal hol. OT" />
+                            <Entry Grid.Row="3" Grid.Column="1" Style="{StaticResource Cell}" Text="{Binding LegalOt}" />
+                            <Label Grid.Row="3" Grid.Column="2" Style="{StaticResource Priced}" FontSize="12.5" WidthRequest="100" VerticalOptions="Center" Text="{Binding LegalOtDisplay}" />
+
+                            <Label Grid.Row="4" Grid.Column="0" Style="{StaticResource Muted}" VerticalOptions="Center" Text="Night shift" />
+                            <Entry Grid.Row="4" Grid.Column="1" Style="{StaticResource Cell}" Text="{Binding NightShift}" />
+                            <Label Grid.Row="4" Grid.Column="2" Style="{StaticResource Priced}" FontSize="12.5" WidthRequest="100" VerticalOptions="Center" Text="{Binding NightDisplay}" />
+                        </Grid>
+
+                        <BoxView Style="{StaticResource Divider}" />
+
+                        <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="10" RowSpacing="7"
+                              RowDefinitions="Auto,Auto">
+                            <Label Grid.Row="0" Grid.Column="0" Style="{StaticResource Muted}" VerticalOptions="Center" Text="Late" />
+                            <Entry Grid.Row="0" Grid.Column="1" Style="{StaticResource Cell}" Text="{Binding Late}" />
+                            <Label Grid.Row="0" Grid.Column="2" Style="{StaticResource Faint}" WidthRequest="100" HorizontalTextAlignment="End" VerticalOptions="Center" Text="off gross" />
+
+                            <Label Grid.Row="1" Grid.Column="0" Style="{StaticResource Muted}" VerticalOptions="Center" Text="Company loan" />
+                            <Entry Grid.Row="1" Grid.Column="1" Style="{StaticResource Cell}" Text="{Binding CompanyLoan}" />
+                            <Label Grid.Row="1" Grid.Column="2" Style="{StaticResource Faint}" WidthRequest="100" HorizontalTextAlignment="End" VerticalOptions="Center" Text="deduction" />
+                        </Grid>
+
+                        <controls:FormEntry Label="NOTE" Text="{Binding Note}" Placeholder="Optional — e.g. UNIFORM, NO ATM" />
+
+                        <BoxView Style="{StaticResource Divider}" />
+
+                        <Grid ColumnDefinitions="*,Auto" RowDefinitions="Auto,Auto" RowSpacing="4">
+                            <Label Grid.Row="0" Grid.Column="0" Style="{StaticResource Muted}" Text="Gross income" />
+                            <Label Grid.Row="0" Grid.Column="1"
+                                   Text="{Binding GrossDisplay}"
+                                   FontSize="14"
+                                   FontAttributes="Bold"
+                                   HorizontalTextAlignment="End"
+                                   TextColor="{AppThemeBinding Light={StaticResource TextLight}, Dark={StaticResource TextDark}}" />
+
+                            <Label Grid.Row="1" Grid.Column="0" Style="{StaticResource Muted}" Text="Less company loan" />
+                            <Label Grid.Row="1" Grid.Column="1"
+                                   Text="{Binding AfterDeductionsDisplay}"
+                                   FontSize="13"
+                                   HorizontalTextAlignment="End"
+                                   TextColor="{AppThemeBinding Light={StaticResource TextLight}, Dark={StaticResource TextDark}}" />
+                        </Grid>
+
+                        <Label Style="{StaticResource Faint}"
+                               Text="Gross is earnings less late, which is where the client's own sheet puts it. SSS, PhilHealth, Pag-IBIG and withholding are read from the tables in force on the pay date and come off when the run is calculated — so this is not yet take-home pay." />
+                    </VerticalStackLayout>
+                </controls:ModalHost.Body>
+            </controls:ModalHost>
+
+            <!-- ================== CONFIRMATION ================== -->
+            <controls:ModalHost IsOpen="{Binding IsConfirmOpen}"
+                                Title="{Binding ConfirmTitle}"
+                                ModalWidth="420"
+                                PrimaryText="Clear"
+                                PrimaryCommand="{Binding ConfirmCommand}"
+                                SecondaryCommand="{Binding CancelConfirmCommand}"
+                                DismissCommand="{Binding CancelConfirmCommand}">
+                <controls:ModalHost.Body>
+                    <Label Style="{StaticResource Muted}" Text="{Binding ConfirmMessage}" />
+                </controls:ModalHost.Body>
+            </controls:ModalHost>
+        </Grid>
+    </Grid>
+</ContentView>

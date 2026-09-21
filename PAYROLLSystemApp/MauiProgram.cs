@@ -49,11 +49,13 @@ namespace PAYROLLSystemApp
 
             // Section 2.2 — employee masterfile and its reference data.
             services.AddSingleton<IOrganizationService, OrganizationService>();
+            services.AddSingleton<IDetachmentService, DetachmentService>();
             services.AddSingleton<IEmployeeService, EmployeeService>();
 
             // Section 2.3 — daily time records and the holiday calendar.
             services.AddSingleton<IHolidayService, HolidayService>();
             services.AddSingleton<IAttendanceService, AttendanceService>();
+            services.AddSingleton<ITimesheetService, TimesheetService>();
 
             // Section 2.4 — leave types, credits and the request queue.
             services.AddSingleton<ILeaveService, LeaveService>();
@@ -85,7 +87,9 @@ namespace PAYROLLSystemApp
             services.AddTransient<DashboardViewModel>();
             services.AddTransient<EmployeeDirectoryViewModel>();
             services.AddTransient<OrganizationViewModel>();
+            services.AddTransient<DetachmentsViewModel>();
             services.AddTransient<AttendanceViewModel>();
+            services.AddTransient<TimesheetsViewModel>();
             services.AddTransient<LeaveViewModel>();
             services.AddTransient<PayrollSetupViewModel>();
             services.AddTransient<PayrollRunsViewModel>();
@@ -106,7 +110,9 @@ namespace PAYROLLSystemApp
             services.AddTransient<DashboardView>();
             services.AddTransient<EmployeesView>();
             services.AddTransient<OrganizationView>();
+            services.AddTransient<DetachmentsView>();
             services.AddTransient<AttendanceView>();
+            services.AddTransient<TimesheetsView>();
             services.AddTransient<LeaveView>();
             services.AddTransient<PayrollSetupView>();
             services.AddTransient<PayrollRunsView>();

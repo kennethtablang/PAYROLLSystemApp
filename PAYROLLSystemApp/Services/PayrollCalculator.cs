@@ -1,4 +1,4 @@
-using PAYROLLSystemApp.Models;
+﻿using PAYROLLSystemApp.Models;
 
 namespace PAYROLLSystemApp.Services;
 
@@ -51,12 +51,19 @@ public static class PayrollCalculator
 
         // ---------------------------------------------------------- rates
 
-        var rates = ResolveRates(employee, ctx.Settings);
+        var rates = ResolveRates(input, ctx);
 
         if (rates.Hourly <= 0m)
         {
+            // Two different faults, and the fix is different for each: nobody
+            // should go looking at the employee record when what is missing is a
+            // row in the detachment's rate table.
             blockers.Add(
-                $"{employee.FullName} has no basic rate set, so nothing can be computed for them.");
+                !employee.UsesOwnRate && employee.DetachmentId is not null
+                    ? $"No daily rate is posted for {employee.FullName}'s position at their " +
+                      $"detachment on {run.PayDate:dd MMM yyyy}. Set it on Detachments, or put them " +
+                      "on their own rate."
+                    : $"{employee.FullName} has no basic rate set, so nothing can be computed for them.");
         }
 
         var payslip = NewPayslip(input, ctx, rates);
@@ -88,10 +95,12 @@ public static class PayrollCalculator
 
         // ----------------------------------------------------------- time
 
-        var time = Summarise(input, ctx);
+        var sheet = input.Timesheet;
+
+        var time = sheet is null ? Summarise(input, ctx) : Summarise(sheet);
         ApplyTime(payslip, time);
 
-        if (input.Attendance.Count == 0)
+        if (sheet is null && input.Attendance.Count == 0)
         {
             // Paying without a timesheet is how an employee is paid for a
             // cut-off nobody recorded. The cut-off is generated on the
@@ -101,17 +110,35 @@ public static class PayrollCalculator
                 $"({run.CutOffStart:dd MMM} – {run.CutOffEnd:dd MMM yyyy}).");
         }
 
+        if (sheet is not null && !sheet.HasFigures)
+        {
+            blockers.Add(
+                $"The timesheet for {employee.FullName} is blank. Key their figures on " +
+                "Timesheets, or take them off this run.");
+        }
+
         // -------------------------------------------------------- earnings
 
-        var isMonthly = employee.PayType == PayType.Monthly;
+        var isMonthly = sheet is null && employee.PayType == PayType.Monthly;
 
-        if (isMonthly)
+        if (sheet is not null)
+        {
+            AddSheetBasic(input, ctx, rates, sheet, lines);
+            AddSheetPremiums(input, ctx, rates, sheet, lines, blockers);
+        }
+        else if (isMonthly)
+        {
             AddMonthlyBasic(input, ctx, rates, time, lines);
+            AddPremiums(input, ctx, rates, lines, blockers, isMonthly);
+        }
         else
+        {
             AddDailyBasic(input, ctx, rates, time, lines);
+            AddPremiums(input, ctx, rates, lines, blockers, isMonthly);
+        }
 
-        AddPremiums(input, ctx, rates, lines, blockers, isMonthly);
         AddAllowance(input, ctx, rates, time, lines);
+        AddServiceIncentiveLeave(input, ctx, rates, time, lines);
         AddAdjustments(input, lines, PayslipLineKind.Earning);
 
         if (run.RunType == PayrollRunType.FinalPay)
@@ -122,11 +149,14 @@ public static class PayrollCalculator
 
         // ------------------------------------------------------ deductions
 
-        if (isMonthly)
+        if (sheet is not null)
+            AddSheetDeductions(ctx, sheet, lines);
+        else if (isMonthly)
             AddTimeDeductions(input, ctx, rates, time, lines);
 
         AddStatutory(input, ctx, payslip, lines, blockers);
         AddLoans(input, ctx, lines, loanCollections);
+        AddRecurringDeductions(input, ctx, lines);
         AddAdjustments(input, lines, PayslipLineKind.Deduction);
 
         // ------------------------------------------------------------ tax
@@ -148,7 +178,14 @@ public static class PayrollCalculator
     // Rates
     // =====================================================================
 
-    private sealed record Rates(decimal Monthly, decimal Daily, decimal Hourly, decimal MonthlyBasis);
+    /// <param name="FromDetachment">
+    /// True when the figures came from the detachment's posted rate rather than
+    /// the employee's own. The payslip records this by reporting the rate as a
+    /// daily one, which is what a wage order publishes and what was actually
+    /// applied.
+    /// </param>
+    private sealed record Rates(
+        decimal Monthly, decimal Daily, decimal Hourly, decimal MonthlyBasis, bool FromDetachment = false);
 
     /// <summary>
     /// §5.2. Monthly to daily to hourly, and the monthly figure the statutory
@@ -159,9 +196,25 @@ public static class PayrollCalculator
     /// factor the daily rate came from. Reading a bracket against a fortnight's
     /// pay would put the employee in a bracket less than half as high.</para>
     /// </summary>
-    private static Rates ResolveRates(Employee employee, PayrollSettings settings)
+    private static Rates ResolveRates(EmployeePayrollInput input, PayrollContext ctx)
     {
+        var employee = input.Employee;
+        var settings = ctx.Settings;
+
         var hoursPerDay = settings.StandardHoursPerDay <= 0 ? 8m : settings.StandardHoursPerDay;
+
+        // The posted rate for the post, unless this employee is on their own. A
+        // detachment rate is always a *daily* one: that is the unit a regional
+        // wage order is published in.
+        if (!employee.UsesOwnRate &&
+            ctx.DetachmentRates.DailyRateFor(employee.DetachmentId) is { } posted)
+        {
+            var postedMonthly = PayrollRounding.Rate(posted * settings.WorkingDaysFactor / 12m);
+
+            return new Rates(
+                postedMonthly, posted, PayrollRounding.Rate(posted / hoursPerDay), postedMonthly,
+                FromDetachment: true);
+        }
 
         switch (employee.PayType)
         {
@@ -205,6 +258,8 @@ public static class PayrollCalculator
             EmployeeName = employee.FullName,
             DepartmentName = input.DepartmentName,
             PositionTitle = input.PositionTitle,
+            DetachmentCode = input.DetachmentCode,
+            DetachmentName = input.DetachmentName,
             Tin = employee.Tin,
             SssNumber = employee.SssNumber,
             PhilHealthNumber = employee.PhilHealthNumber,
@@ -217,8 +272,11 @@ public static class PayrollCalculator
             PeriodEnd = run.PeriodEnd,
             PayDate = run.PayDate,
 
-            PayType = employee.PayType,
-            BasicRate = employee.BasicRate,
+            // A posted rate is a daily one whatever the employee record says,
+            // so the payslip reports the rate that was actually applied rather
+            // than a monthly figure nobody was paid from.
+            PayType = rates.FromDetachment ? PayType.Daily : employee.PayType,
+            BasicRate = rates.FromDetachment ? rates.Daily : employee.BasicRate,
             DailyRate = rates.Daily,
             HourlyRate = rates.Hourly,
             WorkingDaysFactor = ctx.Settings.WorkingDaysFactor,
@@ -308,6 +366,158 @@ public static class PayrollCalculator
         }
 
         return summary;
+    }
+
+    // =====================================================================
+    // Time from a period timesheet
+    // =====================================================================
+
+    /// <summary>
+    /// The same summary shape, filled from a keyed sheet instead of a walk over
+    /// days.
+    ///
+    /// <para>Most of the fields stay zero, and that is correct rather than
+    /// missing: a sheet records what was rendered, not what was scheduled and
+    /// missed. Absence, undertime and unpaid leave are already priced out of it —
+    /// a guard who stood eleven days is keyed as eleven days — so deriving them
+    /// here would deduct for the same shortfall twice.</para>
+    /// </summary>
+    private static TimeSummary Summarise(PeriodTimesheet sheet) => new()
+    {
+        DaysWorked = sheet.Days,
+        ScheduledDays = sheet.Days,
+        EmployedScheduledDays = sheet.Days,
+        OvertimeHours = sheet.TotalOtHours,
+        NightHours = sheet.NightShiftHours
+    };
+
+    /// <summary>
+    /// The days rendered, at the post's daily rate. This is the sheet's
+    /// "# of days" column and the only thing on it that is not an increment.
+    /// </summary>
+    private static void AddSheetBasic(
+        EmployeePayrollInput input, PayrollContext ctx, Rates rates, PeriodTimesheet sheet,
+        List<PayslipLine> lines)
+    {
+        if (sheet.Days <= 0m)
+            return;
+
+        lines.Add(Earning(ctx, PayComponentCodes.BasicPay, "Basic pay",
+            rates.Daily * sheet.Days, input,
+            quantity: sheet.Days, rate: rates.Daily,
+            note: $"{sheet.Days:0.##} day(s) rendered, from the client's timesheet."));
+    }
+
+    /// <summary>
+    /// The three overtime buckets and the night differential, priced the way the
+    /// sheet is written.
+    ///
+    /// <para><b>Two buckets pay an increment, one pays in full.</b> The hours in
+    /// the special-holiday and legal-holiday columns fall on days already counted
+    /// in "# of days", so only the premium over that day is still owed — 0.30 and
+    /// 1.00 against the configured 1.30 and 2.00. Ordinary overtime is different:
+    /// it is worked beyond the day, nothing covers it, and it pays its full
+    /// 1.25. This is the same salary-coverage rule the day-walking path applies,
+    /// arrived at from totals instead of dates.</para>
+    ///
+    /// <para>Multipliers come from the configured premium matrix, never from
+    /// constants here, so a change on Payroll Setup reaches both paths at once.</para>
+    /// </summary>
+    private static void AddSheetPremiums(
+        EmployeePayrollInput input, PayrollContext ctx, Rates rates, PeriodTimesheet sheet,
+        List<PayslipLine> lines, List<string> blockers)
+    {
+        // Art. 82 again: managerial staff earn no overtime, premium or night pay,
+        // whatever the sheet says.
+        if (input.IsManagerial)
+            return;
+
+        var missing = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+        decimal? Multiplier(string code)
+        {
+            var configured = ctx.Premiums.Get(code)?.Multiplier;
+
+            if (configured is null)
+                missing.Add(code);
+
+            return configured;
+        }
+
+        void Add(string premiumCode, string earningCode, decimal hours, bool covered, string what)
+        {
+            if (hours <= 0m)
+                return;
+
+            if (Multiplier(premiumCode) is not { } full)
+                return;
+
+            // The day underneath a holiday or rest day premium is already paid by
+            // "# of days"; overtime beyond the day is covered by nothing.
+            var payable = covered ? full - 1m : full;
+
+            if (payable <= 0m)
+                return;
+
+            lines.Add(Earning(ctx, earningCode,
+                ctx.Premiums.Get(premiumCode)?.Name ?? what,
+                rates.Hourly * hours * payable, input,
+                quantity: hours, rate: rates.Hourly, multiplier: full,
+                code: earningCode,
+                note: covered
+                    ? "The premium over the day already counted in days rendered."
+                    : "Worked beyond the ordinary day."));
+        }
+
+        Add(PremiumCodes.OrdinaryOvertime, PayComponentCodes.OvertimeRegular,
+            sheet.RegularOtHours, covered: false, "Overtime");
+
+        Add(PremiumCodes.SpecialNonWorking, PayComponentCodes.OvertimeRestDay,
+            sheet.SpecialHolidayOtHours, covered: true, "Special holiday / rest day premium");
+
+        Add(PremiumCodes.RegularHoliday, PayComponentCodes.OvertimeHoliday,
+            sheet.LegalHolidayOtHours, covered: true, "Legal holiday premium");
+
+        if (sheet.NightShiftHours > 0m && ctx.Premiums.NightDifferentialRate is var nd && nd > 0m)
+        {
+            lines.Add(Earning(ctx, PayComponentCodes.NightDifferential, "Night differential",
+                rates.Hourly * sheet.NightShiftHours * nd, input,
+                quantity: sheet.NightShiftHours, rate: rates.Hourly, multiplier: nd,
+                note: "Art. 86, on the hours keyed in the night shift column."));
+        }
+
+        foreach (var code in missing)
+        {
+            blockers.Add(
+                $"No premium multiplier is configured for {code}, which this timesheet needs. " +
+                "Set it on Payroll Setup → Premium rates.");
+        }
+    }
+
+    /// <summary>
+    /// The sheet's two money columns.
+    ///
+    /// <para><b>Both are taken as keyed.</b> Lateness is priced at the post
+    /// before the sheet is written, and the loan instalment is the client's
+    /// instruction for this cut-off. Recomputing either from something the system
+    /// holds would produce a figure the client was not billed.</para>
+    /// </summary>
+    private static void AddSheetDeductions(
+        PayrollContext ctx, PeriodTimesheet sheet, List<PayslipLine> lines)
+    {
+        if (sheet.LateAmount > 0m)
+        {
+            lines.Add(Deduction(ctx, PayComponentCodes.Tardiness, "Tardiness",
+                sheet.LateAmount,
+                note: "As keyed from the client's timesheet."));
+        }
+
+        if (sheet.CompanyLoan > 0m)
+        {
+            lines.Add(Deduction(ctx, PayComponentCodes.CompanyLoan, "Company loan",
+                sheet.CompanyLoan,
+                note: "As keyed from the client's timesheet."));
+        }
     }
 
     /// <summary>
@@ -542,16 +752,17 @@ public static class PayrollCalculator
                 "Set it on Payroll Setup → Premium rates.");
         }
 
-        // Overtime lines are reported under the overtime earning; the rest under
-        // holiday or rest day pay, so a payslip groups the way a payroll officer
-        // reads it rather than one line per matrix cell.
+        // Premium cells are reported under a handful of earnings, so a payslip
+        // groups the way a payroll officer reads it rather than one line per
+        // matrix cell. Overtime is the exception: it splits three ways, because
+        // the payroll summary bills ordinary, rest day and holiday overtime
+        // separately and a single figure cannot be taken apart afterwards.
         foreach (var (code, entry) in premiums.OrderBy(p => p.Key, StringComparer.OrdinalIgnoreCase))
         {
-            var earningCode = code.Contains("_OT", StringComparison.OrdinalIgnoreCase)
-                ? PayComponentCodes.Overtime
-                : code.StartsWith("RD", StringComparison.OrdinalIgnoreCase)
+            var earningCode = OvertimeEarningFor(code)
+                ?? (code.StartsWith("RD", StringComparison.OrdinalIgnoreCase)
                     ? PayComponentCodes.RestDayPremium
-                    : PayComponentCodes.HolidayPay;
+                    : PayComponentCodes.HolidayPay);
 
             lines.Add(Earning(ctx, earningCode, entry.Name, entry.Amount, input,
                 quantity: entry.Hours, rate: rates.Hourly, multiplier: entry.Multiplier,
@@ -611,6 +822,92 @@ public static class PayrollCalculator
 
         lines.Add(Earning(ctx, PayComponentCodes.RecurringAllowance, "Allowance", amount, input,
             note: $"Monthly allowance ÷ {runs} run(s) in the month"));
+    }
+
+    /// <summary>
+    /// Art. 95. The five days of Service Incentive Leave, accrued against the
+    /// days actually rendered — the legacy screen's <c>5Days Inc.</c>.
+    ///
+    /// <para><b>Accrued, not banked.</b> The agency pays the entitlement out a
+    /// slice at a time instead of holding credits and converting them on the way
+    /// out, so a guard who stands thirteen days is paid thirteen days' worth of
+    /// it in that cut-off. The per-day figure is
+    /// <c>daily rate × days per year ÷ divisor</c>, both of which are settings:
+    /// at ₱600/day and 5 ÷ 365 that is ₱8.2192 a day, and thirteen days is
+    /// ₱106.85 — the legacy screen's figure to the centavo.</para>
+    ///
+    /// <para><b>It is off for anyone whose leave is banked instead.</b> The
+    /// setting governs the whole company, and where it is on,
+    /// <see cref="AddLeaveConversion"/> would be settling an entitlement this
+    /// has already paid — so a final-pay run that converts leave and a period
+    /// that accrues it must never both be in force. That is the company's switch
+    /// to hold, not this engine's to guess at, which is why it is one setting
+    /// and not a rule per employee.</para>
+    ///
+    /// <para>Tax treatment comes from the <c>ALW_5SLIP</c> earning type, as with
+    /// every other earning — the engine computes the figure, not its
+    /// treatment.</para>
+    /// </summary>
+    private static void AddServiceIncentiveLeave(
+        EmployeePayrollInput input, PayrollContext ctx, Rates rates, TimeSummary time,
+        List<PayslipLine> lines)
+    {
+        if (time.DaysWorked <= 0m)
+            return;
+
+        var perDay = ctx.Settings.ServiceIncentivePerDay(rates.Daily);
+        if (perDay <= 0m)
+            return;
+
+        // A retired earning type turns the accrual off, the same way it does for
+        // any other configurable line.
+        if (ctx.Earning(PayComponentCodes.FiveSlip) is null)
+            return;
+
+        var days = ctx.Settings.ServiceIncentiveLeaveDays;
+        var divisor = ctx.Settings.ServiceIncentiveLeaveDivisor;
+
+        lines.Add(Earning(ctx, PayComponentCodes.FiveSlip, "5Slip",
+            perDay * time.DaysWorked, input,
+            quantity: time.DaysWorked, rate: perDay,
+            note: $"Art. 95 — {days:0.##} day(s) ÷ {divisor:0.##}, on {time.DaysWorked:0.##} day(s) rendered."));
+    }
+
+    /// <summary>
+    /// FR-055. The standing deductions set up against the employee — insurance,
+    /// performance bond, processing fee — taken in full on every run their dates
+    /// cover.
+    ///
+    /// <para><b>No balance and no proration.</b> These are not loans: nothing
+    /// counts down and there is nothing to over-collect, so unlike
+    /// <see cref="AddLoans"/> there is no instalment arithmetic. And unlike the
+    /// monthly allowance they are <em>not</em> divided across the month's runs —
+    /// the figure set up is what a period takes, because a premium agreed at
+    /// ₱100 a cut-off means ₱100 a cut-off. A company that means ₱100 a month
+    /// sets up ₱50.</para>
+    ///
+    /// <para>Read against the run's <b>pay date</b>, the same date the wage
+    /// rates and statutory tables are read at.</para>
+    /// </summary>
+    private static void AddRecurringDeductions(
+        EmployeePayrollInput input, PayrollContext ctx, List<PayslipLine> lines)
+    {
+        var payDate = ctx.Run.PayDate;
+
+        foreach (var standing in input.RecurringDeductions)
+        {
+            if (!standing.AppliesOn(payDate))
+                continue;
+
+            var name = !string.IsNullOrWhiteSpace(standing.DeductionName)
+                ? standing.DeductionName
+                : ctx.Deduction(standing.DeductionCode)?.Name ?? standing.DeductionCode;
+
+            lines.Add(Deduction(ctx, standing.DeductionCode, name, standing.Amount,
+                note: string.IsNullOrWhiteSpace(standing.Reference)
+                    ? "Standing deduction."
+                    : $"Standing deduction · {standing.Reference}"));
+        }
     }
 
     /// <summary>FR-062. Unused convertible leave, cashed out on separation.</summary>
@@ -912,8 +1209,17 @@ public static class PayrollCalculator
         if (ctx.Run.RunType == PayrollRunType.ThirteenthMonth)
             return;
 
+        // A keyed sheet carries the company loan instalment for the cut-off as an
+        // instruction, and AddSheetDeductions has already taken it. Amortising a
+        // company loan record on top of that would collect twice for the same
+        // fortnight, so the sheet wins and the loan's own schedule is left alone.
+        var loanFromSheet = input.Timesheet is { CompanyLoan: > 0m };
+
         var ordered = input.Loans
             .Where(l => l.IsCollectable)
+            .Where(l => !loanFromSheet ||
+                        !string.Equals(l.DeductionCode, PayComponentCodes.CompanyLoan,
+                            StringComparison.OrdinalIgnoreCase))
             .OrderBy(l => ctx.Deduction(l.DeductionCode)?.Priority ?? 100)
             .ThenBy(l => l.Id);
 
@@ -1000,6 +1306,30 @@ public static class PayrollCalculator
         payslip.TaxableEarnings = PayrollRounding.Money(taxableEarnings);
         payslip.NonTaxableEarnings = PayrollRounding.Money(nonTaxableEarnings);
         payslip.TaxableIncome = PayrollRounding.Money(basis);
+
+        // The legacy screen's E-Withtax: a figure entered against this employee
+        // on this run, which stands in place of the table's answer rather than
+        // being added to it. It arrives as an adjustment coded WTAX, so it is
+        // already in `lines` by the time this runs — computing a second figure
+        // and adding it would withhold twice.
+        //
+        // It is deliberately the ordinary adjustment path (FR-057) and not a
+        // field of its own: an adjustment demands a remark, is captured in the
+        // audit log, and dies with a discarded draft. A manual tax override is
+        // exactly the entry that should have to explain itself.
+        var entered = lines.FirstOrDefault(l =>
+            l.IsDeduction &&
+            string.Equals(l.Code, PayComponentCodes.WithholdingTax, StringComparison.OrdinalIgnoreCase));
+
+        if (entered is not null)
+        {
+            payslip.WithholdingTax = entered.Amount;
+
+            if (string.IsNullOrWhiteSpace(entered.Note))
+                entered.Note = "Entered against this run; the table was not consulted.";
+
+            return;
+        }
 
         if (ctx.Statutory.TaxBrackets.Count == 0)
         {
@@ -1138,9 +1468,47 @@ public static class PayrollCalculator
         };
     }
 
+    /// <summary>
+    /// Which overtime earning a premium cell belongs to, or null when the cell
+    /// is not overtime at all.
+    ///
+    /// <para><b>A holiday outranks a rest day.</b> <c>SPL_RD_OT</c> and
+    /// <c>REG_HOL_RD_OT</c> are overtime on a holiday that happened to fall on a
+    /// rest day, and they were paid at the holiday-rest-day multiplier — the
+    /// dearest cell in the matrix. Reporting them as rest day overtime would
+    /// understate the holiday column and overstate the Sunday one, so the
+    /// holiday wins.</para>
+    /// </summary>
+    private static string? OvertimeEarningFor(string premiumCode)
+    {
+        if (!premiumCode.Contains("_OT", StringComparison.OrdinalIgnoreCase))
+            return null;
+
+        if (premiumCode.Contains("HOL", StringComparison.OrdinalIgnoreCase) ||
+            premiumCode.StartsWith("SPL", StringComparison.OrdinalIgnoreCase))
+        {
+            return PayComponentCodes.OvertimeHoliday;
+        }
+
+        return premiumCode.StartsWith("RD", StringComparison.OrdinalIgnoreCase)
+            ? PayComponentCodes.OvertimeRestDay
+            : PayComponentCodes.OvertimeRegular;
+    }
+
+    /// <summary>
+    /// RA 9504: a minimum wage earner pays no tax on basic pay, holiday pay,
+    /// overtime, night differential or hazard pay.
+    ///
+    /// <para>Every overtime code has to be listed. Missing one would make a
+    /// minimum wage earner's rest day overtime taxable — an under-payment that
+    /// looks like a rounding difference on the payslip.</para>
+    /// </summary>
     private static bool IsWageExempt(string code) =>
         code is PayComponentCodes.BasicPay
              or PayComponentCodes.Overtime
+             or PayComponentCodes.OvertimeRegular
+             or PayComponentCodes.OvertimeRestDay
+             or PayComponentCodes.OvertimeHoliday
              or PayComponentCodes.NightDifferential
              or PayComponentCodes.HolidayPay
              or PayComponentCodes.HolidayUnworked

@@ -1,11 +1,12 @@
-using System.Globalization;
+﻿using System.Globalization;
 using System.Text;
+using PAYROLLSystemApp.Models;
 
 namespace PAYROLLSystemApp.Services;
 
 /// <summary>
-/// A minimal PDF writer: text, rules and filled rectangles on A4, in the two
-/// base-14 Helvetica faces.
+/// A minimal PDF writer: text, rules and filled rectangles on a page of any
+/// size, in the two base-14 Helvetica faces.
 ///
 /// <para><b>Why hand-rolled rather than a library.</b> A payslip is a fixed
 /// layout of text at known positions — the smallest problem a PDF library
@@ -31,30 +32,49 @@ namespace PAYROLLSystemApp.Services;
 public sealed class PdfWriter
 {
     /// <summary>A4 in points: 210 × 297 mm at 72 dpi.</summary>
-    public const double A4Short = 595.28;
+    public const double A4Short = ReportPaperSizes.A4Short;
 
-    public const double A4Long = 841.89;
+    public const double A4Long = ReportPaperSizes.A4Long;
 
     private readonly List<StringBuilder> _pages = new();
 
     private StringBuilder _current = new();
 
     /// <param name="landscape">
-    /// Turns the page on its side. A payslip is a column of figures and fits
+    /// Turns the A4 page on its side. A payslip is a column of figures and fits
     /// portrait; a payroll register is a column per pay code and does not, so
     /// the orientation belongs to the document rather than to the writer.
     /// </param>
     public PdfWriter(bool landscape = false)
+        : this(landscape ? A4Long : A4Short, landscape ? A4Short : A4Long)
     {
-        IsLandscape = landscape;
+    }
+
+    /// <summary>
+    /// An explicit page box in points, for stock that is not A4.
+    ///
+    /// <para>Taken already oriented rather than as a size plus a flag: 11 × 14
+    /// continuous form is fed one way through a tractor, so "landscape" is not a
+    /// choice the document gets to make about it. See
+    /// <see cref="ReportPaperSizes.Box"/>, which is where that decision is
+    /// taken.</para>
+    /// </summary>
+    public PdfWriter(double pageWidth, double pageHeight)
+    {
+        if (pageWidth <= 0 || pageHeight <= 0)
+            throw new ArgumentOutOfRangeException(nameof(pageWidth), "A page has to have a positive size.");
+
+        PageWidth = pageWidth;
+        PageHeight = pageHeight;
         _pages.Add(_current);
     }
 
-    public bool IsLandscape { get; }
+    /// <summary>True when the page is wider than it is tall.</summary>
+    public bool IsLandscape => PageWidth > PageHeight;
 
-    public double PageWidth => IsLandscape ? A4Long : A4Short;
+    public double PageWidth { get; }
 
-    public double PageHeight => IsLandscape ? A4Short : A4Long;
+    public double PageHeight { get; }
 
     public int PageCount => _pages.Count;
 

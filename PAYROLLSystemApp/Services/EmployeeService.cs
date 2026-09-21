@@ -1,4 +1,4 @@
-using PAYROLLSystemApp.Data;
+﻿using PAYROLLSystemApp.Data;
 using PAYROLLSystemApp.Models;
 using PAYROLLSystemApp.Security;
 
@@ -9,7 +9,12 @@ public enum EmployeeStatusFilter
 {
     Active,
     Separated,
-    All
+
+    /// <summary>Everyone still on the books. Archived records stay hidden.</summary>
+    All,
+
+    /// <summary>The archived records themselves, so one can be restored.</summary>
+    Archived
 }
 
 /// <summary>The search and filter criteria behind FR-016.</summary>
@@ -57,6 +62,15 @@ public interface IEmployeeService
     Task<EmployeeSaveResult> SeparateAsync(int id, DateTime separationDate, string reason, User performedBy);
 
     Task<EmployeeSaveResult> ReinstateAsync(int id, User performedBy);
+
+    /// <summary>
+    /// FR-017. Hides an employee from every list and picker without touching a
+    /// figure that has been paid or filed. This is what "delete" does here.
+    /// </summary>
+    Task<EmployeeSaveResult> ArchiveAsync(int id, string reason, User performedBy);
+
+    /// <summary>Brings an archived employee back into the lists.</summary>
+    Task<EmployeeSaveResult> RestoreAsync(int id, User performedBy);
 
     Task<IReadOnlyList<SalaryRateHistory>> GetRateHistoryAsync(int employeeId);
 
@@ -123,11 +137,17 @@ public sealed class EmployeeService : IEmployeeService
     {
         IEnumerable<Employee> results = source;
 
+        // Archived records are out of every view but their own. That is the
+        // whole point of archiving: the row survives for the payslips and the
+        // alphalist that point at it, and nobody has to look at it again.
         results = query.Status switch
         {
-            EmployeeStatusFilter.Active => results.Where(e => e.IsActive && !e.IsSeparated),
-            EmployeeStatusFilter.Separated => results.Where(e => e.IsSeparated || !e.IsActive),
-            _ => results
+            EmployeeStatusFilter.Active =>
+                results.Where(e => e.IsActive && !e.IsSeparated && !e.IsArchived),
+            EmployeeStatusFilter.Separated =>
+                results.Where(e => (e.IsSeparated || !e.IsActive) && !e.IsArchived),
+            EmployeeStatusFilter.Archived => results.Where(e => e.IsArchived),
+            _ => results.Where(e => !e.IsArchived)
         };
 
         if (query.DepartmentId is { } department)
@@ -410,6 +430,106 @@ public sealed class EmployeeService : IEmployeeService
             performedBy.Username, performedBy.Id).ConfigureAwait(false);
 
         return EmployeeSaveResult.Ok(employee, $"{employee.DisplayName} reinstated.");
+    }
+
+    // =====================================================================
+    // Archiving — what "delete" means here
+    // =====================================================================
+
+    /// <summary>
+    /// FR-017, NFR-009. Takes an employee out of every list and picker while
+    /// leaving the record itself intact.
+    ///
+    /// <para><b>There is no hard delete, and there cannot be one.</b> Payslips,
+    /// the payroll register, each remittance report and the annual alphalist all
+    /// key on this row; a BIR 2316 already issued names it. Removing it would
+    /// change payroll that has been paid, remitted and filed — figures that are
+    /// no longer the company's alone to alter.</para>
+    ///
+    /// <para>Archiving does what someone deleting a record actually wants: the
+    /// employee stops appearing anywhere they have to be looked at. Reversible
+    /// through <see cref="RestoreAsync"/>, and audited both ways.</para>
+    /// </summary>
+    public async Task<EmployeeSaveResult> ArchiveAsync(int id, string reason, User performedBy)
+    {
+        if (!performedBy.Can(Permission.ManageEmployees))
+        {
+            await _audit.WriteAsync(AuditActions.AccessDenied, nameof(Employee), id, false,
+                $"Role {performedBy.RoleDisplayName} is not permitted to archive an employee.",
+                performedBy.Username, performedBy.Id).ConfigureAwait(false);
+
+            return EmployeeSaveResult.Fail("You do not have permission to archive an employee.");
+        }
+
+        var connection = await _database.GetConnectionAsync().ConfigureAwait(false);
+        var employee = await connection.FindAsync<Employee>(id).ConfigureAwait(false);
+
+        if (employee is null)
+            return EmployeeSaveResult.Fail("That employee record no longer exists.");
+
+        if (employee.IsArchived)
+            return EmployeeSaveResult.Fail($"{employee.DisplayName} is already archived.");
+
+        employee.IsArchived = true;
+        employee.IsActive = false;
+        employee.ArchivedUtc = DateTime.UtcNow;
+        employee.ArchivedReason = (reason ?? string.Empty).Trim();
+        employee.UpdatedUtc = DateTime.UtcNow;
+
+        await connection.UpdateAsync(employee).ConfigureAwait(false);
+
+        var payslips = await connection.ExecuteScalarAsync<int>(
+            "SELECT COUNT(*) FROM payslips WHERE EmployeeId = ?", id).ConfigureAwait(false);
+
+        await _audit.WriteAsync(AuditActions.EmployeeArchived, nameof(Employee), employee.Id, true,
+            $"Archived employee {employee.EmployeeNumber} — {employee.FullName}. " +
+            $"{payslips} payslip(s) retained." +
+            (employee.ArchivedReason.Length > 0 ? $" Reason: {employee.ArchivedReason}" : string.Empty),
+            performedBy.Username, performedBy.Id).ConfigureAwait(false);
+
+        return EmployeeSaveResult.Ok(employee,
+            payslips > 0
+                ? $"{employee.DisplayName} archived. Their {payslips} payslip(s) and everything " +
+                  "reported from them are unchanged."
+                : $"{employee.DisplayName} archived.");
+    }
+
+    public async Task<EmployeeSaveResult> RestoreAsync(int id, User performedBy)
+    {
+        if (!performedBy.Can(Permission.ManageEmployees))
+        {
+            await _audit.WriteAsync(AuditActions.AccessDenied, nameof(Employee), id, false,
+                $"Role {performedBy.RoleDisplayName} is not permitted to restore an employee.",
+                performedBy.Username, performedBy.Id).ConfigureAwait(false);
+
+            return EmployeeSaveResult.Fail("You do not have permission to restore an employee.");
+        }
+
+        var connection = await _database.GetConnectionAsync().ConfigureAwait(false);
+        var employee = await connection.FindAsync<Employee>(id).ConfigureAwait(false);
+
+        if (employee is null)
+            return EmployeeSaveResult.Fail("That employee record no longer exists.");
+
+        if (!employee.IsArchived)
+            return EmployeeSaveResult.Fail($"{employee.DisplayName} is not archived.");
+
+        employee.IsArchived = false;
+        employee.ArchivedUtc = null;
+        employee.ArchivedReason = string.Empty;
+
+        // Active again only where nothing else is holding them back. A separated
+        // employee restored from the archive is still separated.
+        employee.IsActive = employee.SeparationDate is null;
+        employee.UpdatedUtc = DateTime.UtcNow;
+
+        await connection.UpdateAsync(employee).ConfigureAwait(false);
+
+        await _audit.WriteAsync(AuditActions.EmployeeRestored, nameof(Employee), employee.Id, true,
+            $"Restored employee {employee.EmployeeNumber} — {employee.FullName} from the archive.",
+            performedBy.Username, performedBy.Id).ConfigureAwait(false);
+
+        return EmployeeSaveResult.Ok(employee, $"{employee.DisplayName} restored.");
     }
 
     // ----------------------------------------------------------- internals

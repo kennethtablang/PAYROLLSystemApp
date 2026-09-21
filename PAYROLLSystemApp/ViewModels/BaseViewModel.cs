@@ -59,15 +59,13 @@ public abstract partial class BaseViewModel : ObservableObject
     }
 
     /// <summary>
-    /// Runs work with a busy guard and re-entrancy protection, and records the
-    /// interaction against the idle timeout (FR-006, NFR-026).
+    /// Runs work with a busy guard and re-entrancy protection (NFR-026).
     /// </summary>
     protected async Task RunAsync(Func<Task> operation)
     {
         if (IsBusy)
             return;
 
-        Session.Touch();
         IsBusy = true;
 
         try
@@ -88,7 +86,6 @@ public abstract partial class BaseViewModel : ObservableObject
     /// <summary>Called by the page when it becomes visible.</summary>
     public virtual Task OnAppearingAsync()
     {
-        Session.Touch();
         return Task.CompletedTask;
     }
 }

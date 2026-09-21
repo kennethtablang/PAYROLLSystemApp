@@ -1,4 +1,4 @@
-using PAYROLLSystemApp.Data;
+﻿using PAYROLLSystemApp.Data;
 using PAYROLLSystemApp.Models;
 
 namespace PAYROLLSystemApp.Services;
@@ -78,6 +78,17 @@ public interface IPayrollRunService
     Task<SaveResult<EmployeeLoan>> SetLoanStatusAsync(int id, LoanStatus status, User performedBy);
 
     Task<IReadOnlyList<LoanPayment>> GetLoanPaymentsAsync(int loanId);
+
+    // ------------------------------------- standing deductions (FR-055)
+
+    Task<IReadOnlyList<EmployeeDeduction>> GetStandingDeductionsAsync(
+        int? employeeId = null, bool includeStopped = false);
+
+    Task<SaveResult<EmployeeDeduction>> SaveStandingDeductionAsync(
+        EmployeeDeduction deduction, User performedBy);
+
+    Task<SaveResult<EmployeeDeduction>> SetStandingDeductionActiveAsync(
+        int id, bool isActive, User performedBy);
 }
 
 /// <summary>
@@ -103,7 +114,9 @@ public sealed class PayrollRunService : IPayrollRunService
     private readonly IStatutoryTableService _statutory;
     private readonly IOrganizationService _organization;
     private readonly IEmployeeService _employees;
+    private readonly IDetachmentService _detachments;
     private readonly IAttendanceService _attendance;
+    private readonly ITimesheetService _timesheets;
     private readonly ILeaveService _leave;
     private readonly IAuditService _audit;
 
@@ -113,7 +126,9 @@ public sealed class PayrollRunService : IPayrollRunService
         IStatutoryTableService statutory,
         IOrganizationService organization,
         IEmployeeService employees,
+        IDetachmentService detachments,
         IAttendanceService attendance,
+        ITimesheetService timesheets,
         ILeaveService leave,
         IAuditService audit)
     {
@@ -122,7 +137,9 @@ public sealed class PayrollRunService : IPayrollRunService
         _statutory = statutory;
         _organization = organization;
         _employees = employees;
+        _detachments = detachments;
         _attendance = attendance;
+        _timesheets = timesheets;
         _leave = leave;
         _audit = audit;
     }
@@ -195,7 +212,9 @@ public sealed class PayrollRunService : IPayrollRunService
 
         var candidates = new List<RunCandidate>();
 
-        foreach (var employee in employees.OrderBy(e => e.FullName, StringComparer.CurrentCultureIgnoreCase))
+        foreach (var employee in employees
+            .Where(e => !e.IsArchived)
+            .OrderBy(e => e.FullName, StringComparer.CurrentCultureIgnoreCase))
         {
             // FR-060. The same employee cannot be paid twice for the same period
             // and the same kind of run — the single most expensive mistake this
@@ -453,7 +472,13 @@ public sealed class PayrollRunService : IPayrollRunService
         var settles = settings.AnnualiseTaxOnFinalPeriod &&
                       run.SettlesTheYear(await IsLastRegularOfYearAsync(run).ConfigureAwait(false));
 
-        return new PayrollContext(run, settings, premiums, statutory, earnings, deductions, settles);
+        // Read at the pay date, like the premium matrix and the statutory
+        // tables: a run cannot take its wage rate from one month and its
+        // contribution schedule from another.
+        var rates = await _detachments.GetRateTableAsync(run.PayDate).ConfigureAwait(false);
+
+        return new PayrollContext(
+            run, settings, premiums, statutory, earnings, deductions, rates, settles);
     }
 
     /// <summary>
@@ -495,6 +520,15 @@ public sealed class PayrollRunService : IPayrollRunService
         var positionById = positions.ToDictionary(p => p.Id);
 
         var loans = await connection.Table<EmployeeLoan>().ToListAsync().ConfigureAwait(false);
+
+        // Standing deductions — insurance, performance bond, processing fee.
+        // Filtered here rather than in the engine so the calculator stays a pure
+        // function of what it is handed, and read against the pay date, which is
+        // the date the wage rates and statutory tables are read at too.
+        var standing = (await connection.Table<EmployeeDeduction>().ToListAsync().ConfigureAwait(false))
+            .Where(d => d.AppliesOn(run.PayDate))
+            .ToList();
+
         var adjustments = await connection.Table<PayrollAdjustment>()
             .Where(a => a.PayrollRunId == run.Id)
             .ToListAsync()
@@ -502,6 +536,20 @@ public sealed class PayrollRunService : IPayrollRunService
 
         var year = run.PeriodEnd.Year;
         var yearToDate = await BuildYearToDateAsync(year, run.Id).ConfigureAwait(false);
+
+        var detachmentById = (await _detachments.GetAllAsync(includeInactive: true).ConfigureAwait(false))
+            .ToDictionary(d => d.Id);
+
+        // The client's timesheet, where accounting has keyed one. It replaces
+        // daily attendance for whoever it covers; a 13th month run pays an
+        // entitlement rather than time and reads neither.
+        IReadOnlyDictionary<int, PeriodTimesheet> timesheets =
+            run.RunType == PayrollRunType.ThirteenthMonth
+                ? new Dictionary<int, PeriodTimesheet>()
+                : await _timesheets.GetByEmployeeAsync(run.Id).ConfigureAwait(false);
+
+        Detachment? Detachment(Employee employee) =>
+            employee.DetachmentId is { } id && detachmentById.TryGetValue(id, out var found) ? found : null;
 
         var inputs = new List<EmployeePayrollInput>();
 
@@ -530,10 +578,14 @@ public sealed class PayrollRunService : IPayrollRunService
                     ? d.Name
                     : string.Empty,
                 PositionTitle = position?.Title ?? string.Empty,
+                DetachmentCode = Detachment(employee)?.Code ?? string.Empty,
+                DetachmentName = Detachment(employee)?.Name ?? string.Empty,
                 IsManagerial = position?.IsManagerial ?? false,
                 Attendance = attendance,
+                Timesheet = timesheets.GetValueOrDefault(employee.Id),
                 ApprovedLeave = leave,
                 Loans = loans.Where(l => l.EmployeeId == employee.Id).ToList(),
+                RecurringDeductions = standing.Where(d => d.EmployeeId == employee.Id).ToList(),
                 Adjustments = adjustments.Where(a => a.EmployeeId == employee.Id).ToList(),
                 YearToDate = yearToDate.TryGetValue(employee.Id, out var totals) ? totals : YearToDateTotals.Empty,
                 ConvertibleLeaveDays = convertible
@@ -1022,6 +1074,42 @@ public sealed class PayrollRunService : IPayrollRunService
         if (adjustment.Remark.Length == 0)
             return SaveResult<PayrollAdjustment>.Fail("A remark is required on every adjustment.");
 
+        // An adjustment coded to something the engine produces itself would be
+        // added on top of the computed line, not instead of it — so a 5Slip
+        // typed here would pay the accrual twice, and an SSS one would remit a
+        // figure the schedule never asked for.
+        //
+        // Withholding tax is the deliberate exception: the legacy screen's
+        // E-Withtax, where an entered figure stands in place of the table's.
+        // The calculator finds this line and stands down rather than adding to
+        // it, which is why it is the one system code worth allowing.
+        var systemEarning = (await _config.GetEarningTypesAsync(includeInactive: true).ConfigureAwait(false))
+            .FirstOrDefault(e =>
+                e.IsSystem && string.Equals(e.Code, adjustment.Code, StringComparison.OrdinalIgnoreCase));
+
+        if (adjustment.Kind == PayslipLineKind.Earning && systemEarning is not null)
+        {
+            return SaveResult<PayrollAdjustment>.Fail(
+                $"{systemEarning.Name} is computed by the payroll engine, so an adjustment here " +
+                "would be paid on top of it. Correct the figures it is computed from instead.");
+        }
+
+        var isTaxOverride = adjustment.Kind == PayslipLineKind.Deduction &&
+                            string.Equals(adjustment.Code, PayComponentCodes.WithholdingTax,
+                                StringComparison.OrdinalIgnoreCase);
+
+        var systemDeduction = (await _config.GetDeductionTypesAsync(includeInactive: true).ConfigureAwait(false))
+            .FirstOrDefault(d =>
+                d.IsSystem && string.Equals(d.Code, adjustment.Code, StringComparison.OrdinalIgnoreCase));
+
+        if (adjustment.Kind == PayslipLineKind.Deduction && systemDeduction is not null && !isTaxOverride)
+        {
+            return SaveResult<PayrollAdjustment>.Fail(
+                $"{systemDeduction.Name} is computed by the payroll engine, so an adjustment here " +
+                "would be taken on top of it. Withholding tax is the only one that can be entered " +
+                "to stand in place of the computed figure.");
+        }
+
         var connection = await _database.GetConnectionAsync().ConfigureAwait(false);
 
         var onRun = await connection.Table<Payslip>()
@@ -1298,5 +1386,159 @@ public sealed class PayrollRunService : IPayrollRunService
             performedBy.Username, performedBy.Id).ConfigureAwait(false);
 
         return SaveResult<T>.Fail("You do not have permission to perform this action.");
+    }
+
+    // =====================================================================
+    // Standing deductions — the insurance premium, the performance bond, the
+    // processing fee. Beside loans because both recur, but these carry no
+    // balance and stop by date rather than by being paid off.
+    // =====================================================================
+
+    public async Task<IReadOnlyList<EmployeeDeduction>> GetStandingDeductionsAsync(
+        int? employeeId = null, bool includeStopped = false)
+    {
+        var connection = await _database.GetConnectionAsync().ConfigureAwait(false);
+
+        var rows = await connection.Table<EmployeeDeduction>().ToListAsync().ConfigureAwait(false);
+
+        return rows
+            .Where(d => employeeId is not { } id || d.EmployeeId == id)
+            .Where(d => includeStopped || d.IsActive)
+            .OrderBy(d => d.DeductionName)
+            .ThenByDescending(d => d.Id)
+            .ToList();
+    }
+
+    public async Task<SaveResult<EmployeeDeduction>> SaveStandingDeductionAsync(
+        EmployeeDeduction deduction, User performedBy)
+    {
+        if (!performedBy.Can(Permission.RunPayroll))
+        {
+            return await RefuseAsync<EmployeeDeduction>(performedBy, "maintain standing deductions")
+                .ConfigureAwait(false);
+        }
+
+        deduction.DeductionCode = (deduction.DeductionCode ?? string.Empty).Trim().ToUpperInvariant();
+        deduction.Reference = (deduction.Reference ?? string.Empty).Trim();
+        deduction.Remarks = (deduction.Remarks ?? string.Empty).Trim();
+        deduction.StartsOn = deduction.StartsOn.Date;
+        deduction.EndsOn = deduction.EndsOn?.Date;
+
+        if (deduction.EmployeeId <= 0)
+            return SaveResult<EmployeeDeduction>.Fail("Choose the employee the deduction belongs to.");
+
+        if (deduction.DeductionCode.Length == 0)
+            return SaveResult<EmployeeDeduction>.Fail("Choose which deduction this is taken under.");
+
+        if (deduction.Amount <= 0m)
+            return SaveResult<EmployeeDeduction>.Fail("Enter what is taken each period.");
+
+        if (deduction.EndsOn is { } ends && ends < deduction.StartsOn)
+        {
+            return SaveResult<EmployeeDeduction>.Fail(
+                "The end date is before the start date, so the deduction would never be taken.");
+        }
+
+        var type = (await _config.GetDeductionTypesAsync(includeInactive: true).ConfigureAwait(false))
+            .FirstOrDefault(d => string.Equals(d.Code, deduction.DeductionCode, StringComparison.OrdinalIgnoreCase));
+
+        if (type is null)
+        {
+            return SaveResult<EmployeeDeduction>.Fail(
+                $"There is no deduction type with the code {deduction.DeductionCode}.");
+        }
+
+        // An amortised type belongs on the loan ledger, where a balance governs
+        // when it stops. Set up here it would be taken for ever.
+        if (type.IsAmortised)
+        {
+            return SaveResult<EmployeeDeduction>.Fail(
+                $"{type.Name} is amortised, so it carries a balance. Record it under " +
+                "Loans & advances instead — a standing deduction never stops on its own.");
+        }
+
+        if (type.IsSystem)
+        {
+            return SaveResult<EmployeeDeduction>.Fail(
+                $"{type.Name} is produced by the payroll engine itself and cannot be set up by hand.");
+        }
+
+        deduction.DeductionName = type.Name;
+        deduction.UpdatedUtc = DateTime.UtcNow;
+
+        var connection = await _database.GetConnectionAsync().ConfigureAwait(false);
+        var isNew = deduction.Id == 0;
+
+        if (isNew)
+        {
+            deduction.CreatedBy = performedBy.Username;
+            await connection.InsertAsync(deduction).ConfigureAwait(false);
+        }
+        else
+        {
+            var current = await connection.Table<EmployeeDeduction>()
+                .Where(d => d.Id == deduction.Id)
+                .FirstOrDefaultAsync()
+                .ConfigureAwait(false);
+
+            if (current is null)
+                return SaveResult<EmployeeDeduction>.Fail("That standing deduction no longer exists.");
+
+            deduction.CreatedBy = current.CreatedBy;
+            deduction.CreatedUtc = current.CreatedUtc;
+
+            await connection.UpdateAsync(deduction).ConfigureAwait(false);
+        }
+
+        await _audit.WriteAsync(
+            AuditActions.StandingDeductionSaved,
+            nameof(EmployeeDeduction), deduction.Id, true,
+            $"{(isNew ? "Set up" : "Updated")} {deduction.DeductionName} for employee " +
+            $"{deduction.EmployeeId}: {PayrollRounding.Format(deduction.Amount)} per period, " +
+            $"{deduction.PeriodDisplay}.",
+            performedBy.Username, performedBy.Id).ConfigureAwait(false);
+
+        return SaveResult<EmployeeDeduction>.Ok(deduction,
+            isNew
+                ? "Standing deduction set up. It applies from the next run whose pay date it covers."
+                : "Standing deduction updated. Recalculate any draft run to pick up the change.");
+    }
+
+    public async Task<SaveResult<EmployeeDeduction>> SetStandingDeductionActiveAsync(
+        int id, bool isActive, User performedBy)
+    {
+        if (!performedBy.Can(Permission.RunPayroll))
+        {
+            return await RefuseAsync<EmployeeDeduction>(performedBy, "stop a standing deduction")
+                .ConfigureAwait(false);
+        }
+
+        var connection = await _database.GetConnectionAsync().ConfigureAwait(false);
+
+        var deduction = await connection.Table<EmployeeDeduction>()
+            .Where(d => d.Id == id)
+            .FirstOrDefaultAsync()
+            .ConfigureAwait(false);
+
+        if (deduction is null)
+            return SaveResult<EmployeeDeduction>.Fail("That standing deduction no longer exists.");
+
+        deduction.IsActive = isActive;
+        deduction.UpdatedUtc = DateTime.UtcNow;
+
+        await connection.UpdateAsync(deduction).ConfigureAwait(false);
+
+        await _audit.WriteAsync(
+            AuditActions.StandingDeductionStopped,
+            nameof(EmployeeDeduction), deduction.Id, true,
+            $"{(isActive ? "Resumed" : "Stopped")} {deduction.DeductionName} for employee " +
+            $"{deduction.EmployeeId}.",
+            performedBy.Username, performedBy.Id).ConfigureAwait(false);
+
+        // Posted runs keep what they took: stopping one stops it from here on.
+        return SaveResult<EmployeeDeduction>.Ok(deduction,
+            isActive
+                ? $"{deduction.DeductionName} resumed."
+                : $"{deduction.DeductionName} stopped. Runs already posted keep what they took.");
     }
 }

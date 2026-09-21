@@ -287,9 +287,9 @@ public sealed class AuthService : IAuthService
 
         // Never leave the system without a way back in.
         var losingAnAdministrator =
-            user.Role == UserRole.SystemAdministrator &&
+            user.Role == UserRole.Administrator &&
             user.IsActive &&
-            (role != UserRole.SystemAdministrator || !isActive);
+            (role != UserRole.Administrator || !isActive);
 
         if (losingAnAdministrator &&
             await CountActiveAdministratorsAsync(connection).ConfigureAwait(false) <= 1)
@@ -357,7 +357,7 @@ public sealed class AuthService : IAuthService
     private static Task<int> CountActiveAdministratorsAsync(SQLite.SQLiteAsyncConnection connection) =>
         connection.ExecuteScalarAsync<int>(
             "SELECT COUNT(*) FROM users WHERE IsActive = 1 AND Role = ?",
-            (int)UserRole.SystemAdministrator);
+            (int)UserRole.Administrator);
 
     /// <summary>Records a rejected privileged operation (FR-002, FR-091).</summary>
     private async Task<PasswordChangeResult> DenyAsync(User actor, string attemptedAction)

@@ -1,4 +1,4 @@
-namespace PAYROLLSystemApp.Models;
+﻿namespace PAYROLLSystemApp.Models;
 
 /// <summary>
 /// What a column holds. It decides alignment on screen, the number format in a
@@ -118,7 +118,8 @@ public sealed class ReportGrid
         IReadOnlyList<ReportColumn> columns,
         IReadOnlyList<ReportRow> rows,
         IReadOnlyList<ReportNote>? notes = null,
-        string fileStem = "")
+        string fileStem = "",
+        int keyColumnCount = 2)
     {
         Title = title;
         Subtitle = subtitle;
@@ -126,6 +127,7 @@ public sealed class ReportGrid
         Rows = rows;
         Notes = notes ?? [];
         FileStem = string.IsNullOrWhiteSpace(fileStem) ? Slug(title) : fileStem;
+        KeyColumnCount = keyColumnCount;
     }
 
     public string Title { get; }
@@ -141,6 +143,17 @@ public sealed class ReportGrid
 
     /// <summary>Base name of an exported file, without an extension.</summary>
     public string FileStem { get; }
+
+    /// <summary>
+    /// How many leading columns identify a row, and so are repeated on every
+    /// page a wide table is carried onto.
+    ///
+    /// <para>Two — employee number and name — for most reports. The payroll
+    /// summary splits the name across surname, given name and initial, so two
+    /// columns would carry a page headed by a column of surnames with no given
+    /// names beside them.</para>
+    /// </summary>
+    public int KeyColumnCount { get; }
 
     /// <summary>Rows excluding the grand total — what "12 employees" counts.</summary>
     public int DataRowCount => Rows.Count(r => !r.IsTotal);

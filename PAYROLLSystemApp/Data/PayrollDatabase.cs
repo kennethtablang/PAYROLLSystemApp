@@ -1,4 +1,4 @@
-﻿using PAYROLLSystemApp.Models;
+using PAYROLLSystemApp.Models;
 using PAYROLLSystemApp.Security;
 using SQLite;
 
@@ -60,6 +60,11 @@ public sealed partial class PayrollDatabase
 
             _connection ??= new SQLiteAsyncConnection(DatabasePath, Flags);
 
+            // Before anything is created: a rate table built around the old
+            // (detachment, position) key has to lose its position column, and it
+            // has to happen while its old index is still the one on disk.
+            await MigrateDetachmentRatesAsync(_connection).ConfigureAwait(false);
+
             await _connection.CreateTableAsync<User>().ConfigureAwait(false);
             await _connection.CreateTableAsync<AuditEntry>().ConfigureAwait(false);
 
@@ -68,6 +73,8 @@ public sealed partial class PayrollDatabase
             // the new tables on next launch without losing its accounts.
             await _connection.CreateTableAsync<Department>().ConfigureAwait(false);
             await _connection.CreateTableAsync<Position>().ConfigureAwait(false);
+            await _connection.CreateTableAsync<Detachment>().ConfigureAwait(false);
+            await _connection.CreateTableAsync<DetachmentRate>().ConfigureAwait(false);
             await _connection.CreateTableAsync<WorkSchedule>().ConfigureAwait(false);
             await _connection.CreateTableAsync<Employee>().ConfigureAwait(false);
             await _connection.CreateTableAsync<SalaryRateHistory>().ConfigureAwait(false);
@@ -106,10 +113,21 @@ public sealed partial class PayrollDatabase
             await _connection.CreateTableAsync<LoanPayment>().ConfigureAwait(false);
             await _connection.CreateTableAsync<PayrollAdjustment>().ConfigureAwait(false);
 
+            // A standing deduction ends by date rather than by exhausting a
+            // balance, which is why it is not an EmployeeLoan — the insurance
+            // premium, the performance bond, the processing fee.
+            await _connection.CreateTableAsync<EmployeeDeduction>().ConfigureAwait(false);
+
+            // The client's timesheet, keyed per run. Sits beside attendance
+            // rather than inside it: it records a cut-off's totals, not a day.
+            await _connection.CreateTableAsync<PeriodTimesheet>().ConfigureAwait(false);
+
             // Section 2.9 — backup policy and the archive receipts that make a
             // purge refusable when the files are not there (FR-093, FR-094).
             await _connection.CreateTableAsync<BackupSettings>().ConfigureAwait(false);
             await _connection.CreateTableAsync<ArchiveRecord>().ConfigureAwait(false);
+
+            await MigrateUserRolesAsync(_connection).ConfigureAwait(false);
 
             await SeedAdministratorAsync(_connection).ConfigureAwait(false);
             await SeedOrganizationAsync(_connection).ConfigureAwait(false);
@@ -158,6 +176,126 @@ public sealed partial class PayrollDatabase
     }
 
     /// <summary>
+    /// Brings accounts created under the five-role matrix onto the two the
+    /// system now issues (<see cref="UserRole"/>).
+    ///
+    /// <para>Administrator was 0 and still is, so those rows are untouched. The
+    /// three roles that no longer exist all become Accounting — but an account
+    /// that was <b>Employee</b> is additionally <b>deactivated</b>, because
+    /// Employee was self-service and Accounting reads every salary in the
+    /// company. Widening a login's reach without anyone deciding to is the one
+    /// outcome a migration must not produce; an administrator can reactivate it
+    /// deliberately.</para>
+    ///
+    /// <para>Runs on every launch and is a no-op once there is nothing left to
+    /// remap, so it costs one indexed count against a table with two rows in it.
+    /// </para>
+    /// </summary>
+    private static async Task MigrateUserRolesAsync(SQLiteAsyncConnection connection)
+    {
+        const int formerPayrollOfficer = 2;
+        const int formerApprover = 3;
+        const int formerEmployee = 4;
+
+        var stale = await connection.ExecuteScalarAsync<int>(
+            "SELECT COUNT(*) FROM users WHERE Role NOT IN (?, ?)",
+            (int)UserRole.Administrator, (int)UserRole.Accounting).ConfigureAwait(false);
+
+        if (stale == 0)
+            return;
+
+        // Deactivate before remapping: once the role is Accounting the WHERE
+        // clause can no longer tell which rows were self-service accounts.
+        var demoted = await connection.ExecuteAsync(
+            "UPDATE users SET IsActive = 0 WHERE Role = ?", formerEmployee).ConfigureAwait(false);
+
+        await connection.ExecuteAsync(
+            "UPDATE users SET Role = ? WHERE Role IN (?, ?, ?)",
+            (int)UserRole.Accounting, formerPayrollOfficer, formerApprover, formerEmployee)
+            .ConfigureAwait(false);
+
+        await connection.InsertAsync(new AuditEntry
+        {
+            Actor = "system",
+            Action = AuditActions.UserUpdated,
+            Entity = nameof(User),
+            Success = true,
+            Details =
+                $"Role matrix collapsed to Administrator and Accounting: {stale} account(s) remapped " +
+                $"to Accounting, of which {demoted} former self-service account(s) were deactivated."
+        }).ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// Drops <c>PositionId</c> from <c>detachment_rates</c>.
+    ///
+    /// <para>The rate used to hang off a (detachment, position) pair. It does
+    /// not: the client's own paperwork quotes one figure against one code —
+    /// "CS75 (600.00 per day)" — and a post paying two figures is two codes. The
+    /// column has to go rather than sit unused, because SQLite-net declares it
+    /// <c>not null</c> with no default, so an insert that omits it fails.</para>
+    ///
+    /// <para><b>Where a post held several rates for one date, the highest
+    /// survives.</b> Those rows were the same wage order split by position, and
+    /// collapsing them by picking the dearest cannot underpay anyone. The losers
+    /// are deactivated rather than deleted and the audit log names the count, so
+    /// the choice is visible and can be corrected by posting a new rate.</para>
+    ///
+    /// <para>Runs before any table is created, while the old index is still the
+    /// one on disk — a column cannot be dropped while an index references it.
+    /// A no-op on a new database and on one already migrated.</para>
+    /// </summary>
+    private static async Task MigrateDetachmentRatesAsync(SQLiteAsyncConnection connection)
+    {
+        var tableExists = await connection.ExecuteScalarAsync<int>(
+            "SELECT COUNT(*) FROM sqlite_master WHERE type = 'table' AND name = 'detachment_rates'")
+            .ConfigureAwait(false);
+
+        if (tableExists == 0)
+            return;
+
+        var columns = await connection.QueryScalarsAsync<string>(
+            "SELECT name FROM pragma_table_info('detachment_rates')").ConfigureAwait(false);
+
+        if (!columns.Contains("PositionId", StringComparer.OrdinalIgnoreCase))
+            return;
+
+        // Same post, same effective date, several positions: keep the dearest.
+        var collapsed = await connection.ExecuteAsync(
+            """
+            UPDATE detachment_rates SET IsActive = 0
+            WHERE IsActive = 1 AND Id NOT IN (
+                SELECT Id FROM (
+                    SELECT Id, ROW_NUMBER() OVER (
+                        PARTITION BY DetachmentId, date(EffectiveFrom)
+                        ORDER BY DailyRate DESC, Id DESC) AS rn
+                    FROM detachment_rates WHERE IsActive = 1)
+                WHERE rn = 1)
+            """).ConfigureAwait(false);
+
+        await connection.ExecuteAsync("DROP INDEX IF EXISTS ix_detachment_rates_lookup")
+            .ConfigureAwait(false);
+
+        await connection.ExecuteAsync("ALTER TABLE detachment_rates DROP COLUMN PositionId")
+            .ConfigureAwait(false);
+
+        await connection.InsertAsync(new AuditEntry
+        {
+            Actor = "system",
+            Action = AuditActions.DetachmentRateWithdrawn,
+            Entity = nameof(DetachmentRate),
+            Success = true,
+            Details =
+                "Detachment rates are now keyed by post alone rather than by post and position. " +
+                (collapsed == 0
+                    ? "No rate needed collapsing."
+                    : $"{collapsed} rate(s) that shared a post and an effective date were withdrawn, " +
+                      "the dearest of each kept. Check the rate table and post a correction if the " +
+                      "figure kept is not the one intended.")
+        }).ConfigureAwait(false);
+    }
+
+    /// <summary>
     /// Creates the bootstrap administrator on an empty database. Without it
     /// there would be no way to sign in and create the first real account.
     /// </summary>
@@ -173,7 +311,7 @@ public sealed partial class PayrollDatabase
             Email = "admin@payrollsystem.local",
             FullName = "System Administrator",
             PasswordHash = _passwordHasher.Hash(SeedAdminPassword),
-            Role = UserRole.SystemAdministrator,
+            Role = UserRole.Administrator,
             IsActive = true,
             CreatedUtc = DateTime.UtcNow,
             PasswordChangedUtc = DateTime.UtcNow

@@ -1,4 +1,4 @@
-using SQLite;
+﻿using SQLite;
 
 namespace PAYROLLSystemApp.Models;
 
@@ -54,6 +54,17 @@ public class Payslip
 
     [MaxLength(80)]
     public string PositionTitle { get; set; } = string.Empty;
+
+    /// <summary>
+    /// The post this pay was earned at, snapshotted like the department name.
+    /// The payroll summary groups and bills by it, and a detachment renamed or
+    /// retired next year must not change what last September's sheet says.
+    /// </summary>
+    [MaxLength(20)]
+    public string DetachmentCode { get; set; } = string.Empty;
+
+    [MaxLength(80)]
+    public string DetachmentName { get; set; } = string.Empty;
 
     [MaxLength(20)]
     public string Tin { get; set; } = string.Empty;

@@ -1,4 +1,4 @@
-using PAYROLLSystemApp.Models;
+﻿using PAYROLLSystemApp.Models;
 using SQLite;
 
 namespace PAYROLLSystemApp.Data;
@@ -98,11 +98,37 @@ public sealed partial class PayrollDatabase
             },
             new EarningType
             {
+                // Historical. The engine now writes the three codes below; this
+                // stays so payslips computed before the split still have a name.
                 Code = PayComponentCodes.Overtime, Name = "Overtime pay",
                 Description = "Hours beyond the standard day, at the premium the day carries.",
                 Category = EarningCategory.Overtime,
                 Method = ComputationMethod.TimeDerived,
                 IsTaxable = true, IsSystem = true, DisplayOrder = 20
+            },
+            new EarningType
+            {
+                Code = PayComponentCodes.OvertimeRegular, Name = "Overtime — regular",
+                Description = "Hours beyond the standard day on an ordinary working day.",
+                Category = EarningCategory.Overtime,
+                Method = ComputationMethod.TimeDerived,
+                IsTaxable = true, IsSystem = true, DisplayOrder = 21
+            },
+            new EarningType
+            {
+                Code = PayComponentCodes.OvertimeRestDay, Name = "Overtime — rest day",
+                Description = "Overtime on a scheduled rest day. The summary's Sunday column.",
+                Category = EarningCategory.Overtime,
+                Method = ComputationMethod.TimeDerived,
+                IsTaxable = true, IsSystem = true, DisplayOrder = 22
+            },
+            new EarningType
+            {
+                Code = PayComponentCodes.OvertimeHoliday, Name = "Overtime — holiday",
+                Description = "Overtime on a regular or special day, including one on a rest day.",
+                Category = EarningCategory.Overtime,
+                Method = ComputationMethod.TimeDerived,
+                IsTaxable = true, IsSystem = true, DisplayOrder = 23
             },
             new EarningType
             {
@@ -205,7 +231,25 @@ public sealed partial class PayrollDatabase
             },
             new EarningType
             {
-                Code = "ALW_COLA", Name = "Cost of living allowance",
+                Code = PayComponentCodes.SpecialEmergencyAllowance, Name = "Special emergency allowance",
+                Description = "Wage-order SEA. Reported with ECOLA in the payroll summary.",
+                Category = EarningCategory.Allowance,
+                Method = ComputationMethod.FixedAmount,
+                IsTaxable = false, IsRecurring = true, DisplayOrder = 115
+            },
+            new EarningType
+            {
+                Code = PayComponentCodes.FiveSlip, Name = "5Slip",
+                Description =
+                    "Art. 95 service incentive leave, accrued per day rendered rather than " +
+                    "banked. The engine computes it from the daily rate; nobody types it.",
+                Category = EarningCategory.Allowance,
+                Method = ComputationMethod.RatePerDay,
+                IsTaxable = false, IsRecurring = true, IsSystem = true, DisplayOrder = 118
+            },
+            new EarningType
+            {
+                Code = PayComponentCodes.CostOfLivingAllowance, Name = "Cost of living allowance",
                 Description = "COLA under the applicable regional wage order.",
                 Category = EarningCategory.Allowance,
                 Method = ComputationMethod.FixedAmount,
@@ -233,6 +277,39 @@ public sealed partial class PayrollDatabase
 
         if (missing.Count > 0)
             await connection.InsertAllAsync(missing).ConfigureAwait(false);
+
+        await AdoptComputedFiveSlipAsync(connection).ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// A database seeded before the engine computed <c>5Slip</c> holds it as an
+    /// ordinary fixed allowance somebody typed per run. The engine now derives
+    /// it from the daily rate (Art. 95), so the row is brought into line —
+    /// otherwise a typed adjustment and the computed accrual would both be paid.
+    ///
+    /// <para><b>Only the shape is changed, never the tax treatment.</b> Whether
+    /// the accrual is taxable is the company's call and may have been set
+    /// deliberately; the flag that matters here is <see cref="EarningType.IsSystem"/>,
+    /// which is what refuses a duplicate adjustment against the code.</para>
+    /// </summary>
+    private static async Task AdoptComputedFiveSlipAsync(SQLiteAsyncConnection connection)
+    {
+        var row = await connection.Table<EarningType>()
+            .Where(e => e.Code == PayComponentCodes.FiveSlip)
+            .FirstOrDefaultAsync()
+            .ConfigureAwait(false);
+
+        if (row is null || row.IsSystem)
+            return;
+
+        row.IsSystem = true;
+        row.Method = ComputationMethod.RatePerDay;
+        row.DefaultAmount = 0m;
+        row.Description =
+            "Art. 95 service incentive leave, accrued per day rendered rather than " +
+            "banked. The engine computes it from the daily rate; nobody types it.";
+
+        await connection.UpdateAsync(row).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -341,7 +418,15 @@ public sealed partial class PayrollDatabase
             },
             new DeductionType
             {
-                Code = "CO_LOAN", Name = "Company loan",
+                Code = PayComponentCodes.SecondUniform, Name = "2nd uniform",
+                Description = "The second uniform set, recovered over the periods agreed.",
+                Category = DeductionCategory.Other,
+                Method = ComputationMethod.FixedAmount,
+                IsAmortised = true, Priority = 40, DisplayOrder = 145
+            },
+            new DeductionType
+            {
+                Code = PayComponentCodes.CompanyLoan, Name = "Company loan",
                 Description = "Amortisation of a loan granted by the employer.",
                 Category = DeductionCategory.Loan,
                 Method = ComputationMethod.FixedAmount,
@@ -362,6 +447,36 @@ public sealed partial class PayrollDatabase
                 Category = DeductionCategory.Other,
                 Method = ComputationMethod.FixedAmount,
                 ReducesTaxableIncome = true, Priority = 50, DisplayOrder = 150
+            },
+
+            // The legacy entry screen's remaining slots. None of the three
+            // amortise: they are standing deductions set up per employee on
+            // EmployeeDeduction and stopped by date, not by a balance running out.
+            new DeductionType
+            {
+                Code = PayComponentCodes.PerformanceBond, Name = "Performance bond",
+                Description =
+                    "Accumulated against the guard and refundable on separation. Not a loan — " +
+                    "it builds towards a figure rather than down from one.",
+                Category = DeductionCategory.Other,
+                Method = ComputationMethod.FixedAmount,
+                Priority = 45, DisplayOrder = 155
+            },
+            new DeductionType
+            {
+                Code = PayComponentCodes.Insurance, Name = "Insurance",
+                Description = "Group life premium, taken each period for as long as the cover runs.",
+                Category = DeductionCategory.Other,
+                Method = ComputationMethod.FixedAmount,
+                Priority = 46, DisplayOrder = 160
+            },
+            new DeductionType
+            {
+                Code = PayComponentCodes.ProcessingFee, Name = "Processing fee",
+                Description = "The agency's processing charge for the cut-off.",
+                Category = DeductionCategory.Other,
+                Method = ComputationMethod.FixedAmount,
+                Priority = 47, DisplayOrder = 165
             }
         };
 

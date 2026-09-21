@@ -1,4 +1,4 @@
-using SQLite;
+﻿using SQLite;
 
 namespace PAYROLLSystemApp.Models;
 
@@ -52,7 +52,6 @@ public static class AuditActions
     public const string AccountLockedOut = "ACCOUNT_LOCKED_OUT";
     public const string AccountUnlocked = "ACCOUNT_UNLOCKED";
     public const string Logout = "LOGOUT";
-    public const string SessionTimedOut = "SESSION_TIMED_OUT";
     public const string PasswordChanged = "PASSWORD_CHANGED";
     public const string PasswordReset = "PASSWORD_RESET";
     public const string UserCreated = "USER_CREATED";
@@ -60,6 +59,10 @@ public static class AuditActions
     public const string UserDeactivated = "USER_DEACTIVATED";
     public const string UserReactivated = "USER_REACTIVATED";
     public const string AccessDenied = "ACCESS_DENIED";
+
+    // The client's timesheet, keyed by accounting against a run.
+    public const string TimesheetKeyed = "TIMESHEET_KEYED";
+    public const string TimesheetCleared = "TIMESHEET_CLEARED";
 
     // Section 2.2 — employee masterfile and organisation reference data.
     public const string EmployeeCreated = "EMPLOYEE_CREATED";
@@ -80,6 +83,14 @@ public static class AuditActions
     public const string WorkScheduleUpdated = "WORK_SCHEDULE_UPDATED";
     public const string WorkScheduleDeactivated = "WORK_SCHEDULE_DEACTIVATED";
     public const string WorkScheduleReactivated = "WORK_SCHEDULE_REACTIVATED";
+    public const string EmployeeArchived = "EMPLOYEE_ARCHIVED";
+    public const string EmployeeRestored = "EMPLOYEE_RESTORED";
+    public const string DetachmentCreated = "DETACHMENT_CREATED";
+    public const string DetachmentUpdated = "DETACHMENT_UPDATED";
+    public const string DetachmentDeactivated = "DETACHMENT_DEACTIVATED";
+    public const string DetachmentReactivated = "DETACHMENT_REACTIVATED";
+    public const string DetachmentRatePosted = "DETACHMENT_RATE_POSTED";
+    public const string DetachmentRateWithdrawn = "DETACHMENT_RATE_WITHDRAWN";
 
     // Section 2.3 — time and attendance, and the holiday calendar it is
     // classified against.
@@ -144,6 +155,8 @@ public static class AuditActions
     public const string LoanCreated = "LOAN_CREATED";
     public const string LoanUpdated = "LOAN_UPDATED";
     public const string LoanStatusChanged = "LOAN_STATUS_CHANGED";
+    public const string StandingDeductionSaved = "STANDING_DEDUCTION_SAVED";
+    public const string StandingDeductionStopped = "STANDING_DEDUCTION_STOPPED";
 
     // Section 2.7 — payslips. An export is the moment pay data becomes a file
     // somebody can forward, so it is logged like any other privileged read

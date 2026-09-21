@@ -1,4 +1,4 @@
-using SQLite;
+﻿using SQLite;
 
 namespace PAYROLLSystemApp.Models;
 
@@ -180,6 +180,44 @@ public class PayrollSettings
     /// </summary>
     public bool FlagNegativeNetPay { get; set; } = true;
 
+    // ----------------------------------------- service incentive leave
+
+    /// <summary>
+    /// Art. 95. Whether the five days of Service Incentive Leave are <b>accrued
+    /// into every payslip</b> against the days rendered, instead of banked as
+    /// leave credits and converted on separation.
+    ///
+    /// <para>This is the legacy screen's <c>5Days Inc.</c> column, and it is how
+    /// the agency actually pays: a guard sees a slice of it each cut-off rather
+    /// than a lump on the way out. A company that banks the credits instead
+    /// turns this off and lets <c>LEAVE_CONV</c> settle it — the two together
+    /// would pay the same entitlement twice.</para>
+    /// </summary>
+    public bool AccrueServiceIncentiveLeave { get; set; } = true;
+
+    /// <summary>Days of Service Incentive Leave a full year earns. Art. 95 sets five.</summary>
+    public decimal ServiceIncentiveLeaveDays { get; set; } = 5m;
+
+    /// <summary>
+    /// What the year's entitlement is spread over to reach a per-day accrual.
+    ///
+    /// <para>365 — every calendar day — is what the legacy system uses and what
+    /// reproduces its figures exactly. An agency accruing only over days it
+    /// could have been worked would use 313 or 261 and pay more per day for the
+    /// same five days a year, so this is a policy figure and not a constant.</para>
+    /// </summary>
+    public decimal ServiceIncentiveLeaveDivisor { get; set; } = 365m;
+
+    /// <summary>
+    /// FR-085. The stock every report PDF is laid out for.
+    ///
+    /// <para>Defaults to the wide-carriage dot matrix, because that is what the
+    /// payroll summary is signed off on — an impact printer is the only kind
+    /// that produces the carbon copies. A4 is a setting away for anyone printing
+    /// to a laser instead.</para>
+    /// </summary>
+    public ReportPaper ReportPaper { get; set; } = ReportPaper.DotMatrix11x14;
+
     public DateTime UpdatedUtc { get; set; } = DateTime.UtcNow;
 
     // -------------------------------------------------- derived
@@ -196,11 +234,32 @@ public class PayrollSettings
             ? 0m
             : PayrollRounding.Rate(DailyRateFor(monthlyRate) / StandardHoursPerDay);
 
+    /// <summary>
+    /// What one day rendered accrues in Service Incentive Leave, at a given
+    /// daily rate. Zero when the accrual is off or misconfigured, which pays
+    /// nothing rather than dividing by zero.
+    /// </summary>
+    public decimal ServiceIncentivePerDay(decimal dailyRate) =>
+        !AccrueServiceIncentiveLeave ||
+        ServiceIncentiveLeaveDivisor <= 0m ||
+        ServiceIncentiveLeaveDays <= 0m ||
+        dailyRate <= 0m
+            ? 0m
+            : PayrollRounding.Rate(dailyRate * ServiceIncentiveLeaveDays / ServiceIncentiveLeaveDivisor);
+
+    [Ignore]
+    public string ServiceIncentiveDisplay => AccrueServiceIncentiveLeave
+        ? $"{ServiceIncentiveLeaveDays:0.##} day(s) ÷ {ServiceIncentiveLeaveDivisor:0.##}, accrued per day rendered"
+        : "Banked as leave credits, not accrued into payslips";
+
     [Ignore]
     public string FrequencyDisplay => EmployeeEnumNames.Display(PayFrequency);
 
     [Ignore]
     public string ContributionDisplay => PayrollEnumNames.Display(ContributionSchedule);
+
+    [Ignore]
+    public string PaperDisplay => ReportPaperSizes.Display(ReportPaper);
 
     [Ignore]
     public string FactorDisplay => WorkingDaysFactor switch

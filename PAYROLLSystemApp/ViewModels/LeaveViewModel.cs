@@ -690,7 +690,6 @@ public sealed partial class LeaveViewModel : BaseViewModel
 
     private void SwitchTo(LeaveMode mode)
     {
-        Session.Touch();
         ClearMessages();
         Mode = mode;
     }
@@ -703,7 +702,6 @@ public sealed partial class LeaveViewModel : BaseViewModel
 
     private void SetYear(int year)
     {
-        Session.Touch();
         Year = year;
         QueueReload();
     }
@@ -713,7 +711,6 @@ public sealed partial class LeaveViewModel : BaseViewModel
     [RelayCommand]
     private void OpenFile()
     {
-        Session.Touch();
         ClearMessages();
 
         ModalError = string.Empty;
@@ -881,7 +878,6 @@ public sealed partial class LeaveViewModel : BaseViewModel
         if (row is null || !row.IsPending)
             return;
 
-        Session.Touch();
         ClearMessages();
 
         _decisionTarget = row;
@@ -988,7 +984,6 @@ public sealed partial class LeaveViewModel : BaseViewModel
         if (row is null || !row.IsCancellable)
             return;
 
-        Session.Touch();
         ClearMessages();
 
         _cancelTarget = row;
@@ -1059,7 +1054,6 @@ public sealed partial class LeaveViewModel : BaseViewModel
         if (row is null || SelectedEmployee is not { } option)
             return;
 
-        Session.Touch();
         ClearMessages();
 
         _adjustTarget = row;
@@ -1135,7 +1129,6 @@ public sealed partial class LeaveViewModel : BaseViewModel
     [RelayCommand]
     private void OpenCreateType()
     {
-        Session.Touch();
         ClearMessages();
         ResetTypeForm();
 
@@ -1151,7 +1144,6 @@ public sealed partial class LeaveViewModel : BaseViewModel
         if (row is null)
             return;
 
-        Session.Touch();
         ClearMessages();
         ResetTypeForm();
 
@@ -1235,7 +1227,6 @@ public sealed partial class LeaveViewModel : BaseViewModel
         if (row is null)
             return;
 
-        Session.Touch();
         ClearMessages();
 
         _typeTarget = row.Type;

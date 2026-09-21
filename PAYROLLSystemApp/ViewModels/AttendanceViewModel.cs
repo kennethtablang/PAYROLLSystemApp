@@ -792,7 +792,6 @@ public sealed partial class AttendanceViewModel : BaseViewModel
 
     private void SwitchTo(AttendanceMode mode)
     {
-        Session.Touch();
         ClearMessages();
         Mode = mode;
     }
@@ -814,7 +813,6 @@ public sealed partial class AttendanceViewModel : BaseViewModel
 
     private void SetHolidayYear(int year)
     {
-        Session.Touch();
         HolidayYear = year;
         QueueReload();
     }
@@ -843,8 +841,6 @@ public sealed partial class AttendanceViewModel : BaseViewModel
     /// <summary>Moves both ends of the cut-off, then reloads once.</summary>
     private void SetPeriod(DateTime start, DateTime end)
     {
-        Session.Touch();
-
         _suppressReload = true;
         PeriodStart = start;
         PeriodEnd = end;
@@ -861,7 +857,6 @@ public sealed partial class AttendanceViewModel : BaseViewModel
         if (row is null)
             return;
 
-        Session.Touch();
         ClearMessages();
         ResetEntryForm();
         ModalError = string.Empty;
@@ -1057,7 +1052,6 @@ public sealed partial class AttendanceViewModel : BaseViewModel
         if (row is null || row.IsDraft)
             return;
 
-        Session.Touch();
         ClearMessages();
 
         _approvalTarget = row;
@@ -1120,7 +1114,6 @@ public sealed partial class AttendanceViewModel : BaseViewModel
     [RelayCommand]
     private void OpenGenerate()
     {
-        Session.Touch();
         ClearMessages();
 
         _confirmTarget = ConfirmTarget.GenerateCutoff;
@@ -1150,7 +1143,6 @@ public sealed partial class AttendanceViewModel : BaseViewModel
         if (row is null || row.IsDraft)
             return;
 
-        Session.Touch();
         ClearMessages();
 
         _entryTarget = row;
@@ -1260,7 +1252,6 @@ public sealed partial class AttendanceViewModel : BaseViewModel
     [RelayCommand]
     private void OpenCreateHoliday()
     {
-        Session.Touch();
         ClearMessages();
         ResetHolidayForm();
 
@@ -1278,7 +1269,6 @@ public sealed partial class AttendanceViewModel : BaseViewModel
         if (row is null)
             return;
 
-        Session.Touch();
         ClearMessages();
         ResetHolidayForm();
 
@@ -1355,7 +1345,6 @@ public sealed partial class AttendanceViewModel : BaseViewModel
         if (row is null)
             return;
 
-        Session.Touch();
         ClearMessages();
 
         _holidayTarget = row.Holiday;

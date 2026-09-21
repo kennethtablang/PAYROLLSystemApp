@@ -8,7 +8,9 @@ public enum AppSection
     Dashboard,
     Employees,
     Organization,
+    Detachments,
     Attendance,
+    Timesheets,
     Leave,
     PayrollSetup,
     PayrollRuns,
@@ -53,9 +55,17 @@ public static class AppSections
             "Organisation data used when assigning employees",
             Permission.ManageEmployees, true, ""),
 
+        new(AppSection.Detachments, "Detachments", GroupPayroll,
+            "Client posts across Luzon, and the daily rate paid at each of them",
+            Permission.ManageEmployees, true, ""),
+
         new(AppSection.Attendance, "Time & Attendance", GroupPayroll,
             "Daily time records, overtime and holidays",
             Permission.ManageAttendance, true, ""),
+
+        new(AppSection.Timesheets, "Timesheets", GroupPayroll,
+            "Key the client's cut-off sheet: days, overtime, night shift, loan and late",
+            Permission.RunPayroll, true, ""),
 
         new(AppSection.Leave, "Leave", GroupPayroll,
             "Leave credits, filing and approval",

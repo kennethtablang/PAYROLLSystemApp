@@ -67,7 +67,7 @@ Priority legend: **M** = Must have · **S** = Should have · **C** = Could have
 | FR-003 | The system shall lock an account after 5 consecutive failed login attempts and require administrator reset or a timed unlock. | M |
 | FR-004 | The system shall allow users to change their own password and shall enforce the password policy in NFR-013. | M |
 | FR-005 | The system shall support secure password reset through an administrator-issued temporary credential. | S |
-| FR-006 | The system shall automatically sign out a session after a configurable period of inactivity (default 15 minutes). | M |
+| FR-006 | ~~The system shall automatically sign out a session after a configurable period of inactivity (default 15 minutes).~~ **Withdrawn** — the client does not want an idle timeout; a session stays open until the user signs out. | — |
 | FR-007 | The system shall support biometric/device unlock (fingerprint, face) on mobile platforms as a secondary convenience factor. | C |
 
 ### 2.2 Employee Management

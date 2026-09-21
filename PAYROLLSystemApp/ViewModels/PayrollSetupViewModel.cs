@@ -1,4 +1,4 @@
-using System.Collections.ObjectModel;
+﻿using System.Collections.ObjectModel;
 using System.Globalization;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -289,6 +289,7 @@ public sealed partial class PayrollSetupViewModel : BaseViewModel
         MethodOptions = EnumOption.From<ComputationMethod>(PayrollEnumNames.Display);
         FrequencyOptions = EnumOption.From<PayFrequency>(EmployeeEnumNames.Display);
         ContributionOptions = EnumOption.From<ContributionSchedule>(PayrollEnumNames.Display);
+        PaperOptions = EnumOption.From<ReportPaper>(ReportPaperSizes.Display);
 
         CalendarSummary = string.Empty;
         EarningSummary = string.Empty;
@@ -355,6 +356,9 @@ public sealed partial class PayrollSetupViewModel : BaseViewModel
 
     public IReadOnlyList<EnumOption> ContributionOptions { get; }
 
+    /// <summary>FR-085. The stock report PDFs are laid out for.</summary>
+    public IReadOnlyList<EnumOption> PaperOptions { get; }
+
     /// <summary>
     /// The tax tables on offer: one per frequency the BIR publishes, plus the
     /// annual table the year-end settlement reads.
@@ -405,7 +409,6 @@ public sealed partial class PayrollSetupViewModel : BaseViewModel
 
     private void Switch(PayrollSetupPanel panel)
     {
-        Session.Touch();
         ClearMessages();
         Panel = panel;
     }
@@ -570,7 +573,6 @@ public sealed partial class PayrollSetupViewModel : BaseViewModel
     [RelayCommand]
     private void OpenGenerateYear()
     {
-        Session.Touch();
         ClearMessages();
 
         _confirmTarget = ConfirmTarget.GenerateYear;
@@ -588,7 +590,6 @@ public sealed partial class PayrollSetupViewModel : BaseViewModel
     [RelayCommand]
     private void OpenCreatePeriod()
     {
-        Session.Touch();
         ClearMessages();
         ResetPeriodForm();
 
@@ -603,7 +604,6 @@ public sealed partial class PayrollSetupViewModel : BaseViewModel
         if (row is null)
             return;
 
-        Session.Touch();
         ClearMessages();
 
         _periodTarget = row.Period;
@@ -627,7 +627,6 @@ public sealed partial class PayrollSetupViewModel : BaseViewModel
         if (row is null)
             return;
 
-        Session.Touch();
         ClearMessages();
 
         _confirmTarget = ConfirmTarget.PayPeriodState;
@@ -818,7 +817,6 @@ public sealed partial class PayrollSetupViewModel : BaseViewModel
     [RelayCommand]
     private void OpenCreateEarning()
     {
-        Session.Touch();
         ClearMessages();
         ResetEarningForm();
 
@@ -833,7 +831,6 @@ public sealed partial class PayrollSetupViewModel : BaseViewModel
         if (row is null)
             return;
 
-        Session.Touch();
         ClearMessages();
         ResetEarningForm();
 
@@ -862,7 +859,6 @@ public sealed partial class PayrollSetupViewModel : BaseViewModel
         if (row is null)
             return;
 
-        Session.Touch();
         ClearMessages();
 
         _confirmTarget = ConfirmTarget.EarningActive;
@@ -1010,7 +1006,6 @@ public sealed partial class PayrollSetupViewModel : BaseViewModel
     [RelayCommand]
     private void OpenCreateDeduction()
     {
-        Session.Touch();
         ClearMessages();
         ResetDeductionForm();
 
@@ -1025,7 +1020,6 @@ public sealed partial class PayrollSetupViewModel : BaseViewModel
         if (row is null)
             return;
 
-        Session.Touch();
         ClearMessages();
         ResetDeductionForm();
 
@@ -1052,7 +1046,6 @@ public sealed partial class PayrollSetupViewModel : BaseViewModel
         if (row is null)
             return;
 
-        Session.Touch();
         ClearMessages();
 
         _confirmTarget = ConfirmTarget.DeductionActive;
@@ -1219,7 +1212,6 @@ public sealed partial class PayrollSetupViewModel : BaseViewModel
         if (row is null)
             return;
 
-        Session.Touch();
         ClearMessages();
 
         var rate = row.Rate;
@@ -1420,7 +1412,6 @@ public sealed partial class PayrollSetupViewModel : BaseViewModel
     [RelayCommand]
     private Task OpenEditPhilHealthAsync() => RunAsync(async () =>
     {
-        Session.Touch();
         ClearMessages();
 
         var current = (await _statutory.GetPhilHealthRatesAsync()).FirstOrDefault();
@@ -1524,7 +1515,6 @@ public sealed partial class PayrollSetupViewModel : BaseViewModel
     [RelayCommand]
     private Task OpenEditPagIbigAsync() => RunAsync(async () =>
     {
-        Session.Touch();
         ClearMessages();
 
         var current = (await _statutory.GetPagIbigRatesAsync()).FirstOrDefault();
@@ -1643,7 +1633,6 @@ public sealed partial class PayrollSetupViewModel : BaseViewModel
         if (row is null)
             return;
 
-        Session.Touch();
         ClearMessages();
 
         var band = row.Bracket;
@@ -1788,6 +1777,10 @@ public sealed partial class PayrollSetupViewModel : BaseViewModel
         SettingsAnnualiseTax = settings.AnnualiseTaxOnFinalPeriod;
         SettingsPayUnworkedHoliday = settings.PayUnworkedRegularHoliday;
         SettingsFlagNegativeNet = settings.FlagNegativeNetPay;
+        SettingsAccrueSil = settings.AccrueServiceIncentiveLeave;
+        SettingsSilDays = settings.ServiceIncentiveLeaveDays.ToString("0.##");
+        SettingsSilDivisor = settings.ServiceIncentiveLeaveDivisor.ToString("0.##");
+        SettingsPaper = PaperOptions.FirstOrDefault(o => o.Value == (int)settings.ReportPaper);
 
         var missing = profile.MissingForPayslip;
 
@@ -1890,6 +1883,57 @@ public sealed partial class PayrollSetupViewModel : BaseViewModel
     [ObservableProperty]
     public partial bool SettingsFlagNegativeNet { get; set; }
 
+    /// <summary>
+    /// Art. 95. Whether the five days of service incentive leave are accrued
+    /// into every payslip against the days rendered — the legacy screen's
+    /// <c>5Days Inc.</c> — instead of banked as credits and converted later.
+    /// </summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(SilPreview))]
+    public partial bool SettingsAccrueSil { get; set; }
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(SilPreview))]
+    public partial string SettingsSilDays { get; set; } = "5";
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(SilPreview))]
+    public partial string SettingsSilDivisor { get; set; } = "365";
+
+    /// <summary>
+    /// What the accrual actually pays, at the rate on the client's own sheet.
+    /// The same reasoning as <see cref="RatePreview"/>: ₱600 a day is a figure
+    /// somebody can check against a payslip they have seen.
+    /// </summary>
+    public string SilPreview
+    {
+        get
+        {
+            if (!SettingsAccrueSil)
+                return "Off — the five days are banked as leave credits and converted on separation instead.";
+
+            if (!TryParseAmount(SettingsSilDays, out var days) ||
+                !TryParseAmount(SettingsSilDivisor, out var divisor) ||
+                divisor <= 0m || days <= 0m)
+            {
+                return "Enter the days and the divisor as numbers.";
+            }
+
+            var perDay = PayrollRounding.Rate(600m * days / divisor);
+
+            return $"At ₱600.00 a day that accrues {PayrollRounding.Format(perDay)} per day rendered — " +
+                   $"{PayrollRounding.Format(PayrollRounding.Money(perDay * 13m))} for a 13-day cut-off.";
+        }
+    }
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(PaperDetail))]
+    public partial EnumOption? SettingsPaper { get; set; }
+
+    /// <summary>What the chosen stock means for a wide report.</summary>
+    public string PaperDetail => ReportPaperSizes.Detail(
+        SettingsPaper?.As<ReportPaper>() ?? ReportPaper.DotMatrix11x14);
+
     [ObservableProperty]
     public partial string RatePreview { get; set; }
 
@@ -1979,6 +2023,21 @@ public sealed partial class PayrollSetupViewModel : BaseViewModel
             return;
         }
 
+        if (!TryParseAmount(SettingsSilDays, out var silDays) ||
+            !TryParseAmount(SettingsSilDivisor, out var silDivisor))
+        {
+            ShowError("Enter the service incentive leave days and divisor as numbers.");
+            return;
+        }
+
+        // Only checked when the accrual is on: a company that banks the credits
+        // has no reason to keep a divisor that means anything.
+        if (SettingsAccrueSil && (silDays <= 0m || silDivisor <= 0m))
+        {
+            ShowError("The service incentive leave days and divisor must both be greater than zero.");
+            return;
+        }
+
         var settings = new PayrollSettings
         {
             PayFrequency = SettingsFrequency?.As<PayFrequency>() ?? PayFrequency.SemiMonthly,
@@ -1990,7 +2049,11 @@ public sealed partial class PayrollSetupViewModel : BaseViewModel
                                    ?? ContributionSchedule.LastPayrollOfMonth,
             AnnualiseTaxOnFinalPeriod = SettingsAnnualiseTax,
             PayUnworkedRegularHoliday = SettingsPayUnworkedHoliday,
-            FlagNegativeNetPay = SettingsFlagNegativeNet
+            FlagNegativeNetPay = SettingsFlagNegativeNet,
+            AccrueServiceIncentiveLeave = SettingsAccrueSil,
+            ServiceIncentiveLeaveDays = silDays,
+            ServiceIncentiveLeaveDivisor = silDivisor,
+            ReportPaper = SettingsPaper?.As<ReportPaper>() ?? ReportPaper.DotMatrix11x14
         };
 
         var result = await _config.SaveSettingsAsync(settings, performedBy);

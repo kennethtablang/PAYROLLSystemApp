@@ -1,4 +1,4 @@
-using System.Collections.ObjectModel;
+﻿using System.Collections.ObjectModel;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using PAYROLLSystemApp.Models;
@@ -278,6 +278,7 @@ public sealed partial class OrganizationViewModel : BaseViewModel
     [ObservableProperty]
     public partial string DepartmentDescription { get; set; }
 
+
     [ObservableProperty]
     public partial string ErrDepartmentCode { get; set; }
 
@@ -485,7 +486,6 @@ public sealed partial class OrganizationViewModel : BaseViewModel
     [RelayCommand]
     private void OpenCreateDepartment()
     {
-        Session.Touch();
         ClearMessages();
         ResetDepartmentForm();
 
@@ -500,7 +500,6 @@ public sealed partial class OrganizationViewModel : BaseViewModel
         if (row is null)
             return;
 
-        Session.Touch();
         ClearMessages();
         ResetDepartmentForm();
 
@@ -569,7 +568,6 @@ public sealed partial class OrganizationViewModel : BaseViewModel
     [RelayCommand]
     private void OpenCreatePosition()
     {
-        Session.Touch();
         ClearMessages();
         ResetPositionForm();
 
@@ -584,7 +582,6 @@ public sealed partial class OrganizationViewModel : BaseViewModel
         if (row is null)
             return;
 
-        Session.Touch();
         ClearMessages();
         ResetPositionForm();
 
@@ -672,7 +669,6 @@ public sealed partial class OrganizationViewModel : BaseViewModel
     [RelayCommand]
     private void OpenCreateSchedule()
     {
-        Session.Touch();
         ClearMessages();
         ResetScheduleForm();
 
@@ -687,7 +683,6 @@ public sealed partial class OrganizationViewModel : BaseViewModel
         if (row is null)
             return;
 
-        Session.Touch();
         ClearMessages();
         ResetScheduleForm();
 
@@ -778,7 +773,6 @@ public sealed partial class OrganizationViewModel : BaseViewModel
         if (row is null)
             return;
 
-        Session.Touch();
         ClearMessages();
         ModalError = string.Empty;
 
@@ -817,7 +811,6 @@ public sealed partial class OrganizationViewModel : BaseViewModel
         if (row is null)
             return;
 
-        Session.Touch();
         ClearMessages();
         ModalError = string.Empty;
 
@@ -854,7 +847,6 @@ public sealed partial class OrganizationViewModel : BaseViewModel
         if (row is null)
             return;
 
-        Session.Touch();
         ClearMessages();
         ModalError = string.Empty;
 

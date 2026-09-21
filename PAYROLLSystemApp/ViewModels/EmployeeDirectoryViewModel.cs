@@ -1,4 +1,4 @@
-using System.Collections.ObjectModel;
+﻿using System.Collections.ObjectModel;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using PAYROLLSystemApp.Models;
@@ -73,6 +73,14 @@ public sealed class EmployeeRow
 
     public string PostingDisplay =>
         string.IsNullOrEmpty(PositionTitle) ? DepartmentName : $"{PositionTitle} · {DepartmentName}";
+
+    public bool IsArchived => Employee.IsArchived;
+
+    /// <summary>
+    /// "Archive" for a live record, "Restore" for one already archived. One
+    /// button rather than two, because only ever one of them applies.
+    /// </summary>
+    public string ArchiveActionText => Employee.IsArchived ? "Restore" : "Archive";
 }
 
 /// <summary>
@@ -96,18 +104,23 @@ public sealed partial class EmployeeDirectoryViewModel : BaseViewModel
     private IReadOnlyList<Department> _departments = Array.Empty<Department>();
     private IReadOnlyList<Position> _positions = Array.Empty<Position>();
     private IReadOnlyList<WorkSchedule> _schedules = Array.Empty<WorkSchedule>();
+    private IReadOnlyList<Detachment> _detachments = Array.Empty<Detachment>();
 
     /// <summary>The record the open modal is acting on. Null while creating.</summary>
     private Employee? _target;
 
+    private readonly IDetachmentService _detachmentService;
+
     public EmployeeDirectoryViewModel(
         IEmployeeService employees,
         IOrganizationService organization,
+        IDetachmentService detachments,
         ISessionService session)
         : base(session)
     {
         _employees = employees;
         _organization = organization;
+        _detachmentService = detachments;
 
         Title = "Employees";
 
@@ -115,7 +128,8 @@ public sealed partial class EmployeeDirectoryViewModel : BaseViewModel
         [
             new EnumOption((int)EmployeeStatusFilter.Active, "Active only"),
             new EnumOption((int)EmployeeStatusFilter.Separated, "Separated / inactive"),
-            new EnumOption((int)EmployeeStatusFilter.All, "All employees")
+            new EnumOption((int)EmployeeStatusFilter.All, "All employees"),
+            new EnumOption((int)EmployeeStatusFilter.Archived, "Archived")
         ];
 
         GenderOptions = EnumOption.From<Gender>(EmployeeEnumNames.Display);
@@ -143,7 +157,8 @@ public sealed partial class EmployeeDirectoryViewModel : BaseViewModel
     }
 
     /// <summary>Drives the dialog layer; while it is false the layer must not be hit-testable.</summary>
-    public bool IsAnyModalOpen => IsFormOpen || IsSeparateOpen || IsReinstateOpen || IsHistoryOpen;
+    public bool IsAnyModalOpen =>
+        IsFormOpen || IsSeparateOpen || IsReinstateOpen || IsHistoryOpen || IsArchiveOpen;
 
     public ObservableCollection<EmployeeRow> Employees { get; } = new();
 
@@ -156,6 +171,9 @@ public sealed partial class EmployeeDirectoryViewModel : BaseViewModel
     public ObservableCollection<LookupOption> PositionOptions { get; } = new();
 
     public ObservableCollection<LookupOption> ScheduleOptions { get; } = new();
+
+    /// <summary>FR-013. The post an employee is deployed to, and paid by.</summary>
+    public ObservableCollection<LookupOption> DetachmentOptions { get; } = new();
 
     public ObservableCollection<LookupOption> SupervisorOptions { get; } = new();
 
@@ -285,6 +303,34 @@ public sealed partial class EmployeeDirectoryViewModel : BaseViewModel
 
     [ObservableProperty]
     public partial LookupOption? FormPosition { get; set; }
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(RateSourceHint))]
+    public partial LookupOption? FormDetachment { get; set; }
+
+    /// <summary>
+    /// FR-013. Whether this employee is paid their own basic rate rather than
+    /// the rate posted for their position at their detachment.
+    /// </summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(RateSourceHint))]
+    [NotifyPropertyChangedFor(nameof(IsOwnRateEditable))]
+    public partial bool FormUsesOwnRate { get; set; }
+
+    /// <summary>
+    /// The rate box is only meaningful where the employee is on their own rate.
+    /// Left enabled but explained rather than greyed out, because it is still
+    /// what they fall back to if the detachment has no posted rate.
+    /// </summary>
+    public bool IsOwnRateEditable => FormUsesOwnRate || FormDetachment?.Id is null;
+
+    public string RateSourceHint =>
+        FormDetachment?.Id is null
+            ? "No detachment, so this employee is paid the basic rate below."
+            : FormUsesOwnRate
+                ? "On their own rate: the basic rate below is used, not the detachment's posted rate."
+                : "Paid the daily rate posted for their position at this detachment, as at each run's " +
+                  "pay date. The basic rate below is only a fallback if no rate is posted.";
 
     [ObservableProperty]
     public partial LookupOption? FormSupervisor { get; set; }
@@ -471,6 +517,7 @@ public sealed partial class EmployeeDirectoryViewModel : BaseViewModel
         _departments = await _organization.GetDepartmentsAsync();
         _positions = await _organization.GetPositionsAsync();
         _schedules = await _organization.GetWorkSchedulesAsync();
+        _detachments = await _detachmentService.GetAllAsync();
         _all = (await _employees.GetAllAsync()).ToList();
 
         RebuildLookups();
@@ -517,6 +564,15 @@ public sealed partial class EmployeeDirectoryViewModel : BaseViewModel
                 : position.Title;
 
             PositionOptions.Add(new LookupOption(position.Id, label));
+        }
+
+        DetachmentOptions.Clear();
+        DetachmentOptions.Add(new LookupOption(null, "— Head office (own rate) —"));
+
+        foreach (var detachment in _detachments)
+        {
+            DetachmentOptions.Add(new LookupOption(detachment.Id,
+                $"{detachment.Display}  ({LuzonRegionNames.Short(detachment.Region)})"));
         }
 
         ScheduleOptions.Clear();
@@ -597,7 +653,6 @@ public sealed partial class EmployeeDirectoryViewModel : BaseViewModel
         if (row is null)
             return;
 
-        Session.Touch();
         ClearMessages();
         ResetForm();
 
@@ -632,6 +687,8 @@ public sealed partial class EmployeeDirectoryViewModel : BaseViewModel
 
         FormDepartment = Option(DepartmentOptions, employee.DepartmentId);
         FormPosition = Option(PositionOptions, employee.PositionId);
+        FormDetachment = Option(DetachmentOptions, employee.DetachmentId);
+        FormUsesOwnRate = employee.UsesOwnRate;
         FormSchedule = Option(ScheduleOptions, employee.WorkScheduleId);
 
         RebuildSupervisorOptions(employee.Id);
@@ -722,6 +779,11 @@ public sealed partial class EmployeeDirectoryViewModel : BaseViewModel
         employee.EmploymentStatus = FormEmploymentStatus?.As<EmploymentStatus>() ?? EmploymentStatus.Probationary;
         employee.DepartmentId = FormDepartment?.Id;
         employee.PositionId = FormPosition?.Id;
+        employee.DetachmentId = FormDetachment?.Id;
+
+        // An employee with no post has nowhere to take a posted rate from, so
+        // they are on their own rate whatever the switch says.
+        employee.UsesOwnRate = FormUsesOwnRate || FormDetachment?.Id is null;
         employee.SupervisorId = FormSupervisor?.Id;
         employee.WorkScheduleId = FormSchedule?.Id;
 
@@ -767,7 +829,6 @@ public sealed partial class EmployeeDirectoryViewModel : BaseViewModel
         if (row is null)
             return;
 
-        Session.Touch();
         ClearMessages();
         ModalError = string.Empty;
 
@@ -815,6 +876,102 @@ public sealed partial class EmployeeDirectoryViewModel : BaseViewModel
         await ReloadAsync();
     });
 
+    // -------------------------------------------------------------- archive
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsAnyModalOpen))]
+    public partial bool IsArchiveOpen { get; set; }
+
+    [ObservableProperty]
+    public partial string ArchiveTitle { get; set; } = string.Empty;
+
+    [ObservableProperty]
+    public partial string ArchiveMessage { get; set; } = string.Empty;
+
+    [ObservableProperty]
+    public partial string ArchiveAction { get; set; } = "Archive";
+
+    [ObservableProperty]
+    public partial string ArchiveReason { get; set; } = string.Empty;
+
+    /// <summary>The reason box is only asked for when archiving, not restoring.</summary>
+    [ObservableProperty]
+    public partial bool ArchiveNeedsReason { get; set; }
+
+    private bool _archiveRestores;
+
+    /// <summary>
+    /// FR-017. What "delete" does here.
+    ///
+    /// <para>The dialog says plainly that the payslips stay, because someone
+    /// reaching for delete usually expects the opposite and would otherwise
+    /// assume the figures had gone with the record.</para>
+    /// </summary>
+    [RelayCommand]
+    private void OpenArchive(EmployeeRow? row)
+    {
+        if (row is null)
+            return;
+
+        ClearMessages();
+        ModalError = string.Empty;
+
+        _target = row.Employee;
+        _archiveRestores = row.Employee.IsArchived;
+
+        ArchiveReason = string.Empty;
+        ArchiveNeedsReason = !_archiveRestores;
+        ArchiveAction = _archiveRestores ? "Restore" : "Archive";
+
+        ArchiveTitle = _archiveRestores
+            ? $"Restore {row.FullName}?"
+            : $"Archive {row.FullName}?";
+
+        ArchiveMessage = _archiveRestores
+            ? $"{row.FullName} will appear in the employee list again. They stay separated if they " +
+              "were separated before being archived."
+            : $"{row.FullName} disappears from the employee list, every picker and every new payroll " +
+              "run.\n\nTheir payslips, remittance figures and alphalist entries are not touched — " +
+              "those have already been paid and filed, and cannot be unmade by removing the record " +
+              "they point at. This is reversible.";
+
+        IsArchiveOpen = true;
+    }
+
+    [RelayCommand]
+    private void CloseArchive()
+    {
+        IsArchiveOpen = false;
+        ModalError = string.Empty;
+        _target = null;
+    }
+
+    [RelayCommand]
+    private Task SubmitArchiveAsync() => RunAsync(async () =>
+    {
+        ModalError = string.Empty;
+
+        var performedBy = Session.CurrentUser;
+        if (performedBy is null || _target is null)
+            return;
+
+        var result = _archiveRestores
+            ? await _employees.RestoreAsync(_target.Id, performedBy)
+            : await _employees.ArchiveAsync(_target.Id, ArchiveReason, performedBy);
+
+        if (!result.Succeeded)
+        {
+            ModalError = result.Message;
+            return;
+        }
+
+        IsArchiveOpen = false;
+        _target = null;
+
+        ShowStatus(result.Message);
+        await ReloadAsync();
+    });
+
     // ------------------------------------------------------------ reinstate
 
     [RelayCommand]
@@ -823,7 +980,6 @@ public sealed partial class EmployeeDirectoryViewModel : BaseViewModel
         if (row is null)
             return;
 
-        Session.Touch();
         ClearMessages();
         ModalError = string.Empty;
 
@@ -998,6 +1154,8 @@ public sealed partial class EmployeeDirectoryViewModel : BaseViewModel
         FormEmploymentStatus = EmploymentStatusOptions.FirstOrDefault();
         FormDepartment = DepartmentOptions.FirstOrDefault();
         FormPosition = PositionOptions.FirstOrDefault();
+        FormDetachment = DetachmentOptions.FirstOrDefault();
+        FormUsesOwnRate = false;
         FormSupervisor = SupervisorOptions.FirstOrDefault();
         FormSchedule = ScheduleOptions.FirstOrDefault();
 

@@ -226,7 +226,6 @@ public sealed partial class ApprovalsViewModel : BaseViewModel
         if (SelectedRun is null)
             return;
 
-        Session.Touch();
         ClearMessages();
 
         var run = SelectedRun.Run;
@@ -250,7 +249,6 @@ public sealed partial class ApprovalsViewModel : BaseViewModel
         if (SelectedRun is null)
             return;
 
-        Session.Touch();
         ClearMessages();
 
         _confirmTarget = ConfirmTarget.Return;
@@ -271,7 +269,6 @@ public sealed partial class ApprovalsViewModel : BaseViewModel
         if (SelectedRun is null)
             return;
 
-        Session.Touch();
         ClearMessages();
 
         var run = SelectedRun.Run;
@@ -311,7 +308,6 @@ public sealed partial class ApprovalsViewModel : BaseViewModel
         if (row is null)
             return;
 
-        Session.Touch();
 
         var payslip = row.Payslip;
 

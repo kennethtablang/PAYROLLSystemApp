@@ -26,20 +26,16 @@ public sealed partial class DashboardViewModel : BaseViewModel
     public DashboardViewModel(
         ISessionService session,
         IAppNavigator navigator,
-        IAuditService audit,
-        AuthOptions options)
+        IAuditService audit)
         : base(session)
     {
         _navigator = navigator;
         _audit = audit;
-        Options = options;
 
         Title = "Dashboard";
         Greeting = string.Empty;
         LastLoginText = string.Empty;
     }
-
-    private AuthOptions Options { get; }
 
     public ObservableCollection<StatCard> Stats { get; } = new();
 
@@ -61,14 +57,12 @@ public sealed partial class DashboardViewModel : BaseViewModel
     [RelayCommand]
     private void OpenUsers()
     {
-        Session.Touch();
         _navigator.NavigateTo(AppSection.Users);
     }
 
     [RelayCommand]
     private void OpenAudit()
     {
-        Session.Touch();
         _navigator.NavigateTo(AppSection.AuditLog);
     }
 
@@ -103,7 +97,6 @@ public sealed partial class DashboardViewModel : BaseViewModel
         Stats.Add(new StatCard("Your role", user.RoleDisplayName, $"{RolePermissions.For(user.Role).Count} permissions granted"));
         Stats.Add(new StatCard("Modules available", permitted.ToString(), $"{ready} ready to use now"));
         Stats.Add(new StatCard("Last sign-in", LastLoginText, "Recorded in the audit log"));
-        Stats.Add(new StatCard("Idle sign-out", $"{Options.InactivityTimeout.TotalMinutes:0} min", "Configurable by an administrator"));
     }
 
     /// <summary>

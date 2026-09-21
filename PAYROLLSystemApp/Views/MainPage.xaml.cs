@@ -71,8 +71,6 @@ public partial class MainPage : ContentPage
 
     private async Task ShowSectionAsync(AppSection section)
     {
-        _session.Touch();
-
         var view = Resolve(section);
 
         // Dialogs are hoisted out of the section and added directly to the page
@@ -105,7 +103,9 @@ public partial class MainPage : ContentPage
         AppSection.Dashboard => _services.GetRequiredService<DashboardView>(),
         AppSection.Employees => _services.GetRequiredService<EmployeesView>(),
         AppSection.Organization => _services.GetRequiredService<OrganizationView>(),
+        AppSection.Detachments => _services.GetRequiredService<DetachmentsView>(),
         AppSection.Attendance => _services.GetRequiredService<AttendanceView>(),
+        AppSection.Timesheets => _services.GetRequiredService<TimesheetsView>(),
         AppSection.Leave => _services.GetRequiredService<LeaveView>(),
         AppSection.PayrollSetup => _services.GetRequiredService<PayrollSetupView>(),
         AppSection.PayrollRuns => _services.GetRequiredService<PayrollRunsView>(),

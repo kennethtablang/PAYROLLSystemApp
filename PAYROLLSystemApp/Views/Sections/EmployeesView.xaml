@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8" ?>
+﻿<?xml version="1.0" encoding="utf-8" ?>
 <ContentView xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
              xmlns:vm="clr-namespace:PAYROLLSystemApp.ViewModels"
@@ -180,7 +180,7 @@
 
                                         <HorizontalStackLayout Grid.Column="5"
                                                                Spacing="6"
-                                                               WidthRequest="210"
+                                                               WidthRequest="288"
                                                                VerticalOptions="Center">
                                             <Button Style="{StaticResource RowAction}"
                                                     Text="Edit"
@@ -199,6 +199,14 @@
                                                     Text="Reinstate"
                                                     IsVisible="{Binding IsSeparated}"
                                                     Command="{Binding Source={RelativeSource AncestorType={x:Type vm:EmployeeDirectoryViewModel}}, Path=OpenReinstateCommand}"
+                                                    CommandParameter="{Binding .}" />
+
+                                            <!-- What "delete" means here. The
+                                                 dialog explains that payroll
+                                                 already filed is untouched. -->
+                                            <Button Style="{StaticResource RowAction}"
+                                                    Text="{Binding ArchiveActionText}"
+                                                    Command="{Binding Source={RelativeSource AncestorType={x:Type vm:EmployeeDirectoryViewModel}}, Path=OpenArchiveCommand}"
                                                     CommandParameter="{Binding .}" />
                                         </HorizontalStackLayout>
 
@@ -417,6 +425,31 @@
                         </VerticalStackLayout>
                     </Grid>
 
+                    <!-- FR-013. The post decides the daily rate, so it sits
+                         with the department and position rather than down with
+                         the pay fields. -->
+                    <VerticalStackLayout Spacing="0">
+                        <Label Style="{StaticResource FieldLabel}" Text="DETACHMENT" />
+                        <Border Style="{StaticResource FieldFrame}">
+                            <Picker ItemsSource="{Binding DetachmentOptions}"
+                                    SelectedItem="{Binding FormDetachment}"
+                                    ItemDisplayBinding="{Binding Label, x:DataType=vm:LookupOption}" />
+                        </Border>
+                    </VerticalStackLayout>
+
+                    <Grid ColumnDefinitions="*,Auto" Margin="0,2,0,0">
+                        <VerticalStackLayout Grid.Column="0" Spacing="1">
+                            <Label Style="{StaticResource Body}" Text="Pay this employee their own rate" />
+                            <Label Style="{StaticResource Faint}" Text="{Binding RateSourceHint}" />
+                        </VerticalStackLayout>
+                        <Switch Grid.Column="1"
+                                IsToggled="{Binding FormUsesOwnRate}"
+                                WidthRequest="46"
+                                HorizontalOptions="End"
+                                VerticalOptions="Center"
+                                OnColor="{StaticResource Brand}" />
+                    </Grid>
+
                     <Grid ColumnDefinitions="*,*" ColumnSpacing="10">
                         <VerticalStackLayout Grid.Column="0" Spacing="0">
                             <Label Style="{StaticResource FieldLabel}" Text="IMMEDIATE SUPERVISOR" />
@@ -586,6 +619,29 @@
                                 OnColor="{StaticResource Brand}" />
                     </Grid>
 
+                </VerticalStackLayout>
+            </controls:ModalHost.Body>
+        </controls:ModalHost>
+
+        <!-- ===================== ARCHIVE ===================== -->
+        <controls:ModalHost IsOpen="{Binding IsArchiveOpen}"
+                            Title="{Binding ArchiveTitle}"
+                            Subtitle="Removing an employee from the lists"
+                            ModalWidth="460"
+                            PrimaryText="{Binding ArchiveAction}"
+                            IsDestructive="True"
+                            PrimaryCommand="{Binding SubmitArchiveCommand}"
+                            SecondaryCommand="{Binding CloseArchiveCommand}"
+                            DismissCommand="{Binding CloseArchiveCommand}"
+                            ErrorText="{Binding ModalError}">
+            <controls:ModalHost.Body>
+                <VerticalStackLayout Spacing="12">
+                    <Label Style="{StaticResource Body}" Text="{Binding ArchiveMessage}" />
+
+                    <controls:FormEntry Label="REASON"
+                                        Text="{Binding ArchiveReason}"
+                                        IsVisible="{Binding ArchiveNeedsReason}"
+                                        Placeholder="Added by mistake, duplicate record…" />
                 </VerticalStackLayout>
             </controls:ModalHost.Body>
         </controls:ModalHost>

@@ -41,16 +41,40 @@ public sealed class EmployeePayrollInput
 
     public required string PositionTitle { get; init; }
 
+    /// <summary>The post being worked, or empty for head-office staff.</summary>
+    public string DetachmentCode { get; init; } = string.Empty;
+
+    public string DetachmentName { get; init; } = string.Empty;
+
     /// <summary>Art. 82 — managerial staff earn no overtime, night differential or premium pay.</summary>
     public required bool IsManagerial { get; init; }
 
     /// <summary>The days inside the run's cut-off, in date order.</summary>
     public required IReadOnlyList<AttendanceRecord> Attendance { get; init; }
 
+    /// <summary>
+    /// The period timesheet keyed for this employee on this run, when the client's
+    /// paper is the source of their time rather than daily punches.
+    ///
+    /// <para>When this is set it <b>replaces</b> <see cref="Attendance"/> as the
+    /// basis for pay: the sheet already carries the totals in the buckets the
+    /// client priced them in, and there is no day-level record behind it to
+    /// reconcile against. Null for anyone on the daily attendance path.</para>
+    /// </summary>
+    public PeriodTimesheet? Timesheet { get; init; }
+
     /// <summary>Approved leave overlapping the cut-off, for deciding which days are paid.</summary>
     public required IReadOnlyList<LeaveRequest> ApprovedLeave { get; init; }
 
     public required IReadOnlyList<EmployeeLoan> Loans { get; init; }
+
+    /// <summary>
+    /// Standing deductions in force on this run's pay date — the insurance
+    /// premium, the performance bond, the processing fee. Unlike
+    /// <see cref="Loans"/> these carry no balance and are taken in full every
+    /// period until their end date passes.
+    /// </summary>
+    public IReadOnlyList<EmployeeDeduction> RecurringDeductions { get; init; } = [];
 
     public required IReadOnlyList<PayrollAdjustment> Adjustments { get; init; }
 
@@ -81,12 +105,14 @@ public sealed class PayrollContext
         StatutorySnapshot statutory,
         IReadOnlyList<EarningType> earnings,
         IReadOnlyList<DeductionType> deductions,
+        DetachmentRateTable detachmentRates,
         bool settlesTheYear)
     {
         Run = run;
         Settings = settings;
         Premiums = premiums;
         Statutory = statutory;
+        DetachmentRates = detachmentRates;
         SettlesTheYear = settlesTheYear;
 
         Earnings = earnings.ToDictionary(e => e.Code, StringComparer.OrdinalIgnoreCase);
@@ -100,6 +126,13 @@ public sealed class PayrollContext
     public PremiumMatrix Premiums { get; }
 
     public StatutorySnapshot Statutory { get; }
+
+    /// <summary>
+    /// The daily rate posted for each detachment and position, as it stood on
+    /// this run's pay date. Where an employee is not on their own rate, this is
+    /// what they are paid from.
+    /// </summary>
+    public DetachmentRateTable DetachmentRates { get; }
 
     public IReadOnlyDictionary<string, EarningType> Earnings { get; }
 

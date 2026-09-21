@@ -216,7 +216,6 @@ public sealed partial class UserManagementViewModel : BaseViewModel
     [RelayCommand]
     private void OpenCreate()
     {
-        Session.Touch();
         ClearMessages();
         ResetCreateForm();
         IsCreateOpen = true;
@@ -232,7 +231,6 @@ public sealed partial class UserManagementViewModel : BaseViewModel
     [RelayCommand]
     private void GeneratePassword()
     {
-        Session.Touch();
         CreatePassword = PasswordPolicy.GenerateTemporaryPassword();
     }
 
@@ -288,7 +286,6 @@ public sealed partial class UserManagementViewModel : BaseViewModel
         if (user is null)
             return;
 
-        Session.Touch();
         ClearMessages();
         ModalError = string.Empty;
 
@@ -342,7 +339,6 @@ public sealed partial class UserManagementViewModel : BaseViewModel
         if (user is null)
             return;
 
-        Session.Touch();
         ClearMessages();
 
         _target = user;
@@ -363,7 +359,6 @@ public sealed partial class UserManagementViewModel : BaseViewModel
         if (user is null)
             return;
 
-        Session.Touch();
         ClearMessages();
 
         _target = user;
@@ -441,7 +436,6 @@ public sealed partial class UserManagementViewModel : BaseViewModel
     [RelayCommand]
     private void CloseTemp()
     {
-        Session.Touch();
         IsTempOpen = false;
 
         // The clear value is held only as long as the dialog shows it.
@@ -457,7 +451,7 @@ public sealed partial class UserManagementViewModel : BaseViewModel
         CreateEmail = string.Empty;
         CreateFullName = string.Empty;
         CreatePassword = string.Empty;
-        CreateRole = AvailableRoles.First(r => r.Role == UserRole.Employee);
+        CreateRole = AvailableRoles.First(r => r.Role == UserRole.Accounting);
     }
 
     private void ResetEditForm()
@@ -465,6 +459,6 @@ public sealed partial class UserManagementViewModel : BaseViewModel
         EditTitle = string.Empty;
         EditFullName = string.Empty;
         EditIsActive = true;
-        EditRole = AvailableRoles.First(r => r.Role == UserRole.Employee);
+        EditRole = AvailableRoles.First(r => r.Role == UserRole.Accounting);
     }
 }

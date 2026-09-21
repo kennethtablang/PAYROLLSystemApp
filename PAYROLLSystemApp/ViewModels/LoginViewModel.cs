@@ -80,7 +80,6 @@ public sealed partial class LoginViewModel : BaseViewModel
     [RelayCommand]
     private void TogglePasswordVisibility()
     {
-        Session.Touch();
         IsPasswordHidden = !IsPasswordHidden;
     }
 
@@ -88,7 +87,6 @@ public sealed partial class LoginViewModel : BaseViewModel
     private void ForgotPassword()
     {
         // FR-005 is an administrator-issued reset; there is no self-service path.
-        Session.Touch();
         ShowStatus("Ask your system administrator to issue a temporary password for your account.");
     }
 

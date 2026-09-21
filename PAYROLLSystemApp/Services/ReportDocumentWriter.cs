@@ -1,4 +1,4 @@
-using PAYROLLSystemApp.Models;
+﻿using PAYROLLSystemApp.Models;
 
 namespace PAYROLLSystemApp.Services;
 
@@ -24,17 +24,45 @@ namespace PAYROLLSystemApp.Services;
 /// </summary>
 public static class ReportDocument
 {
-    private const double HeaderFontSize = 7.5;
-    private const double BodyFontSize = 7.5;
-    private const double RowHeight = 12;
-    private const double CellPadding = 4;
+    private const double BaseFontSize = 7.5;
+    private const double BasePadding = 4;
+
+    /// <summary>
+    /// How small condensed print is allowed to get. Below about five points
+    /// Helvetica stops being readable off an impact printer's ribbon, and an
+    /// unreadable register is no better than one split across two sheets.
+    /// </summary>
+    private const double MinimumFontSize = 5;
+
+    /// <summary>Cell padding once condensed. Tighter, as condensed print is.</summary>
+    private const double CondensedPadding = 2;
+
+    /// <summary>Slack left across the page when condensing. See <see cref="Condense"/>.</summary>
+    private const double CondenseMargin = 0.5;
+
+    /// <summary>
+    /// The type size and cell padding a document is drawn at.
+    ///
+    /// <para><b>Condensing is not squeezing.</b> The rule this renderer is built
+    /// on is that a column is never narrowed below what its content needs - that
+    /// is what produced a register reading <c>15,0...</c>. Choosing a smaller
+    /// type size and <em>then</em> measuring every column afresh at that size
+    /// breaks nothing: the columns still fit their contents exactly, so no value
+    /// is ever truncated. It is what "condensed" means on a dot matrix, where 17
+    /// characters to the inch is an ordinary setting.</para>
+    /// </summary>
+    private readonly record struct Layout(double FontSize, double Padding)
+    {
+        public double RowHeight => Math.Max(7, FontSize * 1.6);
+    }
 
     /// <summary>
     /// Columns repeated on every carried-over page so a row can still be
-    /// identified. Two is the employee's number and their name on every report
-    /// in section 2.8.
+    /// identified. Two — the employee's number and their name — is right for
+    /// most of section 2.8; a report whose identity spans more columns says so
+    /// through <see cref="ReportGrid.KeyColumnCount"/>.
     /// </summary>
-    private const int KeyColumns = 2;
+    private const int DefaultKeyColumns = 2;
 
     /// <summary>
     /// Slack allowed when deciding whether a value fits its column.
@@ -50,20 +78,38 @@ public static class ReportDocument
     /// </summary>
     private const double FitTolerance = 0.05;
 
-    public static byte[] Render(CompanyProfile company, ReportGrid grid)
+    public static byte[] Render(CompanyProfile company, ReportGrid grid,
+        ReportPaper paper = ReportPaper.A4)
     {
-        var widths = Measure(grid);
-        var total = widths.Sum();
+        var layout = new Layout(BaseFontSize, BasePadding);
+        var widths = Measure(grid, layout);
 
-        // Nothing is ever squeezed. A table wider than portrait A4 is turned on
-        // its side; one still too wide is carried over onto further pages. The
-        // two rules have to agree — deciding orientation on a tolerance the
-        // splitter then does not honour is how a form that fits ends up split
-        // across two pages anyway.
-        var portraitWidth = PdfWriter.A4Short - (2 * PdfPageBuilder.Margin);
+        // Nothing is ever squeezed. A table wider than the portrait edge is
+        // turned on its side where the stock allows it; one still too wide is
+        // carried over onto further pages. The two rules have to agree —
+        // deciding orientation on a tolerance the splitter then does not honour
+        // is how a form that fits ends up split across two pages anyway.
+        //
+        // Continuous form does not turn: it is fed one way through a tractor, so
+        // ReportPaperSizes.Box ignores the flag for those sizes and this is
+        // simply the width they have.
+        var portraitWidth = ReportPaperSizes.PortraitWidth(paper) - (2 * PdfPageBuilder.Margin);
 
-        var writer = new PdfWriter(landscape: total > portraitWidth);
+        var (pageWidth, pageHeight) =
+            ReportPaperSizes.Box(paper, wideTable: widths.Sum() > portraitWidth);
+
+        var writer = new PdfWriter(pageWidth, pageHeight);
         var available = writer.PageWidth - (2 * PdfPageBuilder.Margin);
+
+        // On continuous form a payroll sheet whose columns run onto a second
+        // page is far harder to use than a condensed one: the name and the net
+        // pay have to be readable on the same line. Cut sheet keeps the plain
+        // rule, because a second A4 page is cheap and stays legible.
+        if (ReportPaperSizes.Condenses(paper) && widths.Sum() > available)
+        {
+            layout = Condense(grid, available);
+            widths = Measure(grid, layout);
+        }
 
         var groups = Partition(grid, widths, available);
 
@@ -72,10 +118,42 @@ public static class ReportDocument
             if (i > 0)
                 writer.NewPage();
 
-            DrawGroup(writer, company, grid, groups[i], widths, available, i, groups.Count);
+            DrawGroup(writer, company, grid, groups[i], widths, available, i, groups.Count, layout);
         }
 
         return writer.Build();
+    }
+
+    /// <summary>
+    /// The largest type size at which the whole table still fits across the
+    /// page, down to <see cref="MinimumFontSize"/>.
+    ///
+    /// <para>Solved rather than searched. A column's width is its widest string
+    /// plus padding; string widths scale linearly with the type size and the
+    /// padding does not, so measuring once with no padding leaves one unknown
+    /// and the size falls out of a division. Where even the floor is too wide
+    /// the size stops there and <see cref="Partition"/> splits the table as it
+    /// always did.</para>
+    /// </summary>
+    private static Layout Condense(ReportGrid grid, double available)
+    {
+        var text = Measure(grid, new Layout(BaseFontSize, 0)).Sum();
+
+        if (text <= 0)
+            return new Layout(BaseFontSize, CondensedPadding);
+
+        // Aim a hair under the page rather than exactly at it. Solving for the
+        // size that fills the width exactly makes the re-measured columns sum to
+        // `available` in real arithmetic and a shade *over* it in binary floating
+        // point — whereupon Partition splits a table that was made to fit. Half
+        // a point is far below anything visible and far above the error. This is
+        // the same trap FitTolerance above documents, arrived at from the other
+        // direction.
+        var forText = available - (2 * CondensedPadding * grid.Columns.Count) - CondenseMargin;
+
+        var size = forText <= 0 ? MinimumFontSize : BaseFontSize * forText / text;
+
+        return new Layout(Math.Clamp(size, MinimumFontSize, BaseFontSize), CondensedPadding);
     }
 
     // =====================================================================
@@ -91,13 +169,13 @@ public static class ReportDocument
     /// metrics are published, so the width a column needs is a sum rather than
     /// a guess.</para>
     /// </summary>
-    private static double[] Measure(ReportGrid grid)
+    private static double[] Measure(ReportGrid grid, Layout layout)
     {
         var widths = new double[grid.Columns.Count];
 
         for (var i = 0; i < grid.Columns.Count; i++)
         {
-            var needed = PdfWriter.Measure(grid.Columns[i].Header, HeaderFontSize, bold: true);
+            var needed = PdfWriter.Measure(grid.Columns[i].Header, layout.FontSize, bold: true);
 
             foreach (var row in grid.Rows)
             {
@@ -107,10 +185,10 @@ public static class ReportDocument
                 var text = row.Cells[i].Text;
 
                 if (text.Length > 0)
-                    needed = Math.Max(needed, PdfWriter.Measure(text, BodyFontSize, row.IsTotal));
+                    needed = Math.Max(needed, PdfWriter.Measure(text, layout.FontSize, row.IsTotal));
             }
 
-            widths[i] = needed + (2 * CellPadding);
+            widths[i] = needed + (2 * layout.Padding);
         }
 
         return widths;
@@ -126,7 +204,7 @@ public static class ReportDocument
     private static List<int[]> Partition(ReportGrid grid, double[] widths, double available)
     {
         var count = grid.Columns.Count;
-        var keys = Math.Min(KeyColumns, count);
+        var keys = Math.Min(grid.KeyColumnCount > 0 ? grid.KeyColumnCount : DefaultKeyColumns, count);
         var keyWidth = Enumerable.Range(0, keys).Sum(i => widths[i]);
 
         if (widths.Sum() <= available)
@@ -165,7 +243,7 @@ public static class ReportDocument
 
     private static void DrawGroup(
         PdfWriter writer, CompanyProfile company, ReportGrid grid, int[] group,
-        double[] widths, double available, int index, int groupCount)
+        double[] widths, double available, int index, int groupCount, Layout layout)
     {
         var groupWidths = group.Select(i => widths[i]).ToArray();
         var total = groupWidths.Sum();
@@ -181,21 +259,23 @@ public static class ReportDocument
             groupWidths[1] += Math.Max(0, available - groupWidths.Sum());
 
         var page = new PdfPageBuilder(writer,
-            p => DrawHeader(p, company, grid, group, groupWidths, index, groupCount));
+            p => DrawHeader(p, company, grid, group, groupWidths, index, groupCount, layout));
 
-        foreach (var row in grid.Rows.Where(r => !r.IsTotal))
+        // Rows in the order the grid built them, so a department's people stay
+        // above their own subtotal. Pulling the totals out to the end would put
+        // every subtotal under the last department.
+        foreach (var row in grid.Rows)
         {
-            page.EnsureSpace(RowHeight + 30);
-            DrawRow(page, grid, row, group, groupWidths);
-        }
+            page.EnsureSpace(layout.RowHeight + 30);
 
-        foreach (var row in grid.Rows.Where(r => r.IsTotal))
-        {
-            page.EnsureSpace(RowHeight + 30);
-            page.Down(2);
-            page.Rule(0.55);
-            page.Down(RowHeight);
-            DrawRow(page, grid, row, group, groupWidths, bold: true);
+            if (row.IsTotal)
+            {
+                page.Down(2);
+                page.Rule(0.55);
+                page.Down(layout.RowHeight);
+            }
+
+            DrawRow(page, grid, row, group, groupWidths, layout, bold: row.IsTotal);
         }
 
         if (grid.IsEmpty)
@@ -213,7 +293,7 @@ public static class ReportDocument
 
     private static void DrawHeader(
         PdfPageBuilder page, CompanyProfile company, ReportGrid grid, int[] group,
-        double[] widths, int index, int groupCount)
+        double[] widths, int index, int groupCount, Layout layout)
     {
         page.Text(page.Left, company.IsConfigured ? company.DisplayName : "(company profile not set)",
             12, bold: true);
@@ -263,19 +343,19 @@ public static class ReportDocument
         foreach (var note in grid.BlockingNotes)
         {
             page.Band(11, 0.88);
-            page.Text(page.Left + CellPadding, $"DO NOT FILE OR PAY FROM THIS REPORT — {note.Text}",
+            page.Text(page.Left + BasePadding, $"DO NOT FILE OR PAY FROM THIS REPORT — {note.Text}",
                 8, bold: true);
             page.Down(13);
         }
 
         page.Down(2);
-        DrawColumnHeadings(page, grid, group, widths);
+        DrawColumnHeadings(page, grid, group, widths, layout);
     }
 
     private static void DrawColumnHeadings(
-        PdfPageBuilder page, ReportGrid grid, int[] group, double[] widths)
+        PdfPageBuilder page, ReportGrid grid, int[] group, double[] widths, Layout layout)
     {
-        page.Band(RowHeight + 1, 0.9);
+        page.Band(layout.RowHeight + 1, 0.9);
 
         var x = page.Left;
 
@@ -283,22 +363,22 @@ public static class ReportDocument
         {
             var column = grid.Columns[group[i]];
             var width = widths[i];
-            var text = Fit(column.Header, width, HeaderFontSize, true);
+            var text = Fit(column.Header, width, layout.FontSize, true, layout.Padding);
 
             if (column.IsNumeric)
-                page.TextRight(x + width - CellPadding, text, HeaderFontSize, bold: true);
+                page.TextRight(x + width - layout.Padding, text, layout.FontSize, bold: true);
             else
-                page.Text(x + CellPadding, text, HeaderFontSize, bold: true);
+                page.Text(x + layout.Padding, text, layout.FontSize, bold: true);
 
             x += width;
         }
 
-        page.Down(RowHeight + 2);
+        page.Down(layout.RowHeight + 2);
     }
 
     private static void DrawRow(
         PdfPageBuilder page, ReportGrid grid, ReportRow row, int[] group,
-        double[] widths, bool bold = false)
+        double[] widths, Layout layout, bool bold = false)
     {
         var x = page.Left;
 
@@ -311,18 +391,18 @@ public static class ReportDocument
 
             if (cell.Text.Length > 0)
             {
-                var text = Fit(cell.Text, width, BodyFontSize, bold);
+                var text = Fit(cell.Text, width, layout.FontSize, bold, layout.Padding);
 
                 if (column.IsNumeric)
-                    page.TextRight(x + width - CellPadding, text, BodyFontSize, bold);
+                    page.TextRight(x + width - layout.Padding, text, layout.FontSize, bold);
                 else
-                    page.Text(x + CellPadding, text, BodyFontSize, bold);
+                    page.Text(x + layout.Padding, text, layout.FontSize, bold);
             }
 
             x += width;
         }
 
-        page.Down(RowHeight);
+        page.Down(layout.RowHeight);
     }
 
     private static void DrawFootnotes(PdfPageBuilder page, ReportGrid grid)
@@ -349,9 +429,9 @@ public static class ReportDocument
     /// into the next one. A figure that overlaps its neighbour is a report
     /// nobody can read a column of.
     /// </summary>
-    private static string Fit(string text, double width, double size, bool bold)
+    private static string Fit(string text, double width, double size, bool bold, double padding)
     {
-        var room = width - (2 * CellPadding);
+        var room = width - (2 * padding);
 
         if (PdfWriter.Measure(text, size, bold) <= room + FitTolerance)
             return text;

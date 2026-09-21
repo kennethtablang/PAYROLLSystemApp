@@ -1,4 +1,4 @@
-using PAYROLLSystemApp.Security;
+﻿using PAYROLLSystemApp.Security;
 using SQLite;
 
 namespace PAYROLLSystemApp.Models;
@@ -77,6 +77,26 @@ public class Employee
     /// </summary>
     public DateTime? SeparationDate { get; set; }
 
+    /// <summary>
+    /// Hidden from every list and picker, while the record itself stays.
+    ///
+    /// <para>This is what "delete" does here. A hard delete cannot be offered:
+    /// payslips, the alphalist and each employee's BIR 2316 all point at this
+    /// row, and removing it would rewrite payroll that has already been paid
+    /// and filed (FR-017, NFR-009). Archiving takes the record out of sight —
+    /// which is what someone deleting a mistyped employee actually wants —
+    /// without changing a single figure that has been reported.</para>
+    ///
+    /// <para>An archived employee is excluded from new payroll runs, for the
+    /// same reason an inactive one is.</para>
+    /// </summary>
+    public bool IsArchived { get; set; }
+
+    public DateTime? ArchivedUtc { get; set; }
+
+    [MaxLength(200)]
+    public string ArchivedReason { get; set; } = string.Empty;
+
     [MaxLength(120)]
     public string SeparationReason { get; set; } = string.Empty;
 
@@ -86,6 +106,25 @@ public class Employee
     public int? DepartmentId { get; set; }
 
     public int? PositionId { get; set; }
+
+    /// <summary>
+    /// The post this employee is deployed to, which is where their daily rate
+    /// comes from (<see cref="DetachmentRate"/>). Null for head-office staff,
+    /// who are paid their own rate.
+    /// </summary>
+    [Indexed]
+    public int? DetachmentId { get; set; }
+
+    /// <summary>
+    /// FR-013. True when this employee is paid <see cref="BasicRate"/> rather
+    /// than their detachment's posted rate for their position.
+    ///
+    /// <para>Set for anyone paid above the posted rate, and necessarily for
+    /// anyone with no detachment at all. The default is false, so a regional
+    /// wage order is one edit to the rate table and everybody at the post
+    /// follows it — which is the whole reason the table exists.</para>
+    /// </summary>
+    public bool UsesOwnRate { get; set; }
 
     /// <summary>Another employee's <see cref="Id"/>. Null for the top of the tree.</summary>
     public int? SupervisorId { get; set; }

@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8" ?>
+﻿<?xml version="1.0" encoding="utf-8" ?>
 <ContentView xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
              xmlns:vm="clr-namespace:PAYROLLSystemApp.ViewModels"
@@ -902,6 +902,51 @@
                                             VerticalOptions="Center"
                                             OnColor="{StaticResource Brand}" />
                                 </Grid>
+
+                                <Grid ColumnDefinitions="*,Auto">
+                                    <VerticalStackLayout Grid.Column="0" Spacing="1">
+                                        <Label Style="{StaticResource Body}" Text="Accrue service incentive leave into every payslip" />
+                                        <Label Style="{StaticResource Faint}"
+                                               Text="Art. 95, and the legacy system's 5Days Inc. column. The five days are paid a slice at a time against the days rendered rather than banked as credits. Leave it off and the credits are converted on separation instead — with it on, doing both would pay the same entitlement twice." />
+                                    </VerticalStackLayout>
+                                    <Switch Grid.Column="1"
+                                            IsToggled="{Binding SettingsAccrueSil}"
+                                            WidthRequest="46"
+                                            HorizontalOptions="End"
+                                            VerticalOptions="Center"
+                                            OnColor="{StaticResource Brand}" />
+                                </Grid>
+
+                                <Grid ColumnDefinitions="*,*" ColumnSpacing="10">
+                                    <controls:FormEntry Grid.Column="0"
+                                                        Label="DAYS A YEAR EARNS"
+                                                        Text="{Binding SettingsSilDays}"
+                                                        Placeholder="5" />
+
+                                    <controls:FormEntry Grid.Column="1"
+                                                        Label="SPREAD OVER"
+                                                        Text="{Binding SettingsSilDivisor}"
+                                                        Placeholder="365" />
+                                </Grid>
+
+                                <Label Style="{StaticResource Faint}" Text="{Binding SilPreview}" />
+
+                                <Label Style="{StaticResource Faint}"
+                                       Text="365 spreads the entitlement over every calendar day, which is what the legacy system does. An agency accruing only over days that could have been worked uses 313 or 261 and pays more per day for the same five days a year." />
+
+                                <VerticalStackLayout Spacing="0" Margin="0,4,0,0">
+                                    <Label Style="{StaticResource FieldLabel}" Text="PAPER FOR PRINTED REPORTS" />
+                                    <Border Style="{StaticResource FieldFrame}">
+                                        <Picker ItemsSource="{Binding PaperOptions}"
+                                                SelectedItem="{Binding SettingsPaper}"
+                                                ItemDisplayBinding="{Binding Label, x:DataType=vm:EnumOption}" />
+                                    </Border>
+                                </VerticalStackLayout>
+
+                                <Label Style="{StaticResource Faint}" Text="{Binding PaperDetail}" />
+
+                                <Label Style="{StaticResource Faint}"
+                                       Text="Continuous form is fed one way through a tractor, so the two dot matrix sizes are never turned to suit a table — a report too wide for them is carried onto a further page instead, repeating each employee's code and name. Only A4 turns itself." />
 
                                 <Button Style="{StaticResource PrimaryButton}"
                                         Text="Save payroll rules"

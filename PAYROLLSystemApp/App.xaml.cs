@@ -13,17 +13,15 @@ namespace PAYROLLSystemApp
     {
         private readonly IServiceProvider _services;
         private readonly ISessionService _session;
-        private readonly IDialogService _dialogs;
 
         private Window? _window;
 
-        public App(IServiceProvider services, ISessionService session, IDialogService dialogs)
+        public App(IServiceProvider services, ISessionService session)
         {
             InitializeComponent();
 
             _services = services;
             _session = session;
-            _dialogs = dialogs;
 
             _session.SessionStarted += OnSessionStarted;
             _session.SessionEnded += OnSessionEnded;
@@ -47,15 +45,10 @@ namespace PAYROLLSystemApp
             MainThread.BeginInvokeOnMainThread(() =>
                 SetRoot(_services.GetRequiredService<MainPage>()));
 
-        /// <summary>FR-006 / sign-out: always return to the sign-in screen.</summary>
+        /// <summary>Sign-out always returns to the sign-in screen.</summary>
         private void OnSessionEnded(object? sender, SessionEndedEventArgs e) =>
-            MainThread.BeginInvokeOnMainThread(async () =>
-            {
-                SetRoot(_services.GetRequiredService<LoginPage>());
-
-                if (e.Reason == SessionEndReason.TimedOut)
-                    await _dialogs.AlertAsync("Session ended", e.Message);
-            });
+            MainThread.BeginInvokeOnMainThread(() =>
+                SetRoot(_services.GetRequiredService<LoginPage>()));
 
         private void SetRoot(Page page)
         {

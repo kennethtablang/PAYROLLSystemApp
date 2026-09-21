@@ -27,7 +27,7 @@ public class User
     [NotNull]
     public string PasswordHash { get; set; } = string.Empty;
 
-    public UserRole Role { get; set; } = UserRole.Employee;
+    public UserRole Role { get; set; } = UserRole.Accounting;
 
     /// <summary>Deactivated accounts are retained for audit history but cannot sign in.</summary>
     public bool IsActive { get; set; } = true;

@@ -1,4 +1,4 @@
-using SQLite;
+﻿using SQLite;
 
 namespace PAYROLLSystemApp.Models;
 
@@ -252,7 +252,39 @@ public static class PayComponentCodes
 {
     // Earnings produced by the engine.
     public const string BasicPay = "BASIC";
+
+    /// <summary>
+    /// Overtime as a single figure, whatever day it fell on.
+    ///
+    /// <para><b>Historical.</b> The engine now splits overtime across
+    /// <see cref="OvertimeRegular"/>, <see cref="OvertimeRestDay"/> and
+    /// <see cref="OvertimeHoliday"/>, because the payroll summary bills the
+    /// three separately. Payslips computed before that change carry this code
+    /// and cannot be split retroactively — the day each overtime hour fell on
+    /// was not kept — so reports total them under the ordinary column and say
+    /// so. The type stays seeded so those payslips still have a name.</para>
+    /// </summary>
     public const string Overtime = "OT";
+
+    /// <summary>Overtime on an ordinary working day.</summary>
+    public const string OvertimeRegular = "OT_REG";
+
+    /// <summary>
+    /// Overtime on a rest day — the "Sunday" column of the payroll summary.
+    /// Named for the rest day rather than the weekday because that is what the
+    /// premium matrix and the employee's schedule actually model; a guard whose
+    /// rest day is Tuesday is paid the same premium.
+    /// </summary>
+    public const string OvertimeRestDay = "OT_RD";
+
+    /// <summary>
+    /// Overtime on a regular or special non-working holiday, including one that
+    /// fell on a rest day. <b>A holiday outranks a rest day here</b>: the hour
+    /// was paid at the holiday-rest-day multiplier, so reporting it under the
+    /// rest day column would understate what the holiday cost.
+    /// </summary>
+    public const string OvertimeHoliday = "OT_HOL";
+
     public const string NightDifferential = "ND";
     public const string RestDayPremium = "PREM_RD";
     public const string HolidayPay = "HOL";
@@ -261,6 +293,27 @@ public static class PayComponentCodes
     public const string PaidLeave = "LEAVE";
     public const string ThirteenthMonth = "13TH";
     public const string LeaveConversion = "LEAVE_CONV";
+
+    // Allowances the payroll summary reports in columns of their own. Ordinary
+    // configurable earning types, not engine output — the engine never creates
+    // them, but the report has to know which code is which.
+    public const string SpecialEmergencyAllowance = "ALW_SEA";
+    public const string CostOfLivingAllowance = "ALW_COLA";
+
+    /// <summary>
+    /// The legacy screen's <c>5Days Inc.</c> — the five days of Service Incentive
+    /// Leave (Art. 95) accrued against the days actually rendered, rather than
+    /// banked as credits and cashed out later.
+    ///
+    /// <para><b>The engine computes this; nobody types it.</b> Verified against
+    /// the legacy entry screen for 08662 at ₱600/day: 600 × 5 ÷ 365 × 13 days =
+    /// ₱106.85, to the centavo. The five and the 365 are
+    /// <see cref="PayrollSettings.ServiceIncentiveLeaveDays"/> and
+    /// <see cref="PayrollSettings.ServiceIncentiveLeaveDivisor"/>, because an
+    /// agency that accrues over 261 working days instead pays a different figure
+    /// for the same work and neither divisor belongs in this file.</para>
+    /// </summary>
+    public const string FiveSlip = "ALW_5SLIP";
 
     // Deductions produced by the engine.
     public const string Sss = "SSS";
@@ -271,4 +324,29 @@ public static class PayComponentCodes
     public const string Tardiness = "LATE";
     public const string Undertime = "UT";
     public const string Absence = "ABS";
+
+    // Company deductions the payroll summary reports in columns of their own.
+    public const string CompanyLoan = "CO_LOAN";
+    public const string SecondUniform = "DED_UNIF2";
+
+    // The legacy entry screen's remaining deduction slots. Ordinary configurable
+    // deduction types — the engine never creates them — but they are constants
+    // because they are what an EmployeeDeduction is normally set up against, and
+    // because the seed has to be able to find them to avoid re-creating them.
+
+    /// <summary>
+    /// <c>Perf Bond</c>. Accumulated against the guard and refundable on
+    /// separation, so it is a standing deduction rather than a loan: nothing
+    /// amortises it down and it does not stop on its own.
+    /// </summary>
+    public const string PerformanceBond = "PERF_BOND";
+
+    /// <summary>The legacy screen's <c>Prsing Fee</c> — the agency's processing charge.</summary>
+    public const string ProcessingFee = "PRSG_FEE";
+
+    /// <summary>
+    /// <c>Insuran</c> on the legacy menu — the group life premium, taken every
+    /// period at a flat figure for as long as the cover runs.
+    /// </summary>
+    public const string Insurance = "INSURANCE";
 }

@@ -1,4 +1,4 @@
-using System.Collections.ObjectModel;
+﻿using System.Collections.ObjectModel;
 using System.Globalization;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -11,7 +11,8 @@ namespace PAYROLLSystemApp.ViewModels;
 public enum PayrollRunPanel
 {
     Runs,
-    Loans
+    Loans,
+    Standing
 }
 
 /// <summary>A payroll run as the list renders it.</summary>
@@ -195,6 +196,54 @@ public sealed class LoanRow
 }
 
 /// <summary>
+/// A standing deduction as the ledger list renders it.
+///
+/// <para>It shows a period rather than a balance, which is the whole difference
+/// between this and a <see cref="LoanRow"/>: there is nothing counting down, so
+/// the only thing that answers "when does this stop" is the dates.</para>
+/// </summary>
+public sealed class StandingRow
+{
+    public StandingRow(EmployeeDeduction deduction, string employeeName)
+    {
+        Deduction = deduction;
+        EmployeeName = employeeName;
+    }
+
+    public EmployeeDeduction Deduction { get; }
+
+    public string EmployeeName { get; }
+
+    public int Id => Deduction.Id;
+
+    public string Name => Deduction.DeductionName;
+
+    public string AmountDisplay => PayrollRounding.Format(Deduction.Amount);
+
+    public bool IsActive => Deduction.IsActive;
+
+    public string ActionText => Deduction.IsActive ? "Stop" : "Resume";
+
+    public string Detail
+    {
+        get
+        {
+            var parts = new List<string> { EmployeeName };
+
+            if (!string.IsNullOrWhiteSpace(Deduction.Reference))
+                parts.Add($"ref {Deduction.Reference}");
+
+            parts.Add(Deduction.PeriodDisplay);
+
+            if (!Deduction.IsActive)
+                parts.Add("stopped");
+
+            return string.Join(" · ", parts);
+        }
+    }
+}
+
+/// <summary>
 /// Section 2.6 — payroll processing (FR-050 – FR-063).
 ///
 /// <para>Master and detail on one screen: the runs of a year on the left, the
@@ -219,8 +268,10 @@ public sealed partial class PayrollRunsViewModel : BaseViewModel
     private PayrollAdjustment? _adjustmentTarget;
     private EmployeeLoan? _loanTarget;
     private int _confirmLoanId;
+    private EmployeeDeduction? _standingTarget;
+    private int _confirmStandingId;
 
-    private enum ConfirmTarget { Discard, Submit, LoanStatus }
+    private enum ConfirmTarget { Discard, Submit, LoanStatus, StandingStatus }
 
     private ConfirmTarget _confirmTarget;
 
@@ -252,6 +303,7 @@ public sealed partial class PayrollRunsViewModel : BaseViewModel
         DetailTotals = string.Empty;
         BlockerText = string.Empty;
         LoanSummary = string.Empty;
+        StandingSummary = string.Empty;
         ModalError = string.Empty;
         CreateSummary = string.Empty;
         ConfirmTitle = string.Empty;
@@ -262,6 +314,7 @@ public sealed partial class PayrollRunsViewModel : BaseViewModel
 
         ResetAdjustmentForm();
         ResetLoanForm();
+        ResetStandingForm();
     }
 
     // ======================================================== collections
@@ -276,6 +329,8 @@ public sealed partial class PayrollRunsViewModel : BaseViewModel
 
     public ObservableCollection<LoanRow> Loans { get; } = new();
 
+    public ObservableCollection<StandingRow> Standing { get; } = new();
+
     public ObservableCollection<RunCandidateRow> Candidates { get; } = new();
 
     public ObservableCollection<LookupOption> YearOptions { get; } = new();
@@ -286,6 +341,13 @@ public sealed partial class PayrollRunsViewModel : BaseViewModel
 
     public ObservableCollection<LookupOption> DeductionOptions { get; } = new();
 
+    /// <summary>
+    /// The deduction types a standing deduction may be set up against — the ones
+    /// that are neither amortised (those belong on the loan ledger, where a
+    /// balance stops them) nor produced by the engine itself.
+    /// </summary>
+    public ObservableCollection<LookupOption> StandingDeductionOptions { get; } = new();
+
     public IReadOnlyList<EnumOption> RunTypeOptions { get; }
 
     public IReadOnlyList<EnumOption> AdjustmentKindOptions { get; }
@@ -295,16 +357,18 @@ public sealed partial class PayrollRunsViewModel : BaseViewModel
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(IsRuns))]
     [NotifyPropertyChangedFor(nameof(IsLoans))]
+    [NotifyPropertyChangedFor(nameof(IsStanding))]
     public partial PayrollRunPanel Panel { get; set; }
 
     public bool IsRuns => Panel == PayrollRunPanel.Runs;
 
     public bool IsLoans => Panel == PayrollRunPanel.Loans;
 
+    public bool IsStanding => Panel == PayrollRunPanel.Standing;
+
     [RelayCommand]
     private void ShowRuns()
     {
-        Session.Touch();
         ClearMessages();
         Panel = PayrollRunPanel.Runs;
     }
@@ -312,9 +376,15 @@ public sealed partial class PayrollRunsViewModel : BaseViewModel
     [RelayCommand]
     private void ShowLoans()
     {
-        Session.Touch();
         ClearMessages();
         Panel = PayrollRunPanel.Loans;
+    }
+
+    [RelayCommand]
+    private void ShowStanding()
+    {
+        ClearMessages();
+        Panel = PayrollRunPanel.Standing;
     }
 
     // ======================================================= gate / state
@@ -326,13 +396,17 @@ public sealed partial class PayrollRunsViewModel : BaseViewModel
     public bool IsGranted => !IsDenied;
 
     public bool IsAnyModalOpen =>
-        IsCreateOpen || IsAdjustmentFormOpen || IsLoanFormOpen || IsConfirmOpen || IsPayslipOpen;
+        IsCreateOpen || IsAdjustmentFormOpen || IsLoanFormOpen ||
+        IsStandingFormOpen || IsConfirmOpen || IsPayslipOpen;
 
     [ObservableProperty]
     public partial string RunSummary { get; set; }
 
     [ObservableProperty]
     public partial string LoanSummary { get; set; }
+
+    [ObservableProperty]
+    public partial string StandingSummary { get; set; }
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(HasNoRuns))]
@@ -384,8 +458,13 @@ public sealed partial class PayrollRunsViewModel : BaseViewModel
         foreach (var deduction in deductions.Where(d => d.IsAmortised))
             DeductionOptions.Add(new LookupOption(deduction.Id, deduction.Display));
 
+        StandingDeductionOptions.Clear();
+        foreach (var deduction in deductions.Where(d => !d.IsAmortised && !d.IsSystem))
+            StandingDeductionOptions.Add(new LookupOption(deduction.Id, deduction.Display));
+
         await ReloadRunsAsync();
         await ReloadLoansAsync();
+        await ReloadStandingAsync();
     }
 
     private async Task ReloadRunsAsync()
@@ -560,7 +639,6 @@ public sealed partial class PayrollRunsViewModel : BaseViewModel
     [RelayCommand]
     private Task OpenCreateAsync() => RunAsync(async () =>
     {
-        Session.Touch();
         ClearMessages();
         ModalError = string.Empty;
 
@@ -712,7 +790,6 @@ public sealed partial class PayrollRunsViewModel : BaseViewModel
         if (SelectedRun is null)
             return;
 
-        Session.Touch();
         ClearMessages();
 
         var run = SelectedRun.Run;
@@ -735,7 +812,6 @@ public sealed partial class PayrollRunsViewModel : BaseViewModel
         if (SelectedRun is null)
             return;
 
-        Session.Touch();
         ClearMessages();
 
         var run = SelectedRun.Run;
@@ -779,7 +855,6 @@ public sealed partial class PayrollRunsViewModel : BaseViewModel
         if (row is null)
             return;
 
-        Session.Touch();
         ClearMessages();
 
         var payslip = row.Payslip;
@@ -857,7 +932,6 @@ public sealed partial class PayrollRunsViewModel : BaseViewModel
         if (SelectedRun is null)
             return;
 
-        Session.Touch();
         ClearMessages();
         ResetAdjustmentForm();
 
@@ -878,7 +952,6 @@ public sealed partial class PayrollRunsViewModel : BaseViewModel
         if (row is null || SelectedRun is null)
             return;
 
-        Session.Touch();
         ClearMessages();
 
         var adjustment = row.Adjustment;
@@ -1061,7 +1134,6 @@ public sealed partial class PayrollRunsViewModel : BaseViewModel
     [RelayCommand]
     private void OpenCreateLoan()
     {
-        Session.Touch();
         ClearMessages();
         ResetLoanForm();
 
@@ -1077,7 +1149,6 @@ public sealed partial class PayrollRunsViewModel : BaseViewModel
         if (row is null)
             return;
 
-        Session.Touch();
         ClearMessages();
         ResetLoanForm();
 
@@ -1175,7 +1246,6 @@ public sealed partial class PayrollRunsViewModel : BaseViewModel
         if (row is null)
             return;
 
-        Session.Touch();
         ClearMessages();
 
         _confirmTarget = ConfirmTarget.LoanStatus;
@@ -1298,8 +1368,232 @@ public sealed partial class PayrollRunsViewModel : BaseViewModel
                     ShowStatus(result.Message);
                     break;
                 }
+
+            case ConfirmTarget.StandingStatus:
+                {
+                    var standing = Standing.FirstOrDefault(d => d.Id == _confirmStandingId);
+                    if (standing is null)
+                        return;
+
+                    var result = await _runs.SetStandingDeductionActiveAsync(
+                        _confirmStandingId, !standing.IsActive, performedBy);
+
+                    if (!result.Succeeded)
+                    {
+                        ModalError = result.Message;
+                        return;
+                    }
+
+                    IsConfirmOpen = false;
+                    await ReloadStandingAsync();
+                    ShowStatus(result.Message);
+                    break;
+                }
         }
     });
+
+
+    // ================================== standing deductions (Insuran Set-Up)
+
+    private async Task ReloadStandingAsync()
+    {
+        var rows = await _runs.GetStandingDeductionsAsync(includeStopped: ShowStoppedStanding);
+
+        Standing.Clear();
+        foreach (var row in rows)
+            Standing.Add(new StandingRow(row, NameOf(row.EmployeeId)));
+
+        var perPeriod = rows.Where(d => d.IsActive).Sum(d => d.Amount);
+
+        StandingSummary = rows.Count == 0
+            ? "No standing deductions are set up."
+            : $"{rows.Count} standing deduction(s) · {PayrollRounding.Format(perPeriod)} per period";
+    }
+
+    [ObservableProperty]
+    public partial bool ShowStoppedStanding { get; set; }
+
+    partial void OnShowStoppedStandingChanged(bool value) => _ = RunAsync(ReloadStandingAsync);
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsAnyModalOpen))]
+    public partial bool IsStandingFormOpen { get; set; }
+
+    [ObservableProperty]
+    public partial string StandingFormTitle { get; set; } = string.Empty;
+
+    [ObservableProperty]
+    public partial LookupOption? StandingEmployee { get; set; }
+
+    [ObservableProperty]
+    public partial LookupOption? StandingDeduction { get; set; }
+
+    [ObservableProperty]
+    [NotifyCanExecuteChangedFor(nameof(SubmitStandingCommand))]
+    public partial string StandingAmount { get; set; } = string.Empty;
+
+    [ObservableProperty]
+    public partial string StandingReference { get; set; } = string.Empty;
+
+    [ObservableProperty]
+    public partial string StandingRemarks { get; set; } = string.Empty;
+
+    [ObservableProperty]
+    public partial DateTime StandingStartDate { get; set; } = DateTime.Today;
+
+    /// <summary>
+    /// Whether the deduction has an agreed end. Off — the default — means it
+    /// runs until somebody stops it, which is the honest shape of an insurance
+    /// premium with no agreed term.
+    /// </summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasStandingEnd))]
+    public partial bool StandingEnds { get; set; }
+
+    public bool HasStandingEnd => StandingEnds;
+
+    [ObservableProperty]
+    public partial DateTime StandingEndDate { get; set; } = DateTime.Today.AddYears(1);
+
+    private void ResetStandingForm()
+    {
+        StandingEmployee = null;
+        StandingDeduction = null;
+        StandingAmount = string.Empty;
+        StandingReference = string.Empty;
+        StandingRemarks = string.Empty;
+        StandingStartDate = DateTime.Today;
+        StandingEnds = false;
+        StandingEndDate = DateTime.Today.AddYears(1);
+    }
+
+    [RelayCommand]
+    private void OpenCreateStanding()
+    {
+        ClearMessages();
+        ResetStandingForm();
+
+        _standingTarget = null;
+        StandingFormTitle = "New standing deduction";
+        StandingDeduction = StandingDeductionOptions.FirstOrDefault();
+        IsStandingFormOpen = true;
+    }
+
+    [RelayCommand]
+    private void OpenEditStanding(StandingRow? row)
+    {
+        if (row is null)
+            return;
+
+        ClearMessages();
+        ResetStandingForm();
+
+        var deduction = row.Deduction;
+        _standingTarget = deduction;
+
+        StandingFormTitle = $"Edit {deduction.DeductionName}";
+        StandingEmployee = EmployeeOptions.FirstOrDefault(o => o.Id == deduction.EmployeeId);
+        StandingDeduction = StandingDeductionOptions.FirstOrDefault(o =>
+            o.Label.StartsWith(deduction.DeductionCode + " ", StringComparison.OrdinalIgnoreCase));
+        StandingAmount = deduction.Amount.ToString("0.##");
+        StandingReference = deduction.Reference;
+        StandingRemarks = deduction.Remarks;
+        StandingStartDate = deduction.StartsOn;
+        StandingEnds = deduction.EndsOn is not null;
+        StandingEndDate = deduction.EndsOn ?? DateTime.Today.AddYears(1);
+
+        IsStandingFormOpen = true;
+    }
+
+    [RelayCommand]
+    private void CloseStandingForm()
+    {
+        IsStandingFormOpen = false;
+        _standingTarget = null;
+    }
+
+    private bool CanSubmitStanding() => !string.IsNullOrWhiteSpace(StandingAmount);
+
+    [RelayCommand(CanExecute = nameof(CanSubmitStanding))]
+    private Task SubmitStandingAsync() => RunAsync(async () =>
+    {
+        ModalError = string.Empty;
+
+        var performedBy = Session.CurrentUser;
+        if (performedBy is null)
+            return;
+
+        if (StandingEmployee?.Id is not { } employeeId)
+        {
+            ModalError = "Choose the employee.";
+            return;
+        }
+
+        if (StandingDeduction is null)
+        {
+            ModalError = "Choose which deduction this is taken under. Only deductions " +
+                         "that carry no balance are offered — a loan belongs on the loan ledger.";
+            return;
+        }
+
+        if (!TryAmount(StandingAmount, out var amount))
+        {
+            ModalError = "Enter what is taken each period as a number.";
+            return;
+        }
+
+        var code = StandingDeduction.Label.Split(' ')[0];
+
+        var deduction = new EmployeeDeduction
+        {
+            Id = _standingTarget?.Id ?? 0,
+            EmployeeId = employeeId,
+            DeductionCode = code,
+            Amount = amount,
+            Reference = StandingReference,
+            Remarks = StandingRemarks,
+            StartsOn = StandingStartDate,
+            EndsOn = StandingEnds ? StandingEndDate : null,
+            IsActive = _standingTarget?.IsActive ?? true
+        };
+
+        var result = await _runs.SaveStandingDeductionAsync(deduction, performedBy);
+
+        if (!result.Succeeded)
+        {
+            ModalError = result.Message;
+            return;
+        }
+
+        IsStandingFormOpen = false;
+        _standingTarget = null;
+
+        await ReloadStandingAsync();
+        ShowStatus(result.Message);
+    });
+
+    [RelayCommand]
+    private void OpenToggleStanding(StandingRow? row)
+    {
+        if (row is null)
+            return;
+
+        ClearMessages();
+
+        _confirmTarget = ConfirmTarget.StandingStatus;
+        _confirmStandingId = row.Id;
+
+        ConfirmTitle = row.IsActive ? $"Stop {row.Name}" : $"Resume {row.Name}";
+
+        ConfirmMessage = row.IsActive
+            ? $"{row.Name} for {row.EmployeeName} will not be taken on any run calculated " +
+              "from here on. Runs already posted keep what they took."
+            : $"{row.Name} for {row.EmployeeName} will be taken again on the next run " +
+              "whose pay date its dates cover.";
+
+        ConfirmAction = row.ActionText;
+        IsConfirmOpen = true;
+    }
 
     private static bool TryAmount(string? text, out decimal value)
     {

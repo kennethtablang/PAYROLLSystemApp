@@ -1,0 +1,356 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentView xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:vm="clr-namespace:PAYROLLSystemApp.ViewModels"
+             xmlns:controls="clr-namespace:PAYROLLSystemApp.Views.Controls"
+             x:Class="PAYROLLSystemApp.Views.Sections.DetachmentsView"
+             x:DataType="vm:DetachmentsViewModel">
+
+    <Grid x:Name="RootGrid">
+
+        <Grid Padding="20">
+
+            <!-- FR-002: the section re-checks the permission on load. -->
+            <Border Style="{StaticResource Card}"
+                    IsVisible="{Binding IsDenied}"
+                    Padding="28"
+                    VerticalOptions="Center"
+                    HorizontalOptions="Center">
+                <VerticalStackLayout Spacing="4">
+                    <Label Style="{StaticResource SectionHeading}" Text="Access denied" HorizontalTextAlignment="Center" />
+                    <Label Style="{StaticResource Muted}" Text="You do not have permission to maintain detachments." />
+                </VerticalStackLayout>
+            </Border>
+
+            <Grid IsVisible="{Binding IsGranted}" RowDefinitions="Auto,Auto,*" RowSpacing="10">
+
+                <Grid Grid.Row="0" ColumnDefinitions="Auto,Auto,*,Auto" ColumnSpacing="10">
+
+                    <Label Grid.Column="0"
+                           Style="{StaticResource Muted}"
+                           VerticalOptions="Center"
+                           LineBreakMode="NoWrap"
+                           Text="Show retired" />
+
+                    <Switch Grid.Column="1"
+                            IsToggled="{Binding ShowRetired}"
+                            WidthRequest="46"
+                            VerticalOptions="Center"
+                            OnColor="{StaticResource Brand}" />
+
+                    <Button Grid.Column="3"
+                            Style="{StaticResource SecondaryButton}"
+                            Text="Refresh"
+                            Command="{Binding RefreshCommand}" />
+                </Grid>
+
+                <Label Grid.Row="1"
+                       FontSize="12"
+                       TextColor="{StaticResource Success}"
+                       Text="{Binding StatusMessage}"
+                       IsVisible="{Binding HasStatus}" />
+
+                <Label Grid.Row="1"
+                       Style="{StaticResource ErrorText}"
+                       Text="{Binding ErrorMessage}"
+                       IsVisible="{Binding HasError}" />
+
+                <!-- The posts on the left, the rate table for the selected one on
+                     the right. Side by side because they are read together: a
+                     detachment with nobody's rate posted cannot be paid. -->
+                <Grid Grid.Row="2" ColumnDefinitions="3*,2*" ColumnSpacing="14">
+
+                    <!-- ================== DETACHMENTS ================== -->
+                    <Border Grid.Column="0" Style="{StaticResource Card}" Padding="0">
+                        <Grid RowDefinitions="Auto,Auto,Auto,*">
+
+                            <Grid Grid.Row="0" ColumnDefinitions="*,Auto" Padding="16,12">
+                                <VerticalStackLayout Grid.Column="0" Spacing="1">
+                                    <Label Style="{StaticResource SectionHeading}" Text="Detachments" />
+                                    <Label Style="{StaticResource Faint}"
+                                           LineBreakMode="TailTruncation"
+                                           Text="{Binding Summary}" />
+                                </VerticalStackLayout>
+
+                                <Button Grid.Column="1"
+                                        Style="{StaticResource PrimaryButton}"
+                                        Text="+  New"
+                                        VerticalOptions="Center"
+                                        Command="{Binding OpenCreateCommand}" />
+                            </Grid>
+
+                            <BoxView Grid.Row="1" Style="{StaticResource Divider}" />
+
+                            <Grid Grid.Row="2"
+                                  ColumnDefinitions="*,Auto"
+                                  Padding="16,8"
+                                  BackgroundColor="{AppThemeBinding Light={StaticResource SurfaceAltLight}, Dark={StaticResource SurfaceAltDark}}">
+                                <Label Grid.Column="0" Style="{StaticResource TableHeader}" Text="DETACHMENT" />
+                                <Label Grid.Column="1" Style="{StaticResource TableHeader}" Text="ACTIONS" WidthRequest="132" />
+                            </Grid>
+
+                            <Grid Grid.Row="3">
+                                <CollectionView ItemsSource="{Binding Detachments}"
+                                                SelectionMode="Single"
+                                                SelectedItem="{Binding SelectedDetachment}">
+                                    <CollectionView.ItemTemplate>
+                                        <DataTemplate x:DataType="vm:DetachmentRow">
+                                            <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="10" Padding="16,9">
+
+                                                <Border Grid.Column="0"
+                                                        Style="{StaticResource Pill}"
+                                                        VerticalOptions="Center"
+                                                        BackgroundColor="{AppThemeBinding Light={StaticResource BrandSoftLight}, Dark={StaticResource BrandSoftDark}}">
+                                                    <Label Text="{Binding Code}"
+                                                           FontSize="10.5"
+                                                           FontAttributes="Bold"
+                                                           TextColor="{StaticResource Brand}" />
+                                                </Border>
+
+                                                <VerticalStackLayout Grid.Column="1" Spacing="0" VerticalOptions="Center">
+                                                    <Label Text="{Binding Name}"
+                                                           FontSize="12.5"
+                                                           FontAttributes="Bold"
+                                                           LineBreakMode="TailTruncation"
+                                                           TextColor="{AppThemeBinding Light={StaticResource TextLight}, Dark={StaticResource TextDark}}" />
+                                                    <Label Style="{StaticResource Faint}"
+                                                           LineBreakMode="TailTruncation"
+                                                           Text="{Binding Detail}" />
+
+                                                    <!-- People standing at a post with no posted rate
+                                                         stop a payroll run, so the row says so. -->
+                                                    <Label FontSize="10.5"
+                                                           TextColor="{StaticResource Danger}"
+                                                           IsVisible="{Binding NeedsRates}"
+                                                           Text="No rate posted — payroll cannot be computed for this post" />
+                                                </VerticalStackLayout>
+
+                                                <HorizontalStackLayout Grid.Column="2"
+                                                                       Spacing="6"
+                                                                       WidthRequest="132"
+                                                                       VerticalOptions="Center">
+                                                    <Button Style="{StaticResource RowAction}"
+                                                            Text="Edit"
+                                                            Command="{Binding Source={RelativeSource AncestorType={x:Type vm:DetachmentsViewModel}}, Path=OpenEditCommand}"
+                                                            CommandParameter="{Binding .}" />
+                                                    <Button Style="{StaticResource RowAction}"
+                                                            Text="{Binding ActionText}"
+                                                            Command="{Binding Source={RelativeSource AncestorType={x:Type vm:DetachmentsViewModel}}, Path=OpenToggleCommand}"
+                                                            CommandParameter="{Binding .}" />
+                                                </HorizontalStackLayout>
+
+                                                <BoxView Grid.ColumnSpan="3" VerticalOptions="End" Style="{StaticResource Divider}" />
+                                            </Grid>
+                                        </DataTemplate>
+                                    </CollectionView.ItemTemplate>
+                                </CollectionView>
+
+                                <VerticalStackLayout IsVisible="{Binding HasNoDetachments}"
+                                                     Spacing="4"
+                                                     Padding="24"
+                                                     VerticalOptions="Center">
+                                    <Label Style="{StaticResource Muted}"
+                                           HorizontalTextAlignment="Center"
+                                           Text="No detachments yet." />
+                                    <Label Style="{StaticResource Faint}"
+                                           HorizontalTextAlignment="Center"
+                                           Text="A detachment is a client post. Its rate table is what pays the people standing there." />
+                                </VerticalStackLayout>
+                            </Grid>
+                        </Grid>
+                    </Border>
+
+                    <!-- ===================== RATES ===================== -->
+                    <Border Grid.Column="1" Style="{StaticResource Card}" Padding="0">
+                        <Grid RowDefinitions="Auto,Auto,Auto,*">
+
+                            <Grid Grid.Row="0" ColumnDefinitions="*,Auto" Padding="16,12">
+                                <VerticalStackLayout Grid.Column="0" Spacing="1">
+                                    <Label Style="{StaticResource SectionHeading}" Text="{Binding RatesTitle}" />
+                                    <Label Style="{StaticResource Faint}"
+                                           LineBreakMode="TailTruncation"
+                                           Text="{Binding RatesSubtitle}" />
+                                </VerticalStackLayout>
+
+                                <Button Grid.Column="1"
+                                        Style="{StaticResource PrimaryButton}"
+                                        Text="+  Post rate"
+                                        VerticalOptions="Center"
+                                        IsEnabled="{Binding CanAddRate}"
+                                        Command="{Binding OpenAddRateCommand}" />
+                            </Grid>
+
+                            <BoxView Grid.Row="1" Style="{StaticResource Divider}" />
+
+                            <Grid Grid.Row="2"
+                                  ColumnDefinitions="*,Auto"
+                                  Padding="16,8"
+                                  BackgroundColor="{AppThemeBinding Light={StaticResource SurfaceAltLight}, Dark={StaticResource SurfaceAltDark}}">
+                                <Label Grid.Column="0" Style="{StaticResource TableHeader}" Text="POSITION / DAILY RATE" />
+                                <Label Grid.Column="1" Style="{StaticResource TableHeader}" Text="" WidthRequest="86" />
+                            </Grid>
+
+                            <Grid Grid.Row="3">
+                                <CollectionView ItemsSource="{Binding Rates}" SelectionMode="None">
+                                    <CollectionView.ItemTemplate>
+                                        <DataTemplate x:DataType="vm:RateRow">
+                                            <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="10" Padding="16,9">
+
+                                                <VerticalStackLayout Grid.Column="0" Spacing="0" VerticalOptions="Center">
+                                                    <Label Text="{Binding Position}"
+                                                           FontSize="12.5"
+                                                           FontAttributes="Bold"
+                                                           LineBreakMode="TailTruncation"
+                                                           TextColor="{AppThemeBinding Light={StaticResource TextLight}, Dark={StaticResource TextDark}}" />
+                                                    <Label Style="{StaticResource Faint}"
+                                                           LineBreakMode="TailTruncation"
+                                                           Text="{Binding Detail}" />
+                                                </VerticalStackLayout>
+
+                                                <Label Grid.Column="1"
+                                                       Text="{Binding Amount}"
+                                                       FontSize="12.5"
+                                                       FontAttributes="Bold"
+                                                       VerticalOptions="Center"
+                                                       HorizontalTextAlignment="End"
+                                                       TextColor="{AppThemeBinding Light={StaticResource TextLight}, Dark={StaticResource TextDark}}" />
+
+                                                <Button Grid.Column="2"
+                                                        Style="{StaticResource RowAction}"
+                                                        Text="Withdraw"
+                                                        WidthRequest="86"
+                                                        VerticalOptions="Center"
+                                                        Command="{Binding Source={RelativeSource AncestorType={x:Type vm:DetachmentsViewModel}}, Path=OpenWithdrawRateCommand}"
+                                                        CommandParameter="{Binding .}" />
+
+                                                <BoxView Grid.ColumnSpan="3" VerticalOptions="End" Style="{StaticResource Divider}" />
+                                            </Grid>
+                                        </DataTemplate>
+                                    </CollectionView.ItemTemplate>
+                                </CollectionView>
+
+                                <VerticalStackLayout IsVisible="{Binding HasNoRates}"
+                                                     Spacing="4"
+                                                     Padding="24"
+                                                     VerticalOptions="Center">
+                                    <Label Style="{StaticResource Muted}"
+                                           HorizontalTextAlignment="Center"
+                                           Text="No rates posted." />
+                                    <Label Style="{StaticResource Faint}"
+                                           HorizontalTextAlignment="Center"
+                                           Text="Post one per position. A run reads whichever rate was in force on its pay date, so next quarter's wage order can be entered today." />
+                                </VerticalStackLayout>
+                            </Grid>
+                        </Grid>
+                    </Border>
+                </Grid>
+            </Grid>
+        </Grid>
+
+        <!--
+            Lifted out of this view by MainPage at load time so the scrim covers
+            the whole window. See MainPage.ShowSectionAsync.
+        -->
+        <Grid x:Name="ModalLayer" IsVisible="{Binding IsAnyModalOpen}">
+
+            <!-- ================ DETACHMENT FORM ================ -->
+            <controls:ModalHost IsOpen="{Binding IsFormOpen}"
+                                Title="{Binding FormTitle}"
+                                Subtitle="A client post, and the region whose wage orders set its rates"
+                                ModalWidth="460"
+                                PrimaryText="Save detachment"
+                                PrimaryCommand="{Binding SubmitCommand}"
+                                SecondaryCommand="{Binding CloseFormCommand}"
+                                DismissCommand="{Binding CloseFormCommand}"
+                                ErrorText="{Binding ModalError}">
+                <controls:ModalHost.Body>
+                    <VerticalStackLayout Spacing="12">
+                        <controls:FormEntry Label="CODE"
+                                            Text="{Binding FormCode}"
+                                            Placeholder="e.g. AYL-7"
+                                            ErrorText="{Binding ErrCode}" />
+
+                        <controls:FormEntry Label="NAME"
+                                            Text="{Binding FormName}"
+                                            Placeholder="Ayala Tower Two" />
+
+                        <controls:FormEntry Label="CLIENT"
+                                            Text="{Binding FormClient}"
+                                            Placeholder="Optional — e.g. SM City San Jose Del Monte" />
+
+                        <controls:FormEntry Label="GROUP CODE"
+                                            Text="{Binding FormGroupCode}"
+                                            Placeholder="Optional — e.g. C" />
+
+                        <VerticalStackLayout Spacing="0">
+                            <Label Style="{StaticResource FieldLabel}" Text="REGION" />
+                            <Border Style="{StaticResource FieldFrame}">
+                                <Picker ItemsSource="{Binding RegionOptions}"
+                                        SelectedItem="{Binding FormRegion}"
+                                        ItemDisplayBinding="{Binding Label, x:DataType=vm:EnumOption}" />
+                            </Border>
+                        </VerticalStackLayout>
+
+                        <controls:FormEntry Label="LOCATION"
+                                            Text="{Binding FormLocation}"
+                                            Placeholder="Makati City" />
+
+                        <controls:FormEntry Label="NOTES"
+                                            Text="{Binding FormDescription}"
+                                            Placeholder="Anything worth knowing about this post" />
+
+                        <Label Style="{StaticResource Faint}"
+                               Text="One code, one daily rate: a post that pays two figures is two codes, which is how the client's own sheet is written. The client groups those codes back together, and the region decides which wage board's orders apply. Post the daily rate once the detachment is saved." />
+                    </VerticalStackLayout>
+                </controls:ModalHost.Body>
+            </controls:ModalHost>
+
+            <!-- =================== RATE FORM =================== -->
+            <controls:ModalHost IsOpen="{Binding IsRateFormOpen}"
+                                Title="{Binding RateFormTitle}"
+                                Subtitle="A daily rate for one position, from a date"
+                                ModalWidth="440"
+                                PrimaryText="Post rate"
+                                PrimaryCommand="{Binding SubmitRateCommand}"
+                                SecondaryCommand="{Binding CloseRateFormCommand}"
+                                DismissCommand="{Binding CloseRateFormCommand}"
+                                ErrorText="{Binding ModalError}">
+                <controls:ModalHost.Body>
+                    <VerticalStackLayout Spacing="12">
+                        <controls:FormEntry Label="DAILY RATE"
+                                            Text="{Binding RateAmount}"
+                                            Placeholder="645.00"
+                                            ErrorText="{Binding ErrRateAmount}" />
+
+                        <VerticalStackLayout Spacing="0">
+                            <Label Style="{StaticResource FieldLabel}" Text="EFFECTIVE FROM" />
+                            <Border Style="{StaticResource FieldFrame}">
+                                <DatePicker Date="{Binding RateEffective}" Format="dd MMM yyyy" />
+                            </Border>
+                        </VerticalStackLayout>
+
+                        <controls:FormEntry Label="WAGE ORDER / REFERENCE"
+                                            Text="{Binding RateReference}"
+                                            Placeholder="Optional — e.g. Wage Order NCR-25" />
+
+                        <Label Style="{StaticResource Faint}"
+                               Text="The wage order is optional — a rate posted without one is used exactly the same way. Rates are posted, never edited: a run reads whichever rate was in force on its pay date, so entering next quarter's wage order today does not change this fortnight's payroll. Posting a rate for a date that already has one corrects that row instead." />
+                    </VerticalStackLayout>
+                </controls:ModalHost.Body>
+            </controls:ModalHost>
+
+            <!-- ================== CONFIRMATION ================== -->
+            <controls:ModalHost IsOpen="{Binding IsConfirmOpen}"
+                                Title="{Binding ConfirmTitle}"
+                                ModalWidth="420"
+                                PrimaryText="{Binding ConfirmAction}"
+                                PrimaryCommand="{Binding ConfirmCommand}"
+                                SecondaryCommand="{Binding CloseConfirmCommand}"
+                                DismissCommand="{Binding CloseConfirmCommand}">
+                <controls:ModalHost.Body>
+                    <Label Style="{StaticResource Body}" Text="{Binding ConfirmMessage}" />
+                </controls:ModalHost.Body>
+            </controls:ModalHost>
+        </Grid>
+    </Grid>
+</ContentView>

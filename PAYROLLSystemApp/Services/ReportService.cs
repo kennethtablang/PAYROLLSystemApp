@@ -1,4 +1,4 @@
-using PAYROLLSystemApp.Data;
+﻿using PAYROLLSystemApp.Data;
 using PAYROLLSystemApp.Models;
 
 namespace PAYROLLSystemApp.Services;
@@ -13,7 +13,8 @@ public enum ReportKind
     PagIbigRemittance = 4,
     WithholdingTaxRemittance = 5,
     Attendance = 6,
-    Alphalist = 7
+    Alphalist = 7,
+    PayrollSummary = 8
 }
 
 /// <summary>What a report has to be told before it can be built.</summary>
@@ -105,6 +106,7 @@ public sealed class ReportService : IReportService
     private readonly PayrollDatabase _database;
     private readonly IPayrollConfigService _config;
     private readonly IOrganizationService _organization;
+    private readonly IDetachmentService _detachments;
     private readonly IEmployeeService _employees;
     private readonly IAttendanceService _attendance;
     private readonly IAuditService _audit;
@@ -113,6 +115,7 @@ public sealed class ReportService : IReportService
         PayrollDatabase database,
         IPayrollConfigService config,
         IOrganizationService organization,
+        IDetachmentService detachments,
         IEmployeeService employees,
         IAttendanceService attendance,
         IAuditService audit)
@@ -120,6 +123,7 @@ public sealed class ReportService : IReportService
         _database = database;
         _config = config;
         _organization = organization;
+        _detachments = detachments;
         _employees = employees;
         _attendance = attendance;
         _audit = audit;
@@ -150,6 +154,10 @@ public sealed class ReportService : IReportService
         new(ReportKind.BankFile, "Bank disbursement file",
             "Account details and net pay for one run, ready for the bank's own template.",
             ReportScope.Run, "FR-082"),
+
+        new(ReportKind.PayrollSummary, "Payroll summary by detachment",
+            "Every employee's pay over a range, grouped and subtotalled by the post they were deployed to.",
+            ReportScope.DateRange, "FR-080", SupportsDepartmentFilter: true),
 
         new(ReportKind.Attendance, "Attendance and absences",
             "Days, hours, overtime, tardiness and absences over a range, by department.",
@@ -211,6 +219,7 @@ public sealed class ReportService : IReportService
         {
             ReportKind.PayrollRegister => await RegisterAsync(request).ConfigureAwait(false),
             ReportKind.BankFile => await BankFileAsync(request).ConfigureAwait(false),
+            ReportKind.PayrollSummary => await PayrollSummaryAsync(request).ConfigureAwait(false),
             ReportKind.Attendance => await AttendanceAsync(request).ConfigureAwait(false),
             ReportKind.Alphalist => await AlphalistAsync(request).ConfigureAwait(false),
             _ => await RemittanceAsync(request).ConfigureAwait(false)
@@ -325,6 +334,81 @@ public sealed class ReportService : IReportService
         return ReportResult.Ok(grid);
     }
 
+    // ------------------------------------------- FR-080, by department
+
+    /// <summary>
+    /// Payroll totalled per department over a range, with each department's
+    /// detachment on the right.
+    ///
+    /// <para><b>Whole cut-offs only.</b> A run counts when its whole period sits
+    /// inside the range; one that merely overlaps is handed to the builder
+    /// separately and reported as excluded. Half a payslip is not a figure — see
+    /// <see cref="PayrollSummaryReport"/> for why prorating one would be worse
+    /// than leaving it out.</para>
+    ///
+    /// <para><b>Cancelled runs are dropped, unposted ones are not.</b> A summary
+    /// of a run still in draft is the ordinary case while payroll is being
+    /// prepared; the report leads with a blocking note saying the figures can
+    /// still move, rather than refusing to render.</para>
+    /// </summary>
+    private async Task<ReportResult> PayrollSummaryAsync(ReportRequest request)
+    {
+        if (request.From is not { } from || request.To is not { } to)
+            return ReportResult.Fail("Choose the range the summary covers.");
+
+        if (to.Date < from.Date)
+            return ReportResult.Fail("The end of the range comes before its start.");
+
+        if ((to.Date - from.Date).TotalDays > 366)
+            return ReportResult.Fail("Choose a range of a year or less.");
+
+        var connection = await _database.GetConnectionAsync().ConfigureAwait(false);
+
+        var runs = (await connection.Table<PayrollRun>().ToListAsync().ConfigureAwait(false))
+            .Where(r => !r.IsCancelled)
+            .Where(r => r.PeriodStart.Date <= to.Date && from.Date <= r.PeriodEnd.Date)
+            .ToList();
+
+        var included = runs
+            .Where(r => r.PeriodStart.Date >= from.Date && r.PeriodEnd.Date <= to.Date)
+            .OrderBy(r => r.PeriodStart)
+            .ThenBy(r => r.Id)
+            .ToList();
+
+        var straddling = runs
+            .Where(r => !included.Contains(r))
+            .OrderBy(r => r.PeriodStart)
+            .ThenBy(r => r.Id)
+            .ToList();
+
+        var wanted = included.Select(r => r.Id).ToHashSet();
+
+        var payslips = (await connection.Table<Payslip>().ToListAsync().ConfigureAwait(false))
+            .Where(p => wanted.Contains(p.PayrollRunId))
+            .ToList();
+
+        var departmentName = await DepartmentNameAsync(request.DepartmentId).ConfigureAwait(false);
+
+        if (!string.IsNullOrWhiteSpace(departmentName))
+        {
+            payslips = payslips
+                .Where(p => string.Equals(p.DepartmentName, departmentName, StringComparison.CurrentCultureIgnoreCase))
+                .ToList();
+        }
+
+        var detachments = await _detachments.GetAllAsync(includeInactive: true).ConfigureAwait(false);
+
+        var lines = await LinesForPayslipsAsync(payslips).ConfigureAwait(false);
+
+        // The surname / given name / initial split is only on the employee
+        // record; a payslip snapshots the name as one string.
+        var employees = (await _employees.GetAllAsync().ConfigureAwait(false)).ToDictionary(e => e.Id);
+
+        return ReportResult.Ok(PayrollSummaryReport.Build(new PayrollSummarySource(
+            from.Date, to.Date, payslips, lines, employees, detachments,
+            straddling, included, departmentName)));
+    }
+
     // ------------------------------------------------------------ FR-083
 
     private async Task<ReportResult> AttendanceAsync(ReportRequest request)
@@ -422,6 +506,42 @@ public sealed class ReportService : IReportService
     }
 
     /// <summary>
+    /// Every line of a set of payslips, grouped by payslip.
+    ///
+    /// <para>Read by run rather than by payslip id: sqlite-net has no <c>IN</c>
+    /// over a list, and a summary spanning two cut-offs for three hundred people
+    /// would otherwise be six hundred queries (NFR-002).</para>
+    /// </summary>
+    private async Task<IReadOnlyDictionary<int, IReadOnlyList<PayslipLine>>> LinesForPayslipsAsync(
+        IReadOnlyList<Payslip> payslips)
+    {
+        if (payslips.Count == 0)
+            return new Dictionary<int, IReadOnlyList<PayslipLine>>();
+
+        var connection = await _database.GetConnectionAsync().ConfigureAwait(false);
+
+        var runs = payslips.Select(p => p.PayrollRunId).Distinct().ToHashSet();
+        var wanted = payslips.Select(p => p.Id).ToHashSet();
+
+        var lines = new List<PayslipLine>();
+
+        foreach (var runId in runs)
+        {
+            lines.AddRange(await connection.Table<PayslipLine>()
+                .Where(l => l.PayrollRunId == runId)
+                .ToListAsync()
+                .ConfigureAwait(false));
+        }
+
+        return lines
+            .Where(l => wanted.Contains(l.PayslipId))
+            .GroupBy(l => l.PayslipId)
+            .ToDictionary(
+                g => g.Key,
+                g => (IReadOnlyList<PayslipLine>)g.OrderBy(l => l.Sequence).ToList());
+    }
+
+    /// <summary>
     /// The configured name of every pay component, by code. The register's
     /// column headings come from here rather than from the payslip lines, whose
     /// descriptions carry per-employee detail.
@@ -468,10 +588,11 @@ public sealed class ReportService : IReportService
         try
         {
             var company = await _config.GetCompanyProfileAsync().ConfigureAwait(false);
+            var settings = await _config.GetSettingsAsync().ConfigureAwait(false);
 
             var (bytes, extension) = format == ReportFormat.Csv
                 ? (ReportCsv.Render(grid), "csv")
-                : (ReportDocument.Render(company, grid), "pdf");
+                : (ReportDocument.Render(company, grid, settings.ReportPaper), "pdf");
 
             var folder = ExportFolder();
             Directory.CreateDirectory(folder);
@@ -490,7 +611,8 @@ public sealed class ReportService : IReportService
             // The log names the report and its scope, never the figures.
             await _audit.WriteAsync(AuditActions.ReportExported, "Report", null, true,
                 $"Exported \"{grid.Title}\" ({grid.Subtitle}) as {extension.ToUpperInvariant()}, " +
-                $"{grid.DataRowCount} row(s).",
+                $"{grid.DataRowCount} row(s)" +
+                (format == ReportFormat.Csv ? "." : $", on {ReportPaperSizes.Display(settings.ReportPaper)}."),
                 asUser.Username, asUser.Id).ConfigureAwait(false);
 
             return new ExportResult(true, $"Saved to {path}", path);
