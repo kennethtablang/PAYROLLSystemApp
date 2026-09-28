@@ -110,17 +110,20 @@ public sealed partial class EmployeeDirectoryViewModel : BaseViewModel
     private Employee? _target;
 
     private readonly IDetachmentService _detachmentService;
+    private readonly IEmployeeImportService _import;
 
     public EmployeeDirectoryViewModel(
         IEmployeeService employees,
         IOrganizationService organization,
         IDetachmentService detachments,
+        IEmployeeImportService import,
         ISessionService session)
         : base(session)
     {
         _employees = employees;
         _organization = organization;
         _detachmentService = detachments;
+        _import = import;
 
         Title = "Employees";
 
@@ -158,7 +161,7 @@ public sealed partial class EmployeeDirectoryViewModel : BaseViewModel
 
     /// <summary>Drives the dialog layer; while it is false the layer must not be hit-testable.</summary>
     public bool IsAnyModalOpen =>
-        IsFormOpen || IsSeparateOpen || IsReinstateOpen || IsHistoryOpen || IsArchiveOpen;
+        IsFormOpen || IsSeparateOpen || IsReinstateOpen || IsHistoryOpen || IsArchiveOpen || IsImportOpen;
 
     public ObservableCollection<EmployeeRow> Employees { get; } = new();
 

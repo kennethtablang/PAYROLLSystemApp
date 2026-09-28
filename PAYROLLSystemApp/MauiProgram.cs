@@ -51,6 +51,7 @@ namespace PAYROLLSystemApp
             services.AddSingleton<IOrganizationService, OrganizationService>();
             services.AddSingleton<IDetachmentService, DetachmentService>();
             services.AddSingleton<IEmployeeService, EmployeeService>();
+            services.AddSingleton<IEmployeeImportService, EmployeeImportService>();
 
             // Section 2.3 — daily time records and the holiday calendar.
             services.AddSingleton<IHolidayService, HolidayService>();

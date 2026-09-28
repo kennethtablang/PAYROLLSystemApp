@@ -249,6 +249,26 @@ Review the seeded types (vacation, sick, service incentive leave and others). Fo
 - An employee **assigned to a detachment** is paid the detachment's posted daily rate.
 - Switch on **Pay this employee their own rate** to use the basic rate on the employee record instead. Head-office staff with no detachment always use their own rate.
 
+**Importing many employees at once (Employees → Import…)**
+
+Use this to load a whole roster from a spreadsheet instead of typing each record.
+
+1. Click **Import…**. The first time, click **Save a blank template with every heading**. It saves and opens `Employee import template.csv` in `Documents\Payroll MS\Imports`. Fill it in Excel and save it as CSV or Excel Workbook (.xlsx).
+2. Click **Choose file…** and pick the file. A **preview** appears. **Nothing has been written yet.**
+3. Check the preview:
+   - **Columns read** shows which heading went to which field. If a heading was read as the wrong field, rename it in the file and choose it again.
+   - **Rows** lists each line as *New*, *Update*, *No change* or *Rejected*, with rejected rows first and the reason beside each one.
+4. Click **Import N row(s)**. Rejected rows are skipped and the others are saved. Click **Save report** to keep a text file of the outcome.
+
+Rules:
+
+- **Only Employee No and a name are required.** Use Last Name and First Name, or a single Employee Name column written *Surname, Given*.
+- **An Employee No that already exists updates that employee**, so you can correct a file and import it again. On an existing record, only the columns in the file are changed. A file with just numbers, names and contact numbers changes contact numbers and nothing else. Detachment, own-rate switch and archive state are kept.
+- **Department, Position and Detach Code must already exist.** They are matched by name or code. A row naming an unknown detachment is rejected rather than imported without one, because the guard would otherwise be paid their own rate without anyone noticing.
+- Dates may be day-first or month-first, but the whole file is read one way. If the file cannot tell which, a warning says day-first was assumed.
+- Employment status: Probationary, Regular, Contractual, ProjectBased, PartTime, Seasonal or Consultant. Pay type: Monthly, Daily or Hourly. Minimum Wage: Yes or No.
+- Government IDs are checked the same way as on the form, including the duplicate check. A duplicate found only when saving is reported as rejected in the final result.
+
 Other actions in the employee list:
 
 - **History** shows the salary rate history. Every rate change asks for a reason.

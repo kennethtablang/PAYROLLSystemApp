@@ -4,6 +4,7 @@
              xmlns:vm="clr-namespace:PAYROLLSystemApp.ViewModels"
              xmlns:models="clr-namespace:PAYROLLSystemApp.Models"
              xmlns:controls="clr-namespace:PAYROLLSystemApp.Views.Controls"
+             xmlns:services="clr-namespace:PAYROLLSystemApp.Services"
              x:Class="PAYROLLSystemApp.Views.Sections.EmployeesView"
              x:DataType="vm:EmployeeDirectoryViewModel">
 
@@ -28,7 +29,7 @@
                 <Grid RowDefinitions="Auto,Auto,Auto,Auto,Auto,*">
 
                     <!-- Toolbar -->
-                    <Grid Grid.Row="0" ColumnDefinitions="Auto,Auto,Auto,*,Auto,Auto" ColumnSpacing="8" Padding="16,12">
+                    <Grid Grid.Row="0" ColumnDefinitions="Auto,Auto,Auto,*,Auto,Auto,Auto" ColumnSpacing="8" Padding="16,12">
 
                         <Border Grid.Column="0" Style="{StaticResource FieldFrame}">
                             <Entry Text="{Binding SearchText}"
@@ -61,6 +62,11 @@
                                 Command="{Binding RefreshCommand}" />
 
                         <Button Grid.Column="5"
+                                Style="{StaticResource SecondaryButton}"
+                                Text="Import…"
+                                Command="{Binding OpenImportCommand}" />
+
+                        <Button Grid.Column="6"
                                 Style="{StaticResource PrimaryButton}"
                                 Text="+  New employee"
                                 Command="{Binding OpenCreateCommand}" />
@@ -687,6 +693,104 @@
                             ErrorText="{Binding ModalError}">
             <controls:ModalHost.Body>
                 <Label Style="{StaticResource Body}" Text="{Binding ReinstateMessage}" />
+            </controls:ModalHost.Body>
+        </controls:ModalHost>
+
+        <!-- ==================== BULK IMPORT (FR-019) ==================== -->
+        <controls:ModalHost IsOpen="{Binding IsImportOpen}"
+                            Title="Import employees"
+                            Subtitle="{Binding ImportSubtitle}"
+                            ModalWidth="720"
+                            PrimaryText="{Binding ImportPrimaryText}"
+                            PrimaryCommand="{Binding ImportPrimaryCommand}"
+                            IsPrimaryEnabled="{Binding CanRunImportPrimary}"
+                            SecondaryText="Close"
+                            SecondaryCommand="{Binding CloseImportCommand}"
+                            DismissCommand="{Binding CloseImportCommand}"
+                            ErrorText="{Binding ModalError}">
+            <controls:ModalHost.Body>
+                <VerticalStackLayout Spacing="12">
+
+                    <!-- Step 1: what the file must look like -->
+                    <VerticalStackLayout Spacing="10" IsVisible="{Binding IsImportStart}">
+                        <Label Style="{StaticResource Body}" Text="{Binding ImportGuide}" />
+                        <Button Style="{StaticResource GhostButton}"
+                                HorizontalOptions="Start"
+                                Text="Save a blank template with every heading"
+                                Command="{Binding SaveImportTemplateCommand}" />
+                    </VerticalStackLayout>
+
+                    <!-- Steps 2 and 3: what the file would do, then what it did -->
+                    <VerticalStackLayout Spacing="10" IsVisible="{Binding HasImportResult}">
+
+                        <Label FontSize="13"
+                               FontAttributes="Bold"
+                               TextColor="{AppThemeBinding Light={StaticResource TextLight}, Dark={StaticResource TextDark}}"
+                               Text="{Binding ImportSummary}" />
+
+                        <Border IsVisible="{Binding HasImportWarnings}"
+                                Style="{StaticResource Pill}"
+                                Padding="11,9"
+                                HorizontalOptions="Fill"
+                                BackgroundColor="{AppThemeBinding Light={StaticResource WarningSoftLight}, Dark={StaticResource WarningSoftDark}}">
+                            <Label Text="{Binding ImportWarnings}"
+                                   FontSize="11.5"
+                                   TextColor="{AppThemeBinding Light={StaticResource Warning}, Dark=#F5C77E}" />
+                        </Border>
+
+                        <VerticalStackLayout Spacing="2" IsVisible="{Binding HasImportColumns}">
+                            <Label Style="{StaticResource FieldLabel}" Text="COLUMNS READ — CHECK EACH WENT TO THE RIGHT FIELD" />
+                            <Label Style="{StaticResource Muted}" Text="{Binding ImportColumns}" />
+                        </VerticalStackLayout>
+
+                        <Label Style="{StaticResource FieldLabel}" Text="ROWS — REJECTED ONES FIRST" />
+
+                        <CollectionView ItemsSource="{Binding ImportRows}" HeightRequest="260">
+                            <CollectionView.ItemTemplate>
+                                <DataTemplate x:DataType="services:ImportRow">
+                                    <Grid ColumnDefinitions="56,76,100,*" ColumnSpacing="8" Padding="0,5">
+                                        <Label Grid.Column="0"
+                                               Style="{StaticResource Faint}"
+                                               Text="{Binding LineNumber, StringFormat='Line {0}'}" />
+                                        <Label Grid.Column="1"
+                                               FontSize="11.5"
+                                               FontAttributes="Bold"
+                                               TextColor="{StaticResource Success}"
+                                               Text="{Binding OutcomeDisplay}">
+                                            <Label.Triggers>
+                                                <DataTrigger TargetType="Label" Binding="{Binding IsRejected}" Value="True">
+                                                    <Setter Property="TextColor" Value="{StaticResource Danger}" />
+                                                </DataTrigger>
+                                            </Label.Triggers>
+                                        </Label>
+                                        <Label Grid.Column="2"
+                                               Style="{StaticResource Body}"
+                                               LineBreakMode="TailTruncation"
+                                               Text="{Binding Key}" />
+                                        <VerticalStackLayout Grid.Column="3" Spacing="0">
+                                            <Label Style="{StaticResource Body}" Text="{Binding Description}" />
+                                            <Label Style="{StaticResource Faint}" Text="{Binding Message}" />
+                                        </VerticalStackLayout>
+                                    </Grid>
+                                </DataTemplate>
+                            </CollectionView.ItemTemplate>
+                        </CollectionView>
+
+                        <HorizontalStackLayout Spacing="8">
+                            <Button Style="{StaticResource SecondaryButton}"
+                                    Text="Choose a different file"
+                                    IsVisible="{Binding IsImportPreview}"
+                                    Command="{Binding ChooseImportFileCommand}" />
+                            <Button Style="{StaticResource SecondaryButton}"
+                                    Text="Save report"
+                                    Command="{Binding SaveImportReportCommand}" />
+                        </HorizontalStackLayout>
+                    </VerticalStackLayout>
+
+                    <Label Style="{StaticResource Faint}"
+                           Text="{Binding ImportNote}"
+                           IsVisible="{Binding HasImportNote}" />
+                </VerticalStackLayout>
             </controls:ModalHost.Body>
         </controls:ModalHost>
 

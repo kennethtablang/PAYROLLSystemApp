@@ -53,6 +53,7 @@ public sealed class EmployeeImportService : IEmployeeImportService
     private const string StatusField = "employmentstatus";
     private const string Department = "department";
     private const string Position = "position";
+    private const string DetachmentField = "detachment";
     private const string PayTypeField = "paytype";
     private const string Rate = "rate";
     private const string Allowance = "allowance";
@@ -66,13 +67,16 @@ public sealed class EmployeeImportService : IEmployeeImportService
 
     private readonly IEmployeeService _employees;
     private readonly IOrganizationService _organization;
+    private readonly IDetachmentService _detachments;
     private readonly IAuditService _audit;
 
     public EmployeeImportService(
-        IEmployeeService employees, IOrganizationService organization, IAuditService audit)
+        IEmployeeService employees, IOrganizationService organization,
+        IDetachmentService detachments, IAuditService audit)
     {
         _employees = employees;
         _organization = organization;
+        _detachments = detachments;
         _audit = audit;
     }
 
@@ -128,6 +132,7 @@ public sealed class EmployeeImportService : IEmployeeImportService
 
         var departments = await _organization.GetDepartmentsAsync(includeInactive: true).ConfigureAwait(false);
         var positions = await _organization.GetPositionsAsync(includeInactive: true).ConfigureAwait(false);
+        var detachments = await _detachments.GetAllAsync(includeInactive: true).ConfigureAwait(false);
 
         var existing = (await _employees.GetAllAsync().ConfigureAwait(false))
             .ToDictionary(e => e.EmployeeNumber, StringComparer.OrdinalIgnoreCase);
@@ -164,7 +169,7 @@ public sealed class EmployeeImportService : IEmployeeImportService
 
             var problems = new List<string>();
 
-            Apply(employee, map, row, departments, positions, dayFirst ?? true, problems);
+            Apply(employee, map, row, departments, positions, detachments, dayFirst ?? true, problems);
 
             var name = employee.FullName;
 
@@ -262,6 +267,8 @@ public sealed class EmployeeImportService : IEmployeeImportService
         map.Detect(StatusField, "employment status", "status", "employment type");
         map.Detect(Department, "department", "dept", "division");
         map.Detect(Position, "position", "job title", "designation", "title");
+        map.Detect(DetachmentField, "detach code", "detachment code", "detachment", "detach",
+            "assignment");
 
         map.Detect(PayTypeField, "pay type", "paytype", "salary type", "wage type", "rate type");
         map.Detect(Rate, "basic rate", "rate", "basic salary", "salary", "monthly rate",
@@ -284,7 +291,7 @@ public sealed class EmployeeImportService : IEmployeeImportService
     private static void Apply(
         Employee employee, ColumnMap map, string[] row,
         IReadOnlyList<Department> departments, IReadOnlyList<Position> positions,
-        bool dayFirst, List<string> problems)
+        IReadOnlyList<Detachment> detachments, bool dayFirst, List<string> problems)
     {
         // Name: either the split columns, or one "Surname, Given" field.
         if (map.Has(LastName))
@@ -389,6 +396,24 @@ public sealed class EmployeeImportService : IEmployeeImportService
                 problems.Add($"There is no position called \"{position}\".");
             else
                 employee.PositionId = match.Id;
+        }
+
+        // The detachment is where a guard's daily rate comes from, so a code
+        // that matches nothing is refused rather than dropped: the guard would
+        // otherwise be paid on their own rate without anyone noticing.
+        var detachment = map.Value(row, DetachmentField);
+
+        if (detachment.Length > 0)
+        {
+            var match = detachments.FirstOrDefault(d => Same(d.Code, detachment))
+                        ?? detachments.FirstOrDefault(d => Same(d.Name, detachment));
+
+            if (match is null)
+                problems.Add($"There is no detachment with the code \"{detachment}\". Add it on Detachments first.");
+            else if (!match.IsActive)
+                problems.Add($"Detachment {match.Code} is retired.");
+            else
+                employee.DetachmentId = match.Id;
         }
 
         var payType = map.Value(row, PayTypeField);
@@ -511,6 +536,7 @@ public sealed class EmployeeImportService : IEmployeeImportService
         stored.EmploymentStatus == incoming.EmploymentStatus &&
         stored.DepartmentId == incoming.DepartmentId &&
         stored.PositionId == incoming.PositionId &&
+        stored.DetachmentId == incoming.DetachmentId &&
         stored.PayType == incoming.PayType &&
         stored.BasicRate == incoming.BasicRate &&
         stored.MonthlyAllowance == incoming.MonthlyAllowance &&
@@ -546,6 +572,8 @@ public sealed class EmployeeImportService : IEmployeeImportService
         EmploymentStatus = source.EmploymentStatus,
         DepartmentId = source.DepartmentId,
         PositionId = source.PositionId,
+        DetachmentId = source.DetachmentId,
+        UsesOwnRate = source.UsesOwnRate,
         SupervisorId = source.SupervisorId,
         WorkScheduleId = source.WorkScheduleId,
         PayType = source.PayType,
@@ -563,7 +591,11 @@ public sealed class EmployeeImportService : IEmployeeImportService
         BankName = source.BankName,
         BankAccountNumber = source.BankAccountNumber,
         IsActive = source.IsActive,
-        CreatedUtc = source.CreatedUtc
+        IsArchived = source.IsArchived,
+        ArchivedUtc = source.ArchivedUtc,
+        ArchivedReason = source.ArchivedReason,
+        CreatedUtc = source.CreatedUtc,
+        UpdatedUtc = source.UpdatedUtc
     };
 
     private static List<string> Describe(ColumnMap map)
@@ -575,7 +607,7 @@ public sealed class EmployeeImportService : IEmployeeImportService
             (BirthDate, "Birth date"), (GenderField, "Gender"), (CivilStatusField, "Civil status"),
             (Contact, "Contact number"), (Email, "Email"), (Address, "Address"),
             (HireDate, "Date hired"), (StatusField, "Employment status"),
-            (Department, "Department"), (Position, "Position"),
+            (Department, "Department"), (Position, "Position"), (DetachmentField, "Detachment"),
             (PayTypeField, "Pay type"), (Rate, "Basic rate"), (Allowance, "Allowance"),
             (Sss, "SSS number"), (PhilHealth, "PhilHealth number"), (PagIbig, "Pag-IBIG number"),
             (Tin, "TIN"), (BankName, "Bank"), (BankAccount, "Bank account"),
@@ -584,6 +616,9 @@ public sealed class EmployeeImportService : IEmployeeImportService
 
         return fields
             .Where(f => map.Has(f.Field))
+            // "Name" also matches inside "Last Name", but the split columns win
+            // in Apply, so listing it would describe a mapping that is not used.
+            .Where(f => f.Field != FullName || !map.Has(LastName))
             .Select(f => $"{f.Label} ← \"{map.HeaderOf(f.Field)}\"")
             .ToList();
     }
