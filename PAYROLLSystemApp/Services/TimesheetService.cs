@@ -322,6 +322,12 @@ public sealed class TimesheetService : ITimesheetService
                    "Only a draft run can be keyed — return it to draft first.";
         }
 
+        if (run.RunType is PayrollRunType.ThirteenthMonth or PayrollRunType.Adjustment)
+        {
+            return $"{run.ReferenceNumber} is a {PayrollEnumNames.Display(run.RunType).ToLowerInvariant()} run, " +
+                   "which pays no time — a sheet keyed against it would never be paid.";
+        }
+
         var members = await RosterAsync(connection, runId).ConfigureAwait(false);
         var outsiders = employeeIds.Where(id => !members.Contains(id)).Distinct().ToList();
 

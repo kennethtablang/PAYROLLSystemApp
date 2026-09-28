@@ -155,6 +155,10 @@ public sealed partial class MainViewModel : BaseViewModel, IDisposable
         await Session.SignOutAsync();
     });
 
+    /// <summary>FR-004.</summary>
+    [RelayCommand]
+    private void ChangePassword() => Session.RequestPasswordChange();
+
     private void OnNavigated(object? sender, AppSection section) => SetActive(section);
 
     private void SetActive(AppSection section)

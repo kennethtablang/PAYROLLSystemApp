@@ -474,6 +474,9 @@ public sealed class AttendanceService : IAttendanceService
                 "Correct it through an adjustment run.");
         }
 
+        if (await LockedPeriodCoveringAsync(connection, employee, record.Date).ConfigureAwait(false) is { } lockedIn)
+            return AttendanceSaveResult.Fail(PeriodLockedMessage(lockedIn));
+
         var errors = Validate(record, employee);
         if (errors.Count > 0)
             return AttendanceSaveResult.Invalid(errors);
@@ -553,6 +556,9 @@ public sealed class AttendanceService : IAttendanceService
                 "That day has been locked by a posted payroll run and cannot be removed.");
         }
 
+        if (await LockedPeriodCoveringAsync(connection, record.EmployeeId, record.Date).ConfigureAwait(false) is { } lockedIn)
+            return AttendanceSaveResult.Fail(PeriodLockedMessage(lockedIn));
+
         var employee = await connection.Table<Employee>()
             .Where(e => e.Id == record.EmployeeId)
             .FirstOrDefaultAsync()
@@ -594,6 +600,9 @@ public sealed class AttendanceService : IAttendanceService
 
         if (record.IsLocked)
             return AttendanceSaveResult.Fail("That day has been locked by a posted payroll run.");
+
+        if (await LockedPeriodCoveringAsync(connection, record.EmployeeId, record.Date).ConfigureAwait(false) is { } lockedIn)
+            return AttendanceSaveResult.Fail(PeriodLockedMessage(lockedIn));
 
         if (hours < 0m)
             return AttendanceSaveResult.Fail("Approved overtime cannot be negative.");
@@ -670,6 +679,12 @@ public sealed class AttendanceService : IAttendanceService
 
         var created = 0;
         var existing = 0;
+        var frozen = 0;
+
+        var lockedPeriods = await connection.Table<PayPeriod>()
+            .Where(p => p.Status == PayPeriodStatus.Locked)
+            .ToListAsync()
+            .ConfigureAwait(false);
 
         foreach (var employee in employees)
         {
@@ -689,6 +704,12 @@ public sealed class AttendanceService : IAttendanceService
 
                 if (!employee.IsPayableOver(date, date))
                     continue;
+
+                if (lockedPeriods.Any(p => Covers(p, employee.PayFrequency, date)))
+                {
+                    frozen++;
+                    continue;
+                }
 
                 var draft = Draft(employee, date, schedules, calendar);
                 draft.Source = AttendanceSource.Generated;
@@ -711,13 +732,64 @@ public sealed class AttendanceService : IAttendanceService
             $"for {employees.Count} employee(s); {existing} already recorded.",
             performedBy.Username, performedBy.Id).ConfigureAwait(false);
 
+        var frozenNote = frozen == 0
+            ? string.Empty
+            : $" {frozen} day(s) were left alone because their pay period is locked.";
+
         return new GenerateResult(true,
-            created == 0
+            (created == 0
                 ? "Every day in that period was already recorded."
                 : $"{created} day(s) added. Rest days and holidays are classified; " +
-                  "the rest stand as absences until punches are entered.",
+                  "the rest stand as absences until punches are entered.") + frozenNote,
             created, existing);
     }
+
+    // ----------------------------------------------------- period lock
+
+    /// <summary>
+    /// A pay period locked on Payroll Setup freezes the attendance inside its
+    /// cut-off, so a run computed against it cannot be undermined by a later
+    /// correction. It applies to the employees paid on that period's
+    /// frequency; a weekly period says nothing about a semi-monthly employee.
+    /// A closed period is not checked here — posting has already locked the
+    /// days of everyone it paid, and anyone it did not pay may still need
+    /// their days recorded for a run of their own.
+    /// </summary>
+    private static async Task<PayPeriod?> LockedPeriodCoveringAsync(
+        SQLite.SQLiteAsyncConnection connection, Employee employee, DateTime date)
+    {
+        var day = date.Date;
+
+        var locked = await connection.Table<PayPeriod>()
+            .Where(p => p.Status == PayPeriodStatus.Locked && p.CutOffStart <= day && p.CutOffEnd >= day)
+            .ToListAsync()
+            .ConfigureAwait(false);
+
+        return locked.FirstOrDefault(p => Covers(p, employee.PayFrequency, day));
+    }
+
+    private static async Task<PayPeriod?> LockedPeriodCoveringAsync(
+        SQLite.SQLiteAsyncConnection connection, int employeeId, DateTime date)
+    {
+        var employee = await connection.Table<Employee>()
+            .Where(e => e.Id == employeeId)
+            .FirstOrDefaultAsync()
+            .ConfigureAwait(false);
+
+        return employee is null
+            ? null
+            : await LockedPeriodCoveringAsync(connection, employee, date).ConfigureAwait(false);
+    }
+
+    private static bool Covers(PayPeriod period, PayFrequency frequency, DateTime date) =>
+        period.Frequency == frequency &&
+        period.CutOffStart.Date <= date.Date &&
+        period.CutOffEnd.Date >= date.Date;
+
+    private static string PeriodLockedMessage(PayPeriod period) =>
+        $"{period.Code} is locked, which freezes the attendance inside its cut-off " +
+        $"({period.CutOffStart:dd MMM} – {period.CutOffEnd:dd MMM yyyy}). " +
+        "Reopen it on Payroll Setup → Pay calendar to make a correction.";
 
     public async Task<int> LockRangeAsync(
         IReadOnlyList<int> employeeIds, DateTime from, DateTime to, User performedBy)

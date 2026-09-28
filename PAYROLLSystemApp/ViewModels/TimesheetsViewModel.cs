@@ -432,7 +432,11 @@ public sealed partial class TimesheetsViewModel : BaseViewModel
 
             Runs.Clear();
 
-            foreach (var run in runs.OrderByDescending(r => r.CutOffStart).ThenByDescending(r => r.Id))
+            // A 13th month or adjustment run prices no time, so a sheet keyed
+            // against one would be silently ignored.
+            foreach (var run in runs
+                         .Where(r => r.RunType is PayrollRunType.Regular or PayrollRunType.FinalPay)
+                         .OrderByDescending(r => r.CutOffStart).ThenByDescending(r => r.Id))
                 Runs.Add(new RunOption(run));
 
             OnPropertyChanged(nameof(HasNoRuns));

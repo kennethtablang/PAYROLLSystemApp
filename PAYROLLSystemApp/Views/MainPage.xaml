@@ -155,7 +155,7 @@
 
             <!-- Top bar -->
             <Grid Grid.Row="0"
-                  ColumnDefinitions="*,Auto,Auto"
+                  ColumnDefinitions="*,Auto,Auto,Auto"
                   ColumnSpacing="14"
                   Padding="20,0"
                   HeightRequest="{StaticResource TopBarHeight}"
@@ -175,12 +175,18 @@
                        VerticalOptions="Center" />
 
                 <Button Grid.Column="2"
+                        Style="{StaticResource GhostButton}"
+                        Text="Change password"
+                        Command="{Binding ChangePasswordCommand}"
+                        VerticalOptions="Center" />
+
+                <Button Grid.Column="3"
                         Style="{StaticResource SecondaryButton}"
                         Text="Sign out"
                         Command="{Binding SignOutCommand}"
                         VerticalOptions="Center" />
 
-                <BoxView Grid.ColumnSpan="3" VerticalOptions="End" Style="{StaticResource Divider}" />
+                <BoxView Grid.ColumnSpan="4" VerticalOptions="End" Style="{StaticResource Divider}" />
             </Grid>
 
             <!-- Section content -->

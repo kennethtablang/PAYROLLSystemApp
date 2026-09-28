@@ -186,7 +186,7 @@
                                   ColumnDefinitions="*,Auto"
                                   Padding="16,8"
                                   BackgroundColor="{AppThemeBinding Light={StaticResource SurfaceAltLight}, Dark={StaticResource SurfaceAltDark}}">
-                                <Label Grid.Column="0" Style="{StaticResource TableHeader}" Text="POSITION / DAILY RATE" />
+                                <Label Grid.Column="0" Style="{StaticResource TableHeader}" Text="DAILY RATE / EFFECTIVE FROM" />
                                 <Label Grid.Column="1" Style="{StaticResource TableHeader}" Text="" WidthRequest="86" />
                             </Grid>
 
@@ -238,7 +238,7 @@
                                            Text="No rates posted." />
                                     <Label Style="{StaticResource Faint}"
                                            HorizontalTextAlignment="Center"
-                                           Text="Post one per position. A run reads whichever rate was in force on its pay date, so next quarter's wage order can be entered today." />
+                                           Text="Post the daily rate for this code. A run reads whichever rate was in force on its pay date, so next quarter's wage order can be entered today." />
                                 </VerticalStackLayout>
                             </Grid>
                         </Grid>

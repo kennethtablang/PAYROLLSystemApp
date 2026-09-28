@@ -99,7 +99,7 @@ public sealed partial class LoginViewModel : BaseViewModel
 
     public string FirstRunHint =>
         $"First run — sign in as '{PayrollDatabase.SeedAdminUsername}' with password " +
-        $"'{PayrollDatabase.SeedAdminPassword}'. Change it from User Accounts before going live.";
+        $"'{PayrollDatabase.SeedAdminPassword}'. You will be asked to choose your own password straight away.";
 
     public async Task LoadAsync()
     {

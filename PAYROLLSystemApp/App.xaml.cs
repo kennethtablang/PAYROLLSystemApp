@@ -25,6 +25,7 @@ namespace PAYROLLSystemApp
 
             _session.SessionStarted += OnSessionStarted;
             _session.SessionEnded += OnSessionEnded;
+            _session.PasswordChangeRequested += OnPasswordChangeRequested;
         }
 
         protected override Window CreateWindow(IActivationState? activationState)
@@ -41,9 +42,19 @@ namespace PAYROLLSystemApp
             return _window;
         }
 
+        /// <summary>
+        /// A password someone else chose (seeded, new account, reset) must be
+        /// replaced before any screen opens (FR-004, FR-005).
+        /// </summary>
         private void OnSessionStarted(object? sender, EventArgs e) =>
             MainThread.BeginInvokeOnMainThread(() =>
-                SetRoot(_services.GetRequiredService<MainPage>()));
+                SetRoot(_session.CurrentUser?.MustChangePassword == true
+                    ? _services.GetRequiredService<ChangePasswordPage>()
+                    : _services.GetRequiredService<MainPage>()));
+
+        private void OnPasswordChangeRequested(object? sender, EventArgs e) =>
+            MainThread.BeginInvokeOnMainThread(() =>
+                SetRoot(_services.GetRequiredService<ChangePasswordPage>()));
 
         /// <summary>Sign-out always returns to the sign-in screen.</summary>
         private void OnSessionEnded(object? sender, SessionEndedEventArgs e) =>

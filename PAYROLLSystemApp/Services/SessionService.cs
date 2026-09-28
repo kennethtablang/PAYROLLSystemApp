@@ -39,7 +39,15 @@ public interface ISessionService
 
     event EventHandler? SessionStarted;
 
+    /// <summary>The holder asked to replace their password (FR-004).</summary>
+    event EventHandler? PasswordChangeRequested;
+
     void SignIn(User user);
+
+    void RequestPasswordChange();
+
+    /// <summary>Returns a signed-in session to the workspace, e.g. after a password change.</summary>
+    void ResumeWorkspace();
 
     Task SignOutAsync(SessionEndReason reason = SessionEndReason.SignedOut);
 
@@ -71,6 +79,8 @@ public sealed class SessionService : ISessionService
 
     public event EventHandler? SessionStarted;
 
+    public event EventHandler? PasswordChangeRequested;
+
     public void SignIn(User user)
     {
         ArgumentNullException.ThrowIfNull(user);
@@ -82,6 +92,18 @@ public sealed class SessionService : ISessionService
         }
 
         SessionStarted?.Invoke(this, EventArgs.Empty);
+    }
+
+    public void RequestPasswordChange()
+    {
+        if (IsSignedIn)
+            PasswordChangeRequested?.Invoke(this, EventArgs.Empty);
+    }
+
+    public void ResumeWorkspace()
+    {
+        if (IsSignedIn)
+            SessionStarted?.Invoke(this, EventArgs.Empty);
     }
 
     public async Task SignOutAsync(SessionEndReason reason = SessionEndReason.SignedOut)

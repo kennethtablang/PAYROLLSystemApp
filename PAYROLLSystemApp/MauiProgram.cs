@@ -83,6 +83,7 @@ namespace PAYROLLSystemApp
         private static void RegisterViewModels(IServiceCollection services)
         {
             services.AddTransient<LoginViewModel>();
+            services.AddTransient<ChangePasswordViewModel>();
             services.AddTransient<MainViewModel>();
             services.AddTransient<DashboardViewModel>();
             services.AddTransient<EmployeeDirectoryViewModel>();
@@ -105,6 +106,7 @@ namespace PAYROLLSystemApp
         {
             // Pages and sections are transient so each sign-in starts clean.
             services.AddTransient<LoginPage>();
+            services.AddTransient<ChangePasswordPage>();
             services.AddTransient<MainPage>();
 
             services.AddTransient<DashboardView>();

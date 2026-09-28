@@ -61,16 +61,19 @@ After sign-in you see a fixed sidebar on the left, a top bar with the page title
 ```
  ONE-TIME SETUP                                   EVERY CUT-OFF
  ──────────────                                   ─────────────
- Company profile & payroll rules                  1. Create a payroll run          (Accounting)
- Pay calendar                                     2. Key timesheets / attendance   (Accounting)
- Earnings, deductions, premium & statutory        3. Record leave, loans, standing
- Departments, positions, work schedules              deductions                    (Accounting)
- Detachments + daily rates                        4. Calculate and review          (Accounting)
- Holidays, leave types                            5. Adjust, then Submit           (Accounting)
- Employees                                        6. Approve                       (Administrator)
- User accounts                                    7. Post                          (Administrator)
-                                                  8. Payslips and reports          (either)
-                                                  9. Back up                       (Administrator)
+ Replace the default password                     1. Create a payroll run          (Accounting)
+ Company profile & payroll rules                  2. Key timesheets / attendance   (Accounting)
+ Pay calendar                                     3. Record leave, loans, standing
+ Earnings, deductions, premium & statutory           deductions                    (Accounting)
+ Departments, positions, work schedules           4. Lock the pay period, optional (Accounting)
+ Detachments + daily rates                        5. Calculate and review          (Accounting)
+ Holidays, leave types                            6. Adjust, then Submit           (Accounting)
+ Employees                                        7. Approve                       (Administrator)
+ User accounts                                    8. Post                          (Administrator)
+                                                  9. Payslips and reports          (either)
+                                                 10. Back up                       (Administrator)
+
+ AFTER POSTING: corrections go on an Adjustment run for the same pay period (Part 5.1).
 ```
 
 ---
@@ -85,7 +88,7 @@ A new database comes with one account:
 |---|---|
 | `admin` | `Admin@123` |
 
-> ⚠️ **Change this password before entering any real payroll data.** The system does not force a change, so the default stays valid until an administrator changes it under **User Accounts**.
+> ⚠️ **The first time you sign in with this password, the system makes you replace it.** No screen opens until you do. Keep the new password somewhere safe. If the only administrator forgets it, nobody can issue a reset.
 
 ### 2.2 Signing in
 
@@ -96,15 +99,24 @@ What else to expect:
 
 - **Five wrong passwords in a row lock the account for 15 minutes.** An administrator can unlock it sooner from **User Accounts → Unlock**.
 - **Forgot password?** No self-service reset exists. Ask the administrator for a temporary password.
+- **A password someone else chose must be replaced.** This covers the default password, a new account's first password and a temporary password from a reset. After you sign in with one, the **Set a new password** screen opens before anything else. Enter the password you were given, then your new one twice. The only other way off that screen is **Sign out**.
 - **Sessions do not time out.** You stay signed in until you click **Sign out**, or until an administrator restores a backup (which signs everyone out).
 - Every sign-in, success or failure, goes to the audit trail.
 
-### 2.3 Creating the Accounting account (Administrator)
+### 2.3 Changing your own password
+
+1. Click **Change password** in the top bar, next to **Sign out**.
+2. Enter your current password, then the new one twice. A checklist under the new password shows which rules it meets.
+3. Click **Save password**. **Cancel** takes you back to where you were.
+
+The new password must differ from the old one and cannot be `Admin@123`.
+
+### 2.4 Creating the Accounting account (Administrator)
 
 1. Open **User Accounts** and click **+ New account**.
 2. Fill in the **username**, **e-mail address** and **full name**, then choose the **Accounting** role.
 3. Type an **initial password** or click **Generate**. A password needs at least 8 characters with an upper case letter, a lower case letter, a digit and a special character.
-4. Click **Create account** and give the password to the account holder.
+4. Click **Create account** and give the password to the account holder. At their first sign-in they must replace it with a password of their own.
 
 ---
 
@@ -143,7 +155,15 @@ Do these steps in order, because each one feeds the next. Accounting can do all 
    - **Cut-off from / to:** the attendance the run is allowed to read.
    - **Pay date:** when the money lands. **The pay date decides which statutory tables and which detachment rates apply.** A period paid in January uses January's tables even when it covers December.
 
-A period moves from **Open** to **Locked**, then to **Closed** once its run is posted. A closed period cannot be run again.
+**Period states.** Each period is **Open**, **Locked** or **Closed**.
+
+| State | How it gets there | What it means |
+|---|---|---|
+| **Open** | Every new period starts here. | Attendance inside the cut-off can be entered and corrected. |
+| **Locked** | Click **Lock** on the period once the cut-off's attendance is complete. | Attendance inside the cut-off is frozen for employees paid at that frequency. Until someone clicks **Reopen**, nobody can change or remove a day, approve overtime or fill in missing days. |
+| **Closed** | Set automatically when a **regular** run for the period is posted. | No further **regular** run can be created for it. Adjustment, 13th-month and final-pay runs can still be created (see Part 5). |
+
+**Reopen** on a *locked* period lets its attendance be corrected again. **Reopen** on a *closed* period has one use: paying someone the posted run left out, by letting you create a second regular run for them. It does **not** unlock the days the posted run paid, and it does not change a posted payslip.
 
 ### Step 3 — Earnings, deductions, premium and statutory tables
 
@@ -194,6 +214,7 @@ Rules:
 - **One code, one daily rate.** A post that pays two rates is two codes, which is how the client's sheet is written.
 - **Rates are posted, never edited.** A run uses the rate in force on its **pay date**. You can enter next quarter's wage order today without changing this cut-off's pay.
 - Posting a second rate on the same date **corrects** the first one.
+- **Withdraw** removes a rate posted by mistake. Posted runs keep their figures. A run recalculated afterwards uses the previous rate, or shows a blocker if there is none.
 - A detachment showing *"No rate posted — payroll cannot be computed for this post"* will block every run that includes its people.
 
 ### Step 6 — Holidays
@@ -254,6 +275,13 @@ Draft ──Calculate──► Draft (computed) ──Submit──► For approv
 
 The run starts as a **Draft**. You can recalculate or discard a draft as often as you need; nothing outside the run changes.
 
+**The list of people on a run is fixed when the run is created.** You cannot add names later. If you left someone out:
+
+- **Before posting:** discard the draft and create it again with everyone ticked. Or create a second **Regular** run for the same period with only the missing people ticked. Nobody can be on two regular runs for the same period.
+- **After posting:** the period is closed. Go to **Payroll Setup → Pay calendar**, click **Reopen** on the period, then create a regular run for the missing people only.
+
+> **One run per client, or one run for everybody?** Either works. Several regular runs can share a pay period, as long as nobody is on two of them. **But posting a regular run closes the period.** If you post client runs one at a time, create all of them before you post the first.
+
 ### Step 2 — Key the hours
 
 Detachment staff and head-office staff are entered in different places.
@@ -262,7 +290,7 @@ Detachment staff and head-office staff are entered in different places.
 
 The client sends a printed cut-off sheet with period **totals** per person, not daily punches. Key those totals exactly as written.
 
-1. Open **Timesheets** and choose the draft run under **PERIOD COVERED**. Only draft runs are listed.
+1. Open **Timesheets** and choose the draft run under **PERIOD COVERED**. Only **draft regular and final-pay runs** are listed. 13th-month and adjustment runs pay no hours, so they have no timesheet.
 2. The people **on this run** are banded by detachment code. If a guard is missing, they were not ticked when the run was created, so the run will not pay them. Click a person to open their card and enter:
 
 | Column | Enter | Paid as |
@@ -290,6 +318,7 @@ A timesheet **replaces** attendance for that employee in that run. It belongs to
 - **Fill in the day** / **Fill in the cut-off** create the *missing* days only. Rest days and holidays are classified from the schedule and calendar, but **every other generated day is recorded as an absence until you enter punches on it**. It does not pre-fill time in and out. Use it so that nobody's days are forgotten, then enter the punches. A monthly-paid employee left with blank generated days has absences deducted, and can end up with a negative net pay.
 - **Timesheet** tab: review one employee's cut-off. Overtime has to be **approved** here (*Save approval*) before it is paid.
 - Only days that have already happened can be recorded.
+- A day inside the cut-off of a **locked** pay period cannot be changed, and the message names the period. **Fill in the cut-off** skips those days and reports how many it skipped. A day already paid by a **posted** run is locked permanently. To correct its pay, use an Adjustment run.
 - A correction needs a reason. It is stamped on the entry and written to the audit log.
 - Change the **Rest day** switch when someone worked on a day other than their usual rest day.
 
@@ -305,6 +334,12 @@ A timesheet **replaces** attendance for that employee in that run. It belongs to
 **Payroll Runs → Loans & advances.** Record an SSS, Pag-IBIG or company loan: the amount borrowed, the amount taken each period and the first date it is taken. The instalment repeats until the balance reaches zero, and the last one takes whatever is left. **Balances only go down when a run is posted**, never on recalculation.
 
 **Payroll Runs → Standing deductions.** Use this for flat amounts that end on a date rather than when a balance runs out: insurance premium, performance bond, processing fee. The full amount is taken **every** period. It is never split across the month's runs.
+
+### Step 3a — Lock the pay period (Accounting, optional)
+
+**Payroll Setup → Pay calendar →** **Lock** on the period.
+
+Lock the period once every day of the cut-off has been entered and checked. After that, nobody can change the attendance the run is computed from. This matters most for head-office staff paid from Time & Attendance. Timesheets belong to the run, so locking does not affect them. To correct a day after locking: click **Reopen**, make the correction, lock the period again and recalculate.
 
 ### Step 4 — Calculate and review (Accounting)
 
@@ -388,9 +423,27 @@ Create these the same way as a regular run. Pick the kind under **KIND OF RUN** 
 |---|---|
 | **13th month** | Pays the PD 851 entitlement (basic salary ÷ 12). Up to ₱90,000 is tax-exempt and the excess is taxed. **No** contributions or loan instalments are taken. |
 | **Final pay** | For a separated employee. Adds unused convertible leave paid out as cash and a prorated 13th month, and settles the year's tax. |
-| **Adjustment** | Corrects a cut-off that has already been paid and posted. It does not redo the year-end tax computation, because that period's tax was already settled once. |
+| **Adjustment** | Corrects a cut-off that has already been paid and posted. It pays **only the one-off adjustments entered on it**. See 5.1. |
+
+**All three kinds can be created on a closed pay period.** Only a second *regular* run is refused. So, for example, you can run the 13th month on December's second cut-off after that cut-off's regular payroll has been posted.
 
 The approve → post sequence is the same as for a regular run.
+
+### 5.1 Correcting a posted payroll with an Adjustment run
+
+Use this when a posted payslip was wrong: an underpaid day, a missed allowance or a retroactive increase.
+
+1. **Payroll Runs → + New run.** Choose **Adjustment** under **KIND OF RUN**. The period list now includes closed periods, marked *· closed*. Pick the period being corrected and tick **only the people being corrected**.
+2. Select the run. For each person, click **Adjustment** and enter the kind (earning or deduction), the amount, the **Taxable** switch and a remark saying what is being corrected.
+3. Click **Calculate**. Each payslip holds the adjustments and nothing else. There is no basic pay, 5Days Inc., SSS, PhilHealth, Pag-IBIG, loan instalment or standing deduction, because the regular run already paid or took all of those. Taking them again would pay or deduct them twice.
+4. Submit, approve and post as usual.
+
+Things to know:
+
+- **Tax.** Withholding comes from the period table applied to the adjustment amount alone, which for a small amount is usually zero. The year's correct tax is settled on the last regular run of the year, which includes this payslip. To withhold a specific amount now, add a `WTAX` deduction adjustment.
+- **Everyone on the run needs an adjustment.** Anyone without one is flagged, and the run cannot be submitted. Enter their adjustment, or discard the run and create it again without them.
+- **Each person can be on only one adjustment run per period.** To correct the same person twice, put both adjustments on that one run.
+- **To recover an overpayment**, put a *deduction* adjustment on the person's **next regular run**. On an adjustment run, a deduction by itself gives a negative net pay, which is flagged and stops the run from being submitted.
 
 ---
 
@@ -411,7 +464,7 @@ The approve → post sequence is the same as for a regular run.
 In **User Accounts**:
 
 - **Edit** changes a user's name, e-mail or role, or switches off **Account is active**. Deactivating blocks sign-in but keeps the account's history.
-- **Reset** issues a **temporary password**. It is shown **once only** (only its hash is stored), so hand it over straight away.
+- **Reset** issues a **temporary password**. It is shown **once only** (only its hash is stored), so hand it over straight away. The holder must replace it the next time they sign in.
 - **Unlock** clears a lockout before the 15 minutes are up.
 
 ### 7.2 Audit log
@@ -458,8 +511,12 @@ Backups are saved in your **Documents** folder, not next to the live database, s
 | An employee is missing from a run | They are inactive, archived, separated before the period, or were not ticked when the run was created. |
 | Net pay flagged negative | Deductions exceed earnings. Check loans, standing deductions and adjustments, then recalculate. |
 | Cannot approve a run | You submitted it, or you are signed in as Accounting. The Administrator must approve it. |
-| Cannot edit an approved or posted run | That is by design. A run waiting for approval can be returned to draft. Correct a posted payroll with an **Adjustment** run, or with an adjustment in the next run. |
-| A pay period cannot be run again | It is **Closed** because its run was posted. |
+| Cannot edit an approved or posted run | That is by design. A run waiting for approval can be returned to draft. Correct a posted payroll with an **Adjustment** run (5.1), or with an adjustment on the next regular run. |
+| "…is closed — its regular payroll has been posted" | A second regular run is refused on a closed period. To correct someone already paid, choose **Adjustment** as the kind of run. To pay someone the posted run left out, **Reopen** the period first (Part 4, Step 1). |
+| "…is locked, which freezes the attendance inside its cut-off" | The pay period is locked. Go to **Payroll Setup → Pay calendar → Reopen**, correct the day, lock the period again and recalculate. |
+| "That day has been locked by a posted payroll run" | A posted run has paid that day, so it cannot change. Correct the pay with an Adjustment run. |
+| The **Set a new password** screen appears at sign-in | You signed in with the default password, a new account's first password or a temporary password. Choose your own password to continue. |
+| Timesheets does not list a 13th-month or adjustment run | That is by design. Those runs pay no hours, so a timesheet keyed against them would never be paid. |
 | Payroll summary shows fewer runs than expected | Your date range only partly covers some cut-offs. They are named in the report's warning. Widen the range. |
 | Payroll summary puts old overtime under OT Regular | Payslips computed before overtime was split into Regular/Sunday/Holiday have one OT line. The report names them. |
 
@@ -467,14 +524,16 @@ Backups are saved in your **Documents** folder, not next to the live database, s
 
 ## 10. Quick reference
 
-**Default sign-in:** `admin` / `Admin@123`. Change it immediately.
+**Default sign-in:** `admin` / `Admin@123`. You must replace it at the first sign-in. After that, use **Change password** in the top bar.
 
 **Every cut-off, in one line:**
 
-> Accounting: **New run → Timesheets / Attendance → Leave & loans → Calculate → Adjust → Submit**  
+> Accounting: **New run → Timesheets / Attendance → Leave & loans → Lock period (optional) → Calculate → Adjust → Submit**  
 > Administrator: **Approvals → Approve → Post → Back up now**  
 > Either: **Payslips → Export whole run**, **Reports → Register, remittances, summary**
 
 **Run states:** Draft → For approval → Approved → Posted. A draft can be discarded (Cancelled), and a run waiting for approval can be returned to draft.
 
-**Pay period states:** Open → Locked → Closed.
+**Pay period states:** Open → Locked (manual; freezes attendance) → Closed (automatic when a regular run is posted; blocks another regular run). **Reopen** returns a period to Open.
+
+**Correcting a posted payroll:** create an Adjustment run for the same period. It pays only the adjustments you enter on it.

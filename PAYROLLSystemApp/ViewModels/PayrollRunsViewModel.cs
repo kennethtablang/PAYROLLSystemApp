@@ -628,7 +628,33 @@ public sealed partial class PayrollRunsViewModel : BaseViewModel
     [ObservableProperty]
     public partial EnumOption? CreateRunType { get; set; }
 
-    partial void OnCreateRunTypeChanged(EnumOption? value) => _ = RunAsync(ReloadCandidatesAsync);
+    partial void OnCreateRunTypeChanged(EnumOption? value) => RebuildPeriodOptions();
+
+    /// <summary>
+    /// A regular run is offered only the open periods — posting one closes its
+    /// period. The other kinds exist precisely to pay against a period that has
+    /// already been paid (a correction, the 13th month, a final pay), so they
+    /// are offered every period.
+    /// </summary>
+    private void RebuildPeriodOptions()
+    {
+        var runType = CreateRunType?.As<PayrollRunType>() ?? PayrollRunType.Regular;
+        var keep = CreatePeriod?.Id;
+
+        PeriodOptions.Clear();
+        foreach (var period in _periods.Where(p =>
+                     runType != PayrollRunType.Regular || p.Status != PayPeriodStatus.Closed))
+        {
+            var closed = period.Status == PayPeriodStatus.Closed ? " · closed" : string.Empty;
+            PeriodOptions.Add(new LookupOption(period.Id, $"{period.Code} · {period.RangeDisplay}{closed}"));
+        }
+
+        // Cleared first so the picker, whose items were just replaced, is
+        // handed a selection again, and the candidates are re-read for the
+        // new kind even when the period stays the same.
+        CreatePeriod = null;
+        CreatePeriod = PeriodOptions.FirstOrDefault(o => o.Id == keep) ?? PeriodOptions.FirstOrDefault();
+    }
 
     [ObservableProperty]
     public partial string CreateRemarks { get; set; } = string.Empty;
@@ -644,24 +670,20 @@ public sealed partial class PayrollRunsViewModel : BaseViewModel
 
         _periods = await _config.GetPayPeriodsAsync(SelectedYear);
 
-        PeriodOptions.Clear();
-        foreach (var period in _periods.Where(p => p.Status != PayPeriodStatus.Closed))
-            PeriodOptions.Add(new LookupOption(period.Id, $"{period.Code} · {period.RangeDisplay}"));
-
-        if (PeriodOptions.Count == 0)
+        if (_periods.Count == 0)
         {
             ShowError(
-                $"Every {SelectedYear} pay period is closed, or none has been generated. " +
-                "Open one on Payroll Setup → Pay calendar first.");
+                $"No {SelectedYear} pay period has been generated. " +
+                "Generate the year on Payroll Setup → Pay calendar first.");
             return;
         }
 
-        CreateRunType = RunTypeOptions.FirstOrDefault(o => o.Value == (int)PayrollRunType.Regular);
+        CreatePeriod = null;
         CreateRemarks = string.Empty;
+        CreateRunType = RunTypeOptions.FirstOrDefault(o => o.Value == (int)PayrollRunType.Regular);
 
-        // The period whose cut-off has most recently closed is the one about to
-        // be run, so it is the sensible default.
-        CreatePeriod = PeriodOptions.FirstOrDefault();
+        // Setting the kind rebuilds the list, but not when it was already Regular.
+        RebuildPeriodOptions();
 
         await ReloadCandidatesAsync();
 

@@ -313,6 +313,7 @@ public sealed partial class PayrollDatabase
             PasswordHash = _passwordHasher.Hash(SeedAdminPassword),
             Role = UserRole.Administrator,
             IsActive = true,
+            MustChangePassword = true,
             CreatedUtc = DateTime.UtcNow,
             PasswordChangedUtc = DateTime.UtcNow
         };

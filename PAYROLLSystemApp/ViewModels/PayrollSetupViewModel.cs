@@ -639,9 +639,14 @@ public sealed partial class PayrollSetupViewModel : BaseViewModel
             ? $"Locking {row.Code} freezes the attendance inside its cut-off ({row.CutOffDisplay}) so a " +
               "payroll run computed against it cannot be undermined by a later correction.\n\n" +
               "It can be reopened, but anything already computed will need recalculating."
-            : $"Reopening {row.Code} allows attendance inside its cut-off to be corrected again.\n\n" +
-              "Any payroll already computed against this period is now out of date and should be " +
-              "recalculated before it is approved.";
+            : row.Period.Status == PayPeriodStatus.Closed
+                ? $"{row.Code} was closed when its regular run was posted. Reopening it lets a second " +
+                  "regular run be created for anyone that run left out.\n\n" +
+                  "It does not unlock the days the posted run paid, and it does not change a posted payslip. " +
+                  "To correct someone who was already paid, create an Adjustment run instead — that needs no reopening."
+                : $"Reopening {row.Code} allows attendance inside its cut-off to be corrected again.\n\n" +
+                  "Any payroll already computed against this period is now out of date and should be " +
+                  "recalculated before it is approved.";
 
         ConfirmAction = row.IsOpen ? "Lock" : "Reopen";
         IsConfirmDestructive = !row.IsOpen;

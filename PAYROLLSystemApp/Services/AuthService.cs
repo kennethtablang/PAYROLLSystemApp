@@ -8,6 +8,9 @@ public interface IAuthService
 {
     Task<AuthResult> AuthenticateAsync(string identifier, string password);
 
+    /// <summary>FR-004: the signed-in holder replaces their own password.</summary>
+    Task<PasswordChangeResult> ChangePasswordAsync(User user, string currentPassword, string newPassword);
+
     Task<(PasswordChangeResult Result, string? TemporaryPassword)> ResetPasswordAsync(int userId, User performedBy);
 
     Task<PasswordChangeResult> UnlockAsync(int userId, User performedBy);
@@ -106,6 +109,12 @@ public sealed class AuthService : IAuthService
         if (_hasher.NeedsRehash(user.PasswordHash))
             user.PasswordHash = _hasher.Hash(password);
 
+        // The bootstrap password is printed in the manual, so it is treated as a
+        // temporary credential on every database, including ones seeded before
+        // the forced change existed.
+        if (password == PayrollDatabase.SeedAdminPassword)
+            user.MustChangePassword = true;
+
         await connection.UpdateAsync(user).ConfigureAwait(false);
 
         await _audit.WriteAsync(AuditActions.LoginSucceeded, nameof(User), user.Id, true,
@@ -154,6 +163,50 @@ public sealed class AuthService : IAuthService
     /// FR-005: an administrator issues a replacement password. It is returned
     /// once, to be handed to the account holder, and stored only as a hash.
     /// </summary>
+    public async Task<PasswordChangeResult> ChangePasswordAsync(
+        User user, string currentPassword, string newPassword)
+    {
+        ArgumentNullException.ThrowIfNull(user);
+
+        var connection = await _database.GetConnectionAsync().ConfigureAwait(false);
+        var stored = await connection.FindAsync<User>(user.Id).ConfigureAwait(false);
+
+        if (stored is null || !stored.IsActive)
+            return PasswordChangeResult.Fail("Account not found.");
+
+        if (!_hasher.Verify(currentPassword ?? string.Empty, stored.PasswordHash))
+        {
+            await _audit.WriteAsync(AuditActions.PasswordChanged, nameof(User), stored.Id, false,
+                "Password change refused: the current password was wrong.",
+                stored.Username, stored.Id).ConfigureAwait(false);
+
+            return PasswordChangeResult.Fail("The current password is not correct.");
+        }
+
+        var policy = PasswordPolicy.Evaluate(newPassword);
+        if (!policy.IsValid)
+            return PasswordChangeResult.Fail("The new password does not meet the policy:\n" + policy.FailureSummary);
+
+        if (newPassword == currentPassword || newPassword == PayrollDatabase.SeedAdminPassword)
+            return PasswordChangeResult.Fail("Choose a password different from the one being replaced.");
+
+        stored.PasswordHash = _hasher.Hash(newPassword);
+        stored.PasswordChangedUtc = DateTime.UtcNow;
+        stored.MustChangePassword = false;
+
+        await connection.UpdateAsync(stored).ConfigureAwait(false);
+
+        // The session holds its own copy of the account.
+        user.PasswordHash = stored.PasswordHash;
+        user.PasswordChangedUtc = stored.PasswordChangedUtc;
+        user.MustChangePassword = false;
+
+        await _audit.WriteAsync(AuditActions.PasswordChanged, nameof(User), stored.Id, true,
+            "Password changed by the account holder.", stored.Username, stored.Id).ConfigureAwait(false);
+
+        return PasswordChangeResult.Ok("Password changed.");
+    }
+
     public async Task<(PasswordChangeResult Result, string? TemporaryPassword)> ResetPasswordAsync(
         int userId, User performedBy)
     {
@@ -170,6 +223,7 @@ public sealed class AuthService : IAuthService
 
         user.PasswordHash = _hasher.Hash(temporaryPassword);
         user.PasswordChangedUtc = DateTime.UtcNow;
+        user.MustChangePassword = true;   // the administrator has seen it (FR-005)
         user.FailedLoginAttempts = 0;
         user.LockedOutUntilUtc = null;   // a reset also clears a lockout (FR-003)
 
@@ -248,6 +302,7 @@ public sealed class AuthService : IAuthService
         newUser.PasswordHash = _hasher.Hash(password);
         newUser.CreatedUtc = DateTime.UtcNow;
         newUser.PasswordChangedUtc = DateTime.UtcNow;
+        newUser.MustChangePassword = true;   // the administrator chose it
         newUser.FailedLoginAttempts = 0;
         newUser.LockedOutUntilUtc = null;
 

@@ -265,8 +265,16 @@ public sealed class PayrollRunService : IPayrollRunService
         if (period is null)
             return SaveResult<PayrollRun>.Fail("That pay period is no longer in the calendar.");
 
-        if (period.Status == PayPeriodStatus.Closed)
-            return SaveResult<PayrollRun>.Fail($"{period.Code} is closed. Reopen it to run payroll against it.");
+        // Closing a period stops it being paid a second time as a regular run.
+        // The other kinds are how a paid period is corrected or topped up, so
+        // they are allowed on it; the clash check below still stops anyone
+        // being on two runs of the same kind for the period.
+        if (period.Status == PayPeriodStatus.Closed && runType == PayrollRunType.Regular)
+        {
+            return SaveResult<PayrollRun>.Fail(
+                $"{period.Code} is closed — its regular payroll has been posted. " +
+                "To correct it, create an Adjustment run for the period instead.");
+        }
 
         var taken = await EmployeesAlreadyOnAsync(payPeriodId, runType, excludeRunId: null).ConfigureAwait(false);
         var clashing = employeeIds.Where(taken.Contains).ToList();

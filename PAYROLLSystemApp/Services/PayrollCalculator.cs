@@ -53,7 +53,9 @@ public static class PayrollCalculator
 
         var rates = ResolveRates(input, ctx);
 
-        if (rates.Hourly <= 0m)
+        // An adjustment run prices nothing from the rate, so a rate withdrawn
+        // since the period was paid must not stop a correction to it.
+        if (rates.Hourly <= 0m && run.RunType != PayrollRunType.Adjustment)
         {
             // Two different faults, and the fix is different for each: nobody
             // should go looking at the employee record when what is missing is a
@@ -79,6 +81,38 @@ public static class PayrollCalculator
             // the part of the 13th month beyond the ₱90,000 exclusion is
             // ordinary taxable income, and skipping tax here would let it out
             // untaxed.
+            AddWithholdingTax(input, ctx, payslip, lines, blockers);
+
+            Finalise(input, ctx, payslip, lines, blockers);
+
+            return new PayslipDraft
+            {
+                Payslip = payslip,
+                Lines = lines,
+                LoanCollections = loanCollections,
+                Blockers = blockers
+            };
+        }
+
+        // An adjustment run corrects a cut-off that a regular run has already
+        // paid. Everything the regular run paid — basic, premiums, allowance,
+        // contributions, loans, standing deductions — was paid there, and
+        // walking the time again here would pay all of it a second time. The
+        // run carries its one-off adjustments and nothing else. Tax is the
+        // period table on those alone, or a WTAX adjustment in its place; the
+        // year's true figure is settled on the last regular run, which reads
+        // this payslip in its year to date.
+        if (run.RunType == PayrollRunType.Adjustment)
+        {
+            AddAdjustments(input, lines, PayslipLineKind.Earning);
+            AddAdjustments(input, lines, PayslipLineKind.Deduction);
+
+            if (input.Adjustments.Count == 0)
+            {
+                blockers.Add(
+                    $"No adjustment has been entered for {employee.FullName}. Add one, or take them off this run.");
+            }
+
             AddWithholdingTax(input, ctx, payslip, lines, blockers);
 
             Finalise(input, ctx, payslip, lines, blockers);
