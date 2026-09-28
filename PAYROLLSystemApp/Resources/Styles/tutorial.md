@@ -38,6 +38,20 @@ The system has exactly two roles.
 
 After sign-in you see a fixed sidebar on the left, a top bar with the page title and a live clock, and a footer showing who is signed in. The sidebar lists only the sections your role can open.
 
+The **Dashboard** opens first. Its **Needs attention** list shows what is waiting on you, each item with a button to the screen that deals with it. Amber items stop a payroll from being paid; blue ones are reminders.
+
+| Item | Shown to |
+|---|---|
+| Runs waiting for approval, approved runs not yet posted | Administrator |
+| Detachments with guards but no daily rate in force today | Both |
+| Draft runs in progress: not calculated, flagged for review, or ready to submit | Both |
+| A cut-off that has closed with no payroll run yet (amber from three days before its pay date) | Both |
+| Runs with the Administrator | Accounting |
+| Leave requests waiting for a decision | Both |
+| No backup since the last posted run, or a scheduled backup due | Administrator |
+
+Above the list are headline figures: active employees, draft runs, runs awaiting approval, the last posted run, and the last backup (Administrator) or last sign-in (Accounting).
+
 | Group | Section | Administrator | Accounting |
 |---|---|:-:|:-:|
 | MAIN | Dashboard | ✓ | ✓ |

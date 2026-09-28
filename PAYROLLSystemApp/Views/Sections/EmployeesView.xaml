@@ -615,7 +615,7 @@
                         <VerticalStackLayout Grid.Column="0" Spacing="1">
                             <Label Style="{StaticResource Body}" Text="Record is active" />
                             <Label Style="{StaticResource Faint}"
-                                   Text="An inactive record is kept for payroll history but excluded from new runs (FR-017). To record a resignation, use Separate instead." />
+                                   Text="An inactive record is kept for payroll history but excluded from new runs. To record a resignation, use Separate instead." />
                         </VerticalStackLayout>
                         <Switch Grid.Column="1"
                                 IsToggled="{Binding FormIsActive}"
@@ -666,7 +666,7 @@
             <controls:ModalHost.Body>
                 <VerticalStackLayout Spacing="12">
                     <Label Style="{StaticResource Muted}"
-                           Text="The record is retained in full and stays on every payslip and report already produced. It is excluded from payroll runs covering periods after the separation date (FR-017)." />
+                           Text="The record is retained in full and stays on every payslip and report already produced. It is excluded from payroll runs covering periods after the separation date." />
 
                     <VerticalStackLayout Spacing="0">
                         <Label Style="{StaticResource FieldLabel}" Text="EFFECTIVE DATE" />

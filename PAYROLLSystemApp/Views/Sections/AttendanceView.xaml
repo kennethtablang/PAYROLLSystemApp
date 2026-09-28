@@ -766,7 +766,7 @@
                         </VerticalStackLayout>
 
                         <Label Style="{StaticResource Faint}"
-                               Text="FR-024: a correction records the reason, who made it and when, on the entry itself and in the audit log." />
+                               Text="A correction records the reason, who made it and when, on the entry itself and in the audit log." />
                     </VerticalStackLayout>
                 </controls:ModalHost.Body>
             </controls:ModalHost>

@@ -659,7 +659,7 @@ public static class PayrollCalculator
             lines.Add(Earning(ctx, PayComponentCodes.PaidLeave, "Paid leave",
                 rates.Daily * time.PaidLeaveDays, input,
                 quantity: time.PaidLeaveDays, rate: rates.Daily,
-                note: "Approved leave granted as paid (FR-033)."));
+                note: "Approved leave granted as paid."));
         }
     }
 

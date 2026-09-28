@@ -460,7 +460,7 @@
                     </Grid>
 
                     <Label Style="{StaticResource Faint}"
-                           Text="FR-026: arriving within the grace period is not late. Once it is exceeded, lateness is counted from the shift start, not from the end of the grace." />
+                           Text="Arriving within the grace period is not late. Once it is exceeded, lateness is counted from the shift start, not from the end of the grace." />
 
                     <VerticalStackLayout Spacing="2">
                         <Label Style="{StaticResource FieldLabel}" Text="WORKING DAYS" />

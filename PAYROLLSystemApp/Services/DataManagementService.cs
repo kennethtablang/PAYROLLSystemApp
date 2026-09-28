@@ -72,7 +72,7 @@ public sealed record PayrollYear(
         IsPurged ? "This year has already been removed."
         : !IsArchived ? "Archive the year first — nothing is removed that has not been written out."
         : HasOpenRuns ? "This year still has runs that are not posted or cancelled."
-        : IsWithinRetention ? "This year is inside the retention window and stays online (NFR-007)."
+        : IsWithinRetention ? "This year is inside the retention window and stays online."
         : string.Empty;
 }
 

@@ -228,7 +228,7 @@
                         <VerticalStackLayout Grid.Column="0" Spacing="1">
                             <Label Style="{StaticResource Body}" Text="Account is active" />
                             <Label Style="{StaticResource Faint}"
-                                   Text="Deactivating blocks sign-in but keeps the record and its history (FR-017)." />
+                                   Text="Deactivating blocks sign-in but keeps the record and its history." />
                         </VerticalStackLayout>
                         <Switch Grid.Column="1"
                                 IsToggled="{Binding EditIsActive}"

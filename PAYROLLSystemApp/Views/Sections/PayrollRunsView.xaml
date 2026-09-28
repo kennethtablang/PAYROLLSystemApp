@@ -390,7 +390,7 @@
                         <Label Grid.Row="1"
                                Style="{StaticResource Faint}"
                                Padding="16,0,16,10"
-                               Text="FR-055. The instalment is taken each period until the balance reaches zero, and the last one is whatever is left rather than the full amortisation. Balances move only when a run is posted — recalculating a draft never takes an instalment." />
+                               Text="The instalment is taken each period until the balance reaches zero, and the last one is whatever is left rather than the full amortisation. Balances move only when a run is posted — recalculating a draft never takes an instalment." />
 
                         <Grid Grid.Row="2"
                               ColumnDefinitions="*,140,Auto"
@@ -701,7 +701,7 @@
         <!-- ================ ADJUSTMENT ================ -->
         <controls:ModalHost IsOpen="{Binding IsAdjustmentFormOpen}"
                             Title="{Binding AdjustmentFormTitle}"
-                            Subtitle="FR-057 — a one-off earning or deduction on this run"
+                            Subtitle="A one-off earning or deduction on this run"
                             ModalWidth="480"
                             PrimaryText="Save adjustment"
                             PrimaryCommand="{Binding SubmitAdjustmentCommand}"

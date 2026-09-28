@@ -36,77 +36,51 @@
             </FlexLayout>
 
             <!-- Two-column body -->
-            <Grid ColumnDefinitions="*,*" ColumnSpacing="16" RowSpacing="16">
+            <Grid ColumnDefinitions="2*,*" ColumnSpacing="16" RowSpacing="16">
 
-                <!-- Payroll cycle -->
+                <!-- Needs attention -->
                 <Border Grid.Column="0" Style="{StaticResource Card}" VerticalOptions="Start">
                     <VerticalStackLayout Spacing="10">
                         <VerticalStackLayout Spacing="1">
-                            <Label Style="{StaticResource SectionHeading}" Text="Payroll cycle" />
-                            <Label Style="{StaticResource Faint}" Text="Build progress across the requirement sections" />
+                            <Label Style="{StaticResource SectionHeading}" Text="Needs attention" />
+                            <Label Style="{StaticResource Faint}" Text="What is waiting on you in this payroll cycle" />
                         </VerticalStackLayout>
 
                         <BoxView Style="{StaticResource Divider}" />
 
-                        <VerticalStackLayout Spacing="0" BindableLayout.ItemsSource="{Binding Cycle}">
+                        <Label Style="{StaticResource Muted}"
+                               IsVisible="{Binding IsAllClear}"
+                               Text="Nothing needs attention right now." />
+
+                        <VerticalStackLayout Spacing="0" BindableLayout.ItemsSource="{Binding Attention}">
                             <BindableLayout.ItemTemplate>
-                                <DataTemplate x:DataType="vm:CycleStage">
-                                    <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="10" Padding="0,7">
+                                <DataTemplate x:DataType="vm:AttentionItem">
+                                    <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="10" Padding="0,8">
                                         <Ellipse Grid.Column="0"
-                                                 WidthRequest="7"
-                                                 HeightRequest="7"
-                                                 VerticalOptions="Center">
+                                                 WidthRequest="8"
+                                                 HeightRequest="8"
+                                                 VerticalOptions="Center"
+                                                 Fill="{AppThemeBinding Light=#1B4F87, Dark=#7FB2E5}">
                                             <Ellipse.Triggers>
-                                                <DataTrigger TargetType="Ellipse" Binding="{Binding StatusText}" Value="Ready">
-                                                    <Setter Property="Fill" Value="{AppThemeBinding Light=#15803D, Dark=#4ADE80}" />
-                                                </DataTrigger>
-                                                <DataTrigger TargetType="Ellipse" Binding="{Binding StatusText}" Value="Pending">
+                                                <DataTrigger TargetType="Ellipse" Binding="{Binding IsUrgent}" Value="True">
                                                     <Setter Property="Fill" Value="{AppThemeBinding Light=#B45309, Dark=#FBBF24}" />
-                                                </DataTrigger>
-                                                <DataTrigger TargetType="Ellipse" Binding="{Binding StatusText}" Value="No access">
-                                                    <Setter Property="Fill" Value="{AppThemeBinding Light=#9AA0B2, Dark=#6E7285}" />
                                                 </DataTrigger>
                                             </Ellipse.Triggers>
                                         </Ellipse>
 
-                                        <VerticalStackLayout Grid.Column="1" Spacing="0">
-                                            <Label Text="{Binding Name}"
+                                        <VerticalStackLayout Grid.Column="1" Spacing="1">
+                                            <Label Text="{Binding Title}"
                                                    FontSize="12.5"
+                                                   FontAttributes="Bold"
                                                    TextColor="{AppThemeBinding Light={StaticResource TextLight}, Dark={StaticResource TextDark}}" />
                                             <Label Style="{StaticResource Faint}" Text="{Binding Detail}" />
                                         </VerticalStackLayout>
 
-                                        <Border Grid.Column="2"
-                                                Style="{StaticResource Pill}"
-                                                VerticalOptions="Center">
-                                            <Border.Triggers>
-                                                <DataTrigger TargetType="Border" Binding="{Binding StatusText}" Value="Ready">
-                                                    <Setter Property="BackgroundColor" Value="{AppThemeBinding Light=#E8F6ED, Dark=#14321F}" />
-                                                </DataTrigger>
-                                                <DataTrigger TargetType="Border" Binding="{Binding StatusText}" Value="Pending">
-                                                    <Setter Property="BackgroundColor" Value="{AppThemeBinding Light=#FDF3E4, Dark=#3A2A12}" />
-                                                </DataTrigger>
-                                                <DataTrigger TargetType="Border" Binding="{Binding StatusText}" Value="No access">
-                                                    <Setter Property="BackgroundColor" Value="{AppThemeBinding Light=#EFEFF3, Dark=#26262E}" />
-                                                </DataTrigger>
-                                            </Border.Triggers>
-
-                                            <Label Text="{Binding StatusText}"
-                                                   FontSize="9.5"
-                                                   FontAttributes="Bold">
-                                                <Label.Triggers>
-                                                    <DataTrigger TargetType="Label" Binding="{Binding StatusText}" Value="Ready">
-                                                        <Setter Property="TextColor" Value="{AppThemeBinding Light=#15803D, Dark=#4ADE80}" />
-                                                    </DataTrigger>
-                                                    <DataTrigger TargetType="Label" Binding="{Binding StatusText}" Value="Pending">
-                                                        <Setter Property="TextColor" Value="{AppThemeBinding Light=#B45309, Dark=#FBBF24}" />
-                                                    </DataTrigger>
-                                                    <DataTrigger TargetType="Label" Binding="{Binding StatusText}" Value="No access">
-                                                        <Setter Property="TextColor" Value="{AppThemeBinding Light=#6B7085, Dark=#9599AC}" />
-                                                    </DataTrigger>
-                                                </Label.Triggers>
-                                            </Label>
-                                        </Border>
+                                        <Button Grid.Column="2"
+                                                Style="{StaticResource SecondaryButton}"
+                                                VerticalOptions="Center"
+                                                Text="{Binding ActionText}"
+                                                Command="{Binding GoCommand}" />
                                     </Grid>
                                 </DataTemplate>
                             </BindableLayout.ItemTemplate>
@@ -114,60 +88,30 @@
                     </VerticalStackLayout>
                 </Border>
 
-                <!-- Permissions + shortcuts -->
-                <VerticalStackLayout Grid.Column="1" Spacing="16">
-
-                    <Border Style="{StaticResource Card}">
-                        <VerticalStackLayout Spacing="10">
-                            <VerticalStackLayout Spacing="1">
-                                <Label Style="{StaticResource SectionHeading}" Text="Quick actions" />
-                                <Label Style="{StaticResource Faint}" Text="What you can do right now" />
-                            </VerticalStackLayout>
-
-                            <BoxView Style="{StaticResource Divider}" />
-
-                            <FlexLayout Wrap="Wrap" JustifyContent="Start">
-                                <Button Style="{StaticResource SecondaryButton}"
-                                        Text="Manage accounts"
-                                        Margin="0,0,8,8"
-                                        Command="{Binding OpenUsersCommand}"
-                                        IsVisible="{Binding ShowActivity}" />
-                                <Button Style="{StaticResource SecondaryButton}"
-                                        Text="View audit log"
-                                        Margin="0,0,8,8"
-                                        Command="{Binding OpenAuditCommand}"
-                                        IsVisible="{Binding ShowActivity}" />
-                            </FlexLayout>
+                <!-- Shortcuts -->
+                <Border Grid.Column="1" Style="{StaticResource Card}" VerticalOptions="Start">
+                    <VerticalStackLayout Spacing="10">
+                        <VerticalStackLayout Spacing="1">
+                            <Label Style="{StaticResource SectionHeading}" Text="Quick actions" />
+                            <Label Style="{StaticResource Faint}" Text="The screens your role uses most" />
                         </VerticalStackLayout>
-                    </Border>
 
-                    <Border Style="{StaticResource Card}">
-                        <VerticalStackLayout Spacing="10">
-                            <VerticalStackLayout Spacing="1">
-                                <Label Style="{StaticResource SectionHeading}" Text="Your permissions" />
-                                <Label Style="{StaticResource Faint}" Text="Granted by your assigned role" />
-                            </VerticalStackLayout>
+                        <BoxView Style="{StaticResource Divider}" />
 
-                            <BoxView Style="{StaticResource Divider}" />
-
-                            <FlexLayout Wrap="Wrap"
-                                        JustifyContent="Start"
-                                        BindableLayout.ItemsSource="{Binding Permissions}">
-                                <BindableLayout.ItemTemplate>
-                                    <DataTemplate x:DataType="x:String">
-                                        <Border Style="{StaticResource Pill}"
-                                                Margin="0,0,6,6"
-                                                BackgroundColor="{AppThemeBinding Light={StaticResource BrandSoftLight}, Dark={StaticResource BrandSoftDark}}">
-                                            <Label Text="{Binding .}"
-                                                   FontSize="10.5"
-                                                   TextColor="{StaticResource Brand}" />
-                                        </Border>
-                                    </DataTemplate>
-                                </BindableLayout.ItemTemplate>
-                            </FlexLayout>
-                        </VerticalStackLayout>
-                    </Border>
-                </VerticalStackLayout>
+                        <FlexLayout Wrap="Wrap"
+                                    JustifyContent="Start"
+                                    BindableLayout.ItemsSource="{Binding QuickActions}">
+                            <BindableLayout.ItemTemplate>
+                                <DataTemplate x:DataType="vm:QuickAction">
+                                    <Button Style="{StaticResource SecondaryButton}"
+                                            Margin="0,0,8,8"
+                                            Text="{Binding Text}"
+                                            Command="{Binding GoCommand}" />
+                                </DataTemplate>
+                            </BindableLayout.ItemTemplate>
+                        </FlexLayout>
+                    </VerticalStackLayout>
+                </Border>
             </Grid>
 
             <!-- Recent activity (administrators only) -->

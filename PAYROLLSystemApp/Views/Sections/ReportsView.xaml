@@ -51,10 +51,6 @@
                                                Text="{Binding Description}" />
                                     </VerticalStackLayout>
 
-                                    <Label Grid.Column="1"
-                                           Style="{StaticResource Faint}"
-                                           VerticalOptions="Start"
-                                           Text="{Binding RequirementRef}" />
 
                                     <BoxView Grid.ColumnSpan="2" VerticalOptions="End" Style="{StaticResource Divider}" />
                                 </Grid>

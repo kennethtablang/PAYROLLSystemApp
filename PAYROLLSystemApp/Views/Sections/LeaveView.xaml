@@ -598,7 +598,7 @@
                         </VerticalStackLayout>
 
                         <Label Style="{StaticResource Faint}"
-                               Text="Approving spends the credits and marks the days as leave on attendance, so payroll treats them correctly (FR-033)." />
+                               Text="Approving spends the credits and marks the days as leave on attendance, so payroll treats them correctly." />
                     </VerticalStackLayout>
                 </controls:ModalHost.Body>
             </controls:ModalHost>
@@ -705,7 +705,7 @@
                             <VerticalStackLayout Grid.Column="0" Spacing="1">
                                 <Label Style="{StaticResource Body}" Text="Paid" />
                                 <Label Style="{StaticResource Faint}"
-                                       Text="FR-033: paid leave is compensated as though the day were worked. An unpaid type draws on no credits, so its annual credits must be zero." />
+                                       Text="Paid leave is compensated as though the day were worked. An unpaid type draws on no credits, so its annual credits must be zero." />
                             </VerticalStackLayout>
                             <Switch Grid.Column="1"
                                     IsToggled="{Binding TypeIsPaid}"

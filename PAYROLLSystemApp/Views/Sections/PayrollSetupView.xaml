@@ -893,7 +893,7 @@
                                     <VerticalStackLayout Grid.Column="0" Spacing="1">
                                         <Label Style="{StaticResource Body}" Text="Flag a negative net pay for review" />
                                         <Label Style="{StaticResource Faint}"
-                                               Text="FR-056. A run that would pay less than nothing is stopped for a human rather than truncated to zero, which would hide an over-deduction." />
+                                               Text="A run that would pay less than nothing is stopped for a human rather than truncated to zero, which would hide an over-deduction." />
                                     </VerticalStackLayout>
                                     <Switch Grid.Column="1"
                                             IsToggled="{Binding SettingsFlagNegativeNet}"

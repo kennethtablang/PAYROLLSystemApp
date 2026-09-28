@@ -203,7 +203,7 @@ public sealed class EmployeeImportService : IEmployeeImportService
             }
 
             var result = await _employees
-                .SaveAsync(employee, performedBy, "Bulk import (FR-019)")
+                .SaveAsync(employee, performedBy, "Bulk import")
                 .ConfigureAwait(false);
 
             if (!result.Succeeded)
