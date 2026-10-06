@@ -1,6 +1,6 @@
 <#
 .SYNOPSIS
-    Builds the Windows installer: Export\PayrollSystemSetup-<version>.exe
+    Builds the Windows installer: PAYROLLSystemApp\Installer\PayrollSystemSetup-<version>.exe
 
 .DESCRIPTION
     1. Optionally sets a new version number (installer script and project file).
@@ -129,7 +129,7 @@ Step 'Compiling the installer'
 & $iscc /Q $issFile
 if ($LASTEXITCODE -ne 0) { Fail 'Inno Setup could not compile the installer. Read the errors above.' }
 
-$setup = Join-Path $root "Export\PayrollSystemSetup-$currentVersion.exe"
+$setup = Join-Path $root "PAYROLLSystemApp\Installer\PayrollSystemSetup-$currentVersion.exe"
 if (-not (Test-Path $setup)) { Fail "Expected $setup but it is not there." }
 
 $sizeMb = [math]::Round((Get-Item $setup).Length / 1MB, 1)
