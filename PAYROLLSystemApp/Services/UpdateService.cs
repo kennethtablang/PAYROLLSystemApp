@@ -121,7 +121,7 @@ public sealed class UpdateException(string message) : Exception(message);
 /// SHA-256 check is what stands in for the browser's caution: a file that does
 /// not match what was published is deleted, never run.</para>
 /// </summary>
-public sealed class UpdateService : IUpdateService
+public sealed partial class UpdateService : IUpdateService
 {
     /// <summary>The public repository releases are published to.</summary>
     public const string Repository = "kennethtablang/PAYROLLSystemApp";
@@ -256,8 +256,7 @@ public sealed class UpdateService : IUpdateService
             throw new UpdateException(
                 "This release is not signed, so it cannot be verified and was not installed. Ask the developer to republish it.");
 
-        var expected = await ReadSignedChecksumAsync(update.ChecksumUrl, update.SignatureUrl, cancellation)
-            .ConfigureAwait(false);
+        var expected = await ReadSignedChecksumAsync(update, cancellation).ConfigureAwait(false);
 
         var folder = Path.Combine(Path.GetTempPath(), "PayrollMS-Update");
         Directory.CreateDirectory(folder);
@@ -321,15 +320,23 @@ public sealed class UpdateService : IUpdateService
         }
     }
 
-    private static async Task<string> ReadSignedChecksumAsync(Uri checksumUrl, Uri signatureUrl, CancellationToken cancellation)
+    /// <summary>
+    /// The installer hash from the release's signed checksum file.
+    ///
+    /// <para>The signed file also names the installer, and that name carries the
+    /// version it was built as. It must match the release's tag and be newer than
+    /// this copy. Otherwise an old installer that was genuinely signed could be
+    /// re-uploaded under a higher tag and "update" the company back to it.</para>
+    /// </summary>
+    private static async Task<string> ReadSignedChecksumAsync(UpdateInfo update, CancellationToken cancellation)
     {
         byte[] checksum;
         string signatureText;
 
         try
         {
-            checksum = await Http.GetByteArrayAsync(checksumUrl, cancellation).ConfigureAwait(false);
-            signatureText = await Http.GetStringAsync(signatureUrl, cancellation).ConfigureAwait(false);
+            checksum = await Http.GetByteArrayAsync(update.ChecksumUrl!, cancellation).ConfigureAwait(false);
+            signatureText = await Http.GetStringAsync(update.SignatureUrl!, cancellation).ConfigureAwait(false);
         }
         catch (HttpRequestException)
         {
@@ -340,16 +347,36 @@ public sealed class UpdateService : IUpdateService
             throw new UpdateException(
                 "This release's signature does not match the developer's key. It was not installed. Tell the developer straight away.");
 
-        var text = System.Text.Encoding.UTF8.GetString(checksum);
+        return CheckSignedContents(System.Text.Encoding.UTF8.GetString(checksum), update);
+    }
 
-        // "HASH  file.exe" (sha256sum style) or the bare hash.
-        var hash = text.Split([' ', '\t', '\r', '\n', '*'], StringSplitOptions.RemoveEmptyEntries).FirstOrDefault();
+    /// <summary>"HASH  PayrollSystemSetup-x.y.exe", as build-installer.ps1 writes it.</summary>
+    private static string CheckSignedContents(string text, UpdateInfo update)
+    {
+        var parts = text.Split([' ', '\t', '\r', '\n', '*'], StringSplitOptions.RemoveEmptyEntries);
 
-        if (hash is null || hash.Length != 64 || !hash.All(Uri.IsHexDigit))
+        if (parts.Length != 2 || parts[0].Length != 64 || !parts[0].All(Uri.IsHexDigit))
             throw new UpdateException("The release's checksum file could not be read.");
 
-        return hash;
+        var signedName = parts[1];
+        var match = SignedInstallerName().Match(signedName);
+        var signedVersion = match.Success ? AppVersion.Parse(match.Groups[1].Value) : null;
+
+        if (signedVersion is null ||
+            signedVersion != update.Version ||
+            signedVersion <= AppVersion.Current ||
+            !string.Equals(signedName, update.InstallerName, StringComparison.OrdinalIgnoreCase))
+        {
+            throw new UpdateException(
+                $"The signed installer ({signedName}) does not match release {update.VersionDisplay}. " +
+                "It was not installed. Tell the developer straight away.");
+        }
+
+        return parts[0];
     }
+
+    [System.Text.RegularExpressions.GeneratedRegex(@"^PayrollSystemSetup-(\d+(?:\.\d+){1,3})\.exe$", System.Text.RegularExpressions.RegexOptions.IgnoreCase)]
+    private static partial System.Text.RegularExpressions.Regex SignedInstallerName();
 
     private static bool IsSignedByDeveloper(byte[] data, string signatureBase64)
     {
