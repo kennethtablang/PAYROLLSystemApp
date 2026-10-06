@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8" ?>
 <ContentView xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:markup="clr-namespace:PAYROLLSystemApp.Views.Markup"
              xmlns:vm="clr-namespace:PAYROLLSystemApp.ViewModels"
              x:Class="PAYROLLSystemApp.Views.Sections.DataManagementView"
              x:DataType="vm:DataManagementViewModel">
@@ -90,7 +91,7 @@
 
             <!-- Inline result banner (NFR-023) -->
             <VerticalStackLayout Grid.Row="1" Spacing="2">
-                <Label FontSize="12"
+                <Label FontSize="{markup:Font 12}"
                        TextColor="{StaticResource Success}"
                        LineBreakMode="WordWrap"
                        Text="{Binding StatusMessage}"
@@ -138,11 +139,11 @@
                                     <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8" Padding="16,9">
                                         <VerticalStackLayout Grid.Column="0" Spacing="1">
                                             <Label Text="{Binding TakenDisplay}"
-                                                   FontSize="12.5"
+                                                   FontSize="{markup:Font 12.5}"
                                                    FontAttributes="Bold"
                                                    LineBreakMode="TailTruncation"
                                                    TextColor="{AppThemeBinding Light={StaticResource TextLight}, Dark={StaticResource TextDark}}" />
-                                            <Label FontSize="11"
+                                            <Label FontSize="{markup:Font 11}"
                                                    LineBreakMode="TailTruncation"
                                                    TextColor="{Binding StatusColor}"
                                                    Text="{Binding Detail}" />
@@ -189,13 +190,13 @@
                                     <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8" Padding="16,9">
                                         <VerticalStackLayout Grid.Column="0" Spacing="1">
                                             <Label Text="{Binding Title}"
-                                                   FontSize="12.5"
+                                                   FontSize="{markup:Font 12.5}"
                                                    FontAttributes="Bold"
                                                    TextColor="{AppThemeBinding Light={StaticResource TextLight}, Dark={StaticResource TextDark}}" />
                                             <Label Style="{StaticResource Faint}"
                                                    LineBreakMode="TailTruncation"
                                                    Text="{Binding Summary}" />
-                                            <Label FontSize="11"
+                                            <Label FontSize="{markup:Font 11}"
                                                    TextColor="{Binding StatusColor}"
                                                    Text="{Binding Status}" />
 

@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8" ?>
 <ContentView xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:markup="clr-namespace:PAYROLLSystemApp.Views.Markup"
              xmlns:vm="clr-namespace:PAYROLLSystemApp.ViewModels"
              xmlns:controls="clr-namespace:PAYROLLSystemApp.Views.Controls"
              x:Class="PAYROLLSystemApp.Views.Sections.AttendanceView"
@@ -72,7 +73,7 @@
 
                 <!-- Inline result banner (NFR-023) -->
                 <Label Grid.Row="1"
-                       FontSize="12"
+                       FontSize="{markup:Font 12}"
                        TextColor="{StaticResource Success}"
                        Text="{Binding StatusMessage}"
                        IsVisible="{Binding HasStatus}" />
@@ -169,7 +170,7 @@
 
                                             <VerticalStackLayout Grid.Column="0" Spacing="0" VerticalOptions="Center">
                                                 <Label Text="{Binding EmployeeName}"
-                                                       FontSize="12.5"
+                                                       FontSize="{markup:Font 12.5}"
                                                        FontAttributes="Bold"
                                                        LineBreakMode="TailTruncation"
                                                        TextColor="{AppThemeBinding Light={StaticResource TextLight}, Dark={StaticResource TextDark}}" />
@@ -198,7 +199,7 @@
                                                     WidthRequest="100"
                                                     VerticalOptions="Center">
                                                 <Label Text="{Binding StatusDisplay}"
-                                                       FontSize="10.5"
+                                                       FontSize="{markup:Font 10.5}"
                                                        FontAttributes="Bold"
                                                        LineBreakMode="TailTruncation"
                                                        TextColor="{Binding StatusColor}" />
@@ -308,7 +309,7 @@
                             <Border Grid.Column="0" Style="{StaticResource StatCard}">
                                 <VerticalStackLayout Spacing="1">
                                     <Label Style="{StaticResource TableHeader}" Text="REGULAR HOURS" />
-                                    <Label FontSize="17" FontAttributes="Bold"
+                                    <Label FontSize="{markup:Font 17}" FontAttributes="Bold"
                                            TextColor="{AppThemeBinding Light={StaticResource TextLight}, Dark={StaticResource TextDark}}"
                                            Text="{Binding Summary.RegularHoursDisplay}" />
                                 </VerticalStackLayout>
@@ -317,7 +318,7 @@
                             <Border Grid.Column="1" Style="{StaticResource StatCard}">
                                 <VerticalStackLayout Spacing="1">
                                     <Label Style="{StaticResource TableHeader}" Text="OVERTIME" />
-                                    <Label FontSize="17" FontAttributes="Bold"
+                                    <Label FontSize="{markup:Font 17}" FontAttributes="Bold"
                                            TextColor="{AppThemeBinding Light={StaticResource TextLight}, Dark={StaticResource TextDark}}"
                                            Text="{Binding Summary.OvertimeDisplay}" />
                                     <Label Style="{StaticResource Faint}" Text="approved / rendered" />
@@ -327,7 +328,7 @@
                             <Border Grid.Column="2" Style="{StaticResource StatCard}">
                                 <VerticalStackLayout Spacing="1">
                                     <Label Style="{StaticResource TableHeader}" Text="NIGHT DIFFERENTIAL" />
-                                    <Label FontSize="17" FontAttributes="Bold"
+                                    <Label FontSize="{markup:Font 17}" FontAttributes="Bold"
                                            TextColor="{AppThemeBinding Light={StaticResource TextLight}, Dark={StaticResource TextDark}}"
                                            Text="{Binding Summary.NightDifferentialDisplay}" />
                                 </VerticalStackLayout>
@@ -336,7 +337,7 @@
                             <Border Grid.Column="3" Style="{StaticResource StatCard}">
                                 <VerticalStackLayout Spacing="1">
                                     <Label Style="{StaticResource TableHeader}" Text="LATE" />
-                                    <Label FontSize="17" FontAttributes="Bold"
+                                    <Label FontSize="{markup:Font 17}" FontAttributes="Bold"
                                            TextColor="{StaticResource Warning}"
                                            Text="{Binding Summary.LateDisplay}" />
                                 </VerticalStackLayout>
@@ -345,7 +346,7 @@
                             <Border Grid.Column="4" Style="{StaticResource StatCard}">
                                 <VerticalStackLayout Spacing="1">
                                     <Label Style="{StaticResource TableHeader}" Text="UNDERTIME" />
-                                    <Label FontSize="17" FontAttributes="Bold"
+                                    <Label FontSize="{markup:Font 17}" FontAttributes="Bold"
                                            TextColor="{StaticResource Warning}"
                                            Text="{Binding Summary.UndertimeDisplay}" />
                                 </VerticalStackLayout>
@@ -354,7 +355,7 @@
                             <Border Grid.Column="5" Style="{StaticResource StatCard}">
                                 <VerticalStackLayout Spacing="1">
                                     <Label Style="{StaticResource TableHeader}" Text="ATTENDANCE" />
-                                    <Label FontSize="12.5" FontAttributes="Bold"
+                                    <Label FontSize="{markup:Font 12.5}" FontAttributes="Bold"
                                            TextColor="{AppThemeBinding Light={StaticResource TextLight}, Dark={StaticResource TextDark}}"
                                            Text="{Binding Summary.AttendanceDisplay}" />
                                     <Label Style="{StaticResource Faint}" Text="{Binding TimesheetSummary}" />
@@ -391,7 +392,7 @@
 
                                             <VerticalStackLayout Grid.Column="0" Spacing="0" VerticalOptions="Center">
                                                 <Label Text="{Binding DateDisplay}"
-                                                       FontSize="12.5"
+                                                       FontSize="{markup:Font 12.5}"
                                                        FontAttributes="Bold"
                                                        LineBreakMode="TailTruncation"
                                                        TextColor="{AppThemeBinding Light={StaticResource TextLight}, Dark={StaticResource TextDark}}" />
@@ -420,7 +421,7 @@
                                                     WidthRequest="100"
                                                     VerticalOptions="Center">
                                                 <Label Text="{Binding StatusDisplay}"
-                                                       FontSize="10.5"
+                                                       FontSize="{markup:Font 10.5}"
                                                        FontAttributes="Bold"
                                                        LineBreakMode="TailTruncation"
                                                        TextColor="{Binding StatusColor}" />
@@ -556,7 +557,7 @@
 
                                             <VerticalStackLayout Grid.Column="1" Spacing="0" VerticalOptions="Center">
                                                 <Label Text="{Binding Name}"
-                                                       FontSize="12.5"
+                                                       FontSize="{markup:Font 12.5}"
                                                        FontAttributes="Bold"
                                                        LineBreakMode="TailTruncation"
                                                        TextColor="{AppThemeBinding Light={StaticResource TextLight}, Dark={StaticResource TextDark}}" />
@@ -566,7 +567,7 @@
                                             </VerticalStackLayout>
 
                                             <Label Grid.Column="2"
-                                                   FontSize="11.5"
+                                                   FontSize="{markup:Font 11.5}"
                                                    FontAttributes="Bold"
                                                    WidthRequest="150"
                                                    VerticalOptions="Center"
@@ -749,7 +750,7 @@
                                 Padding="10,7"
                                 HorizontalOptions="Fill"
                                 BackgroundColor="{AppThemeBinding Light={StaticResource BrandSoftLight}, Dark={StaticResource BrandSoftDark}}">
-                            <Label FontSize="11.5"
+                            <Label FontSize="{markup:Font 11.5}"
                                    TextColor="{StaticResource Brand}"
                                    Text="{Binding EntryPreview}" />
                         </Border>

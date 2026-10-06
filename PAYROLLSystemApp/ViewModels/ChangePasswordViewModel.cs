@@ -5,11 +5,7 @@ using PAYROLLSystemApp.Services;
 
 namespace PAYROLLSystemApp.ViewModels;
 
-/// <summary>
-/// FR-004: the holder replaces their own password. Opened from the top bar, or
-/// forced straight after sign-in when someone else chose the current password —
-/// the seeded administrator, a new account, an administrator reset (FR-005).
-/// </summary>
+/// <summary>FR-004: the holder replaces their own password. Opened from the top bar.</summary>
 public sealed partial class ChangePasswordViewModel : BaseViewModel
 {
     private readonly IAuthService _auth;
@@ -27,20 +23,8 @@ public sealed partial class ChangePasswordViewModel : BaseViewModel
         UpdateChecklist();
     }
 
-    /// <summary>
-    /// A forced change has no way back to the workspace: its only exit other
-    /// than saving is signing out.
-    /// </summary>
-    public bool IsForced => Session.CurrentUser?.MustChangePassword == true;
-
-    public string Heading => IsForced ? "Set a new password" : "Change password";
-
-    public string Explanation => IsForced
-        ? "Your current password was issued to you by someone else. Choose your own before continuing — " +
-          "nobody else should know it."
-        : "Choose a new password for " + (Session.CurrentUser?.Username ?? "your account") + ".";
-
-    public string CancelText => IsForced ? "Sign out" : "Cancel";
+    public string Explanation =>
+        "Choose a new password for " + (Session.CurrentUser?.Username ?? "your account") + ".";
 
     [ObservableProperty]
     public partial string CurrentPassword { get; set; }
@@ -93,13 +77,9 @@ public sealed partial class ChangePasswordViewModel : BaseViewModel
     });
 
     [RelayCommand]
-    private async Task CancelAsync()
+    private void Cancel()
     {
         CurrentPassword = NewPassword = ConfirmPassword = string.Empty;
-
-        if (IsForced)
-            await Session.SignOutAsync();
-        else
-            Session.ResumeWorkspace();
+        Session.ResumeWorkspace();
     }
 }

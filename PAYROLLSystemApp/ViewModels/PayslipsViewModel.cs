@@ -60,13 +60,15 @@ public sealed partial class PayslipsViewModel : BaseViewModel
 {
     private readonly IPayslipService _payslips;
     private readonly IEmployeeService _employees;
+    private readonly IUserPreferences _preferences;
 
     public PayslipsViewModel(
-        IPayslipService payslips, IEmployeeService employees, ISessionService session)
+        IPayslipService payslips, IEmployeeService employees, IUserPreferences preferences, ISessionService session)
         : base(session)
     {
         _payslips = payslips;
         _employees = employees;
+        _preferences = preferences;
 
         Title = "Payslips";
 
@@ -338,6 +340,9 @@ public sealed partial class PayslipsViewModel : BaseViewModel
 
         ExportedPath = result.FilePath;
         ShowStatus(result.Message);
+
+        if (_preferences.OpenAfterExport)
+            await OpenSilentlyAsync(result.FilePath, "Payslip");
     });
 
     /// <summary>
@@ -361,6 +366,9 @@ public sealed partial class PayslipsViewModel : BaseViewModel
 
         ExportedPath = result.FilePath;
         ShowStatus(result.Message);
+
+        if (_preferences.OpenAfterExport)
+            await OpenSilentlyAsync(result.FilePath, "Payslip");
     });
 
     /// <summary>
@@ -388,4 +396,20 @@ public sealed partial class PayslipsViewModel : BaseViewModel
             ShowError($"No application is available to open the file. It is saved at {ExportedPath}");
         }
     });
+
+    /// <summary>
+    /// Settings → "Open files after export". Failing to open is not an error:
+    /// the status line already says where the file was saved.
+    /// </summary>
+    private static async Task OpenSilentlyAsync(string path, string title)
+    {
+        try
+        {
+            await Launcher.Default.OpenAsync(new OpenFileRequest(title, new ReadOnlyFile(path)));
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"[OpenAfterExport] {ex}");
+        }
+    }
 }

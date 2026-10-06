@@ -361,3 +361,5 @@ MigrationBackup/
 
 # Fody - auto-generated XML schema
 FodyWeavers.xsd
+# Published app and installer (rebuild with installer/PayrollSystem.iss)
+Export/

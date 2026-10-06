@@ -16,9 +16,12 @@ namespace PAYROLLSystemApp
 
         private Window? _window;
 
-        public App(IServiceProvider services, ISessionService session)
+        public App(IServiceProvider services, ISessionService session, IUserPreferences preferences)
         {
             InitializeComponent();
+
+            // Before the first window, so it never flashes in the other theme.
+            preferences.ApplyTheme(this);
 
             _services = services;
             _session = session;
@@ -42,15 +45,10 @@ namespace PAYROLLSystemApp
             return _window;
         }
 
-        /// <summary>
-        /// A password someone else chose (seeded, new account, reset) must be
-        /// replaced before any screen opens (FR-004, FR-005).
-        /// </summary>
+        /// <summary>Sign-in always opens the main layout.</summary>
         private void OnSessionStarted(object? sender, EventArgs e) =>
             MainThread.BeginInvokeOnMainThread(() =>
-                SetRoot(_session.CurrentUser?.MustChangePassword == true
-                    ? _services.GetRequiredService<ChangePasswordPage>()
-                    : _services.GetRequiredService<MainPage>()));
+                SetRoot(_services.GetRequiredService<MainPage>()));
 
         private void OnPasswordChangeRequested(object? sender, EventArgs e) =>
             MainThread.BeginInvokeOnMainThread(() =>

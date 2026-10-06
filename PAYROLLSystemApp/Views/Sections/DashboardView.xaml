@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8" ?>
 <ContentView xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:markup="clr-namespace:PAYROLLSystemApp.Views.Markup"
              xmlns:vm="clr-namespace:PAYROLLSystemApp.ViewModels"
              xmlns:models="clr-namespace:PAYROLLSystemApp.Models"
              x:Class="PAYROLLSystemApp.Views.Sections.DashboardView"
@@ -24,7 +25,7 @@
                             <VerticalStackLayout Spacing="3">
                                 <Label Style="{StaticResource Faint}" Text="{Binding Caption}" />
                                 <Label Text="{Binding Value}"
-                                       FontSize="17"
+                                       FontSize="{markup:Font 17}"
                                        FontAttributes="Bold"
                                        LineBreakMode="TailTruncation"
                                        TextColor="{AppThemeBinding Light={StaticResource TextLight}, Dark={StaticResource TextDark}}" />
@@ -70,7 +71,7 @@
 
                                         <VerticalStackLayout Grid.Column="1" Spacing="1">
                                             <Label Text="{Binding Title}"
-                                                   FontSize="12.5"
+                                                   FontSize="{markup:Font 12.5}"
                                                    FontAttributes="Bold"
                                                    TextColor="{AppThemeBinding Light={StaticResource TextLight}, Dark={StaticResource TextDark}}" />
                                             <Label Style="{StaticResource Faint}" Text="{Binding Detail}" />
@@ -132,7 +133,7 @@
                                            Style="{StaticResource Faint}"
                                            Text="{Binding TimestampLocal, StringFormat='{0:dd MMM h:mm:ss tt}'}" />
                                     <Label Grid.Column="1"
-                                           FontSize="11"
+                                           FontSize="{markup:Font 11}"
                                            FontAttributes="Bold"
                                            LineBreakMode="TailTruncation"
                                            Text="{Binding Action}"

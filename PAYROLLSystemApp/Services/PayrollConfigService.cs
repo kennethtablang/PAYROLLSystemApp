@@ -58,6 +58,9 @@ public interface IPayrollConfigService
     Task<PayrollSettings> GetSettingsAsync();
 
     Task<SaveResult<PayrollSettings>> SaveSettingsAsync(PayrollSettings settings, User performedBy);
+
+    /// <summary>FR-085. The stock report PDFs are laid out for; set from Settings.</summary>
+    Task<SaveResult<PayrollSettings>> SaveReportPaperAsync(ReportPaper paper, User performedBy);
 }
 
 /// <summary>
@@ -875,6 +878,8 @@ public sealed class PayrollConfigService : IPayrollConfigService
 
         var previous = await GetSettingsAsync().ConfigureAwait(false);
 
+        // The paper has its own screen (Settings) and its own save, below.
+        settings.ReportPaper = previous.ReportPaper;
         settings.Id = PayrollSettings.SingletonId;
         settings.UpdatedUtc = DateTime.UtcNow;
 
@@ -900,6 +905,37 @@ public sealed class PayrollConfigService : IPayrollConfigService
             factorNote.Length > 0
                 ? "Settings saved. The working-days factor changed, so existing draft runs should be recalculated."
                 : "Settings saved.");
+    }
+
+    public async Task<SaveResult<PayrollSettings>> SaveReportPaperAsync(ReportPaper paper, User performedBy)
+    {
+        if (!performedBy.Can(Permission.ManageSystemConfiguration))
+            return await RefuseAsync<PayrollSettings>(performedBy, "change the report paper", nameof(PayrollSettings))
+                .ConfigureAwait(false);
+
+        if (!Enum.IsDefined(paper))
+            return SaveResult<PayrollSettings>.Fail("Choose a paper size.");
+
+        var settings = await GetSettingsAsync().ConfigureAwait(false);
+
+        if (settings.ReportPaper == paper)
+            return SaveResult<PayrollSettings>.Ok(settings, "No change to save.");
+
+        var previousPaper = settings.ReportPaper;
+
+        settings.ReportPaper = paper;
+        settings.Id = PayrollSettings.SingletonId;
+        settings.UpdatedUtc = DateTime.UtcNow;
+
+        var connection = await _database.GetConnectionAsync().ConfigureAwait(false);
+        await connection.InsertOrReplaceAsync(settings).ConfigureAwait(false);
+
+        await _audit.WriteAsync(
+            AuditActions.PayrollSettingsUpdated, nameof(PayrollSettings), settings.Id, true,
+            $"Report paper changed from {ReportPaperSizes.Display(previousPaper)} to {ReportPaperSizes.Display(paper)}.",
+            performedBy.Username, performedBy.Id).ConfigureAwait(false);
+
+        return SaveResult<PayrollSettings>.Ok(settings, $"Reports will now print on {ReportPaperSizes.Display(paper)}.");
     }
 
     // =====================================================================

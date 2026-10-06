@@ -79,6 +79,7 @@ namespace PAYROLLSystemApp
 
             services.AddSingleton<IDialogService, DialogService>();
             services.AddSingleton<IAppNavigator, AppNavigator>();
+            services.AddSingleton<IUserPreferences, UserPreferences>();
         }
 
         private static void RegisterViewModels(IServiceCollection services)
@@ -101,6 +102,7 @@ namespace PAYROLLSystemApp
             services.AddTransient<UserManagementViewModel>();
             services.AddTransient<AuditLogViewModel>();
             services.AddTransient<DataManagementViewModel>();
+            services.AddTransient<SettingsViewModel>();
         }
 
         private static void RegisterViews(IServiceCollection services)
@@ -125,6 +127,7 @@ namespace PAYROLLSystemApp
             services.AddTransient<UserManagementView>();
             services.AddTransient<AuditLogView>();
             services.AddTransient<DataManagementView>();
+            services.AddTransient<SettingsView>();
         }
     }
 }

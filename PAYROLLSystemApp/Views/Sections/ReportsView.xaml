@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8" ?>
 <ContentView xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:markup="clr-namespace:PAYROLLSystemApp.Views.Markup"
              xmlns:vm="clr-namespace:PAYROLLSystemApp.ViewModels"
              x:Class="PAYROLLSystemApp.Views.Sections.ReportsView"
              x:DataType="vm:ReportsViewModel">
@@ -42,7 +43,7 @@
                                 <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8" Padding="16,10">
                                     <VerticalStackLayout Grid.Column="0" Spacing="1">
                                         <Label Text="{Binding Title}"
-                                               FontSize="12.5"
+                                               FontSize="{markup:Font 12.5}"
                                                FontAttributes="Bold"
                                                LineBreakMode="TailTruncation"
                                                TextColor="{AppThemeBinding Light={StaticResource TextLight}, Dark={StaticResource TextDark}}" />
@@ -158,7 +159,7 @@
 
                 <!-- Inline result banner (NFR-023) -->
                 <Label Grid.Row="1"
-                       FontSize="12"
+                       FontSize="{markup:Font 12}"
                        TextColor="{StaticResource Success}"
                        Text="{Binding StatusMessage}"
                        IsVisible="{Binding HasStatus}" />
@@ -194,7 +195,7 @@
                                     Stroke="Transparent"
                                     StrokeThickness="0"
                                     Padding="8,5">
-                                <Label FontSize="11.5"
+                                <Label FontSize="{markup:Font 11.5}"
                                        LineBreakMode="WordWrap"
                                        TextColor="{Binding TextColor}"
                                        Text="{Binding Text}" />
@@ -248,7 +249,7 @@
                                                                        BindableLayout.ItemsSource="{Binding Cells}">
                                                     <BindableLayout.ItemTemplate>
                                                         <DataTemplate x:DataType="vm:ReportCellView">
-                                                            <Label FontSize="12"
+                                                            <Label FontSize="{markup:Font 12}"
                                                                    FontAttributes="{Binding Weight}"
                                                                    WidthRequest="{Binding Width}"
                                                                    Padding="0,0,10,0"

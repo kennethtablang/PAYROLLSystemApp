@@ -36,9 +36,9 @@ The system has exactly two roles.
 
 ### 1.2 The screen layout
 
-After sign-in you see a fixed sidebar on the left, a top bar with the page title and a live clock, and a footer showing who is signed in. The sidebar lists only the sections your role can open.
+After sign-in you see a fixed sidebar on the left, a top bar with the page title, a live clock and **Sign out**, and a footer showing who is signed in. The sidebar lists only the sections your role can open, each with an icon. **Settings**, at the bottom of the sidebar, holds the theme, your account and password, printing choices and the screen you start on (7.4).
 
-The **Dashboard** opens first. Its **Needs attention** list shows what is waiting on you, each item with a button to the screen that deals with it. Amber items stop a payroll from being paid; blue ones are reminders.
+The **Dashboard** opens first, unless you chose another start-up screen in **Settings**. Its **Needs attention** list shows what is waiting on you, each item with a button to the screen that deals with it. Amber items stop a payroll from being paid; blue ones are reminders.
 
 | Item | Shown to |
 |---|---|
@@ -103,7 +103,7 @@ A new database comes with one account:
 |---|---|
 | `admin` | `Admin@123` |
 
-> ⚠️ **The first time you sign in with this password, the system makes you replace it.** No screen opens until you do. Keep the new password somewhere safe. If the only administrator forgets it, nobody can issue a reset.
+> ⚠️ **Change this password after your first sign-in** with **Settings → My account → Change password** (2.3). The system does not force it. Keep the new password somewhere safe. If the only administrator forgets it, nobody can issue a reset.
 
 ### 2.2 Signing in
 
@@ -114,15 +114,14 @@ What else to expect:
 
 - **Five wrong passwords in a row lock the account for 15 minutes.** An administrator can unlock it sooner from **User Accounts → Unlock**.
 - **Forgot password?** No self-service reset exists. Ask the administrator for a temporary password.
-- **A password someone else chose must be replaced.** This covers the default password, a new account's first password and a temporary password from a reset. After you sign in with one, the **Set a new password** screen opens before anything else. Enter the password you were given, then your new one twice. The only other way off that screen is **Sign out**.
 - **Sessions do not time out.** You stay signed in until you click **Sign out**, or until an administrator restores a backup (which signs everyone out).
 - Every sign-in, success or failure, goes to the audit trail.
 
 ### 2.3 Changing your own password
 
-1. Click **Change password** in the top bar, next to **Sign out**.
+1. Open **Settings** and, under **My account**, click **Change password**.
 2. Enter your current password, then the new one twice. A checklist under the new password shows which rules it meets.
-3. Click **Save password**. **Cancel** takes you back to where you were.
+3. Click **Save password**. **Cancel** takes you back to Settings.
 
 The new password must differ from the old one and cannot be `Admin@123`.
 
@@ -145,7 +144,7 @@ Do these steps in order, because each one feeds the next. Accounting can do all 
 
 **Company profile.** This is printed on every payslip and report. Enter the registered name, trade name, address, employer TIN and RDO code, the SSS, PhilHealth and Pag-IBIG employer numbers, a contact number and e-mail, and the authorised signatory. Click **Save company profile**.
 
-**Payroll rules.** Review each rule, then click **Save payroll rules**.
+**Payroll rules.** Review each rule, then click **Save payroll rules**. The paper reports print on is set separately, in **Settings → Printing and exports** (7.4).
 
 | Setting | Meaning |
 |---|---|
@@ -158,7 +157,6 @@ Do these steps in order, because each one feeds the next. Accounting can do all 
 | Pay unworked regular holidays | Art. 94, for daily-paid staff. |
 | Flag a negative net pay for review | Stops a run that would pay less than zero. |
 | Accrue service incentive leave into every payslip | The legacy **5Days Inc.** column. Pays 5 ÷ 365 of a day's rate for each day rendered. **Do not** also convert SIL to cash at separation, or the same leave is paid twice. |
-| Paper for printed reports | A4, dot matrix 11×14, or Epson legal. The dot matrix sizes print condensed, landscape only. |
 
 ### Step 2 — Pay calendar
 
@@ -511,7 +509,7 @@ Things to know:
 In **User Accounts**:
 
 - **Edit** changes a user's name, e-mail or role, or switches off **Account is active**. Deactivating blocks sign-in but keeps the account's history.
-- **Reset** issues a **temporary password**. It is shown **once only** (only its hash is stored), so hand it over straight away. The holder must replace it the next time they sign in.
+- **Reset** issues a **temporary password**. It is shown **once only** (only its hash is stored), so hand it over straight away. The holder can replace it from **Settings → My account** once signed in.
 - **Unlock** clears a lockout before the 15 minutes are up.
 
 ### 7.2 Audit log
@@ -530,6 +528,17 @@ In **Backup & Archive**:
 | **Delete** | Removes a backup file. |
 
 Backups are saved in your **Documents** folder, not next to the live database, so uninstalling the app does not remove them. **Copy them off the machine regularly.**
+
+### 7.4 Settings (either role)
+
+**Settings** is the last item in the sidebar. Everything except the paper takes effect as soon as you choose it.
+
+| Card | What it does |
+|---|---|
+| **Appearance** | **Theme**: **Light**, **Dark** or **Match Windows**. **Text size**: **Normal**, **Large (115%)** or **Larger (130%)**; close and reopen the app to see it. **Compact sidebar** shows icons only; point at an icon to see its name. All remembered on this PC. |
+| **Start-up and behaviour** | The screen that opens after you sign in, such as **Timesheets** (only screens your role can open are offered). **Confirm before signing out** (on by default). **Remember my last report**: **Reports** opens on the report and department you used last (on by default). Kept for your account on this PC. |
+| **My account** | Your name, username, e-mail, role, when you signed in and when your password last changed. **Change password** is here (2.3). Name, e-mail and role are changed by the Administrator in **User Accounts**. |
+| **Printing and exports** | **Paper for printed reports**: A4, dot matrix 11×14, or Epson legal. The dot matrix sizes print condensed, landscape only. This applies to everyone, so only an account that can change the payroll setup can change it; click **Save paper**. **Open files after export** opens a saved payslip or report straight away, ready to print (on by default). **Open folder** shows where exports, imports and backups are saved. |
 
 ---
 
@@ -562,7 +571,6 @@ Backups are saved in your **Documents** folder, not next to the live database, s
 | "…is closed — its regular payroll has been posted" | A second regular run is refused on a closed period. To correct someone already paid, choose **Adjustment** as the kind of run. To pay someone the posted run left out, **Reopen** the period first (Part 4, Step 1). |
 | "…is locked, which freezes the attendance inside its cut-off" | The pay period is locked. Go to **Payroll Setup → Pay calendar → Reopen**, correct the day, lock the period again and recalculate. |
 | "That day has been locked by a posted payroll run" | A posted run has paid that day, so it cannot change. Correct the pay with an Adjustment run. |
-| The **Set a new password** screen appears at sign-in | You signed in with the default password, a new account's first password or a temporary password. Choose your own password to continue. |
 | Timesheets does not list a 13th-month or adjustment run | That is by design. Those runs pay no hours, so a timesheet keyed against them would never be paid. |
 | Payroll summary shows fewer runs than expected | Your date range only partly covers some cut-offs. They are named in the report's warning. Widen the range. |
 | Payroll summary puts old overtime under OT Regular | Payslips computed before overtime was split into Regular/Sunday/Holiday have one OT line. The report names them. |
@@ -571,7 +579,7 @@ Backups are saved in your **Documents** folder, not next to the live database, s
 
 ## 10. Quick reference
 
-**Default sign-in:** `admin` / `Admin@123`. You must replace it at the first sign-in. After that, use **Change password** in the top bar.
+**Default sign-in:** `admin` / `Admin@123`. Replace it from **Settings → My account → Change password**.
 
 **Every cut-off, in one line:**
 

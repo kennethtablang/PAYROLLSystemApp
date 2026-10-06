@@ -25,18 +25,21 @@ public sealed partial class ApprovalsViewModel : BaseViewModel
     private readonly IPayrollRunService _runs;
     private readonly IPayslipService _payslips;
     private readonly IAppNavigator _navigator;
+    private readonly IUserPreferences _preferences;
 
     private enum ConfirmTarget { Approve, Return, Post }
 
     private ConfirmTarget _confirmTarget;
 
     public ApprovalsViewModel(
-        IPayrollRunService runs, IPayslipService payslips, IAppNavigator navigator, ISessionService session)
+        IPayrollRunService runs, IPayslipService payslips, IAppNavigator navigator,
+        IUserPreferences preferences, ISessionService session)
         : base(session)
     {
         _runs = runs;
         _payslips = payslips;
         _navigator = navigator;
+        _preferences = preferences;
 
         Title = "Approvals";
 
@@ -426,6 +429,9 @@ public sealed partial class ApprovalsViewModel : BaseViewModel
         }
 
         ShowStatus(result.Message);
+
+        if (!_preferences.OpenAfterExport)
+            return;
 
         try
         {

@@ -1,6 +1,7 @@
 ﻿<?xml version="1.0" encoding="utf-8" ?>
 <ContentView xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:markup="clr-namespace:PAYROLLSystemApp.Views.Markup"
              xmlns:vm="clr-namespace:PAYROLLSystemApp.ViewModels"
              xmlns:controls="clr-namespace:PAYROLLSystemApp.Views.Controls"
              x:Class="PAYROLLSystemApp.Views.Sections.TimesheetsView"
@@ -14,15 +15,15 @@
         <x:String x:Key="SheetColumns">96,*,62,62,62,62,62,84,84,96,34</x:String>
 
         <Style x:Key="Cell" TargetType="Entry">
-            <Setter Property="FontSize" Value="12" />
+            <Setter Property="FontSize" Value="{markup:Font 12}" />
             <Setter Property="HorizontalTextAlignment" Value="End" />
             <Setter Property="Keyboard" Value="Numeric" />
-            <Setter Property="HeightRequest" Value="30" />
+            <Setter Property="HeightRequest" Value="{markup:Scaled 30}" />
             <Setter Property="Margin" Value="0" />
         </Style>
 
         <Style x:Key="Priced" TargetType="Label">
-            <Setter Property="FontSize" Value="10.5" />
+            <Setter Property="FontSize" Value="{markup:Font 10.5}" />
             <Setter Property="HorizontalTextAlignment" Value="End" />
             <Setter Property="TextColor" Value="{StaticResource Brand}" />
             <Setter Property="LineBreakMode" Value="NoWrap" />
@@ -80,7 +81,7 @@
 
                 <!-- ================== MESSAGES =================== -->
                 <Grid Grid.Row="1">
-                    <Label FontSize="12"
+                    <Label FontSize="{markup:Font 12}"
                            TextColor="{StaticResource Success}"
                            Text="{Binding StatusMessage}"
                            IsVisible="{Binding HasStatus}" />
@@ -147,7 +148,7 @@
 
                                                     <Label Grid.Column="0"
                                                            Text="{Binding Banner}"
-                                                           FontSize="12.5"
+                                                           FontSize="{markup:Font 12.5}"
                                                            FontAttributes="Bold"
                                                            VerticalOptions="Center"
                                                            TextColor="{AppThemeBinding Light={StaticResource TextLight}, Dark={StaticResource TextDark}}" />
@@ -183,18 +184,18 @@
 
                                                                 <Label Grid.Column="0"
                                                                        Text="{Binding EmployeeNumber}"
-                                                                       FontSize="12"
+                                                                       FontSize="{markup:Font 12}"
                                                                        VerticalOptions="Center"
                                                                        LineBreakMode="TailTruncation"
                                                                        TextColor="{AppThemeBinding Light={StaticResource TextLight}, Dark={StaticResource TextDark}}" />
 
                                                                 <VerticalStackLayout Grid.Column="1" Spacing="0" VerticalOptions="Center">
                                                                     <Label Text="{Binding Name}"
-                                                                           FontSize="12"
+                                                                           FontSize="{markup:Font 12}"
                                                                            LineBreakMode="TailTruncation"
                                                                            TextColor="{AppThemeBinding Light={StaticResource TextLight}, Dark={StaticResource TextDark}}" />
                                                                     <Label Style="{StaticResource ErrorText}"
-                                                                           FontSize="10"
+                                                                           FontSize="{markup:Font 10}"
                                                                            Text="{Binding Problem}"
                                                                            IsVisible="{Binding HasProblem}" />
                                                                 </VerticalStackLayout>
@@ -238,7 +239,7 @@
 
                                                                 <Label Grid.Column="9"
                                                                        Text="{Binding GrossDisplay}"
-                                                                       FontSize="12"
+                                                                       FontSize="{markup:Font 12}"
                                                                        FontAttributes="Bold"
                                                                        VerticalOptions="Start"
                                                                        Margin="0,7,0,0"
@@ -307,23 +308,23 @@
 
                             <Label Grid.Row="0" Grid.Column="0" Style="{StaticResource Muted}" VerticalOptions="Center" Text="# of Days" />
                             <Entry Grid.Row="0" Grid.Column="1" Style="{StaticResource Cell}" Text="{Binding Days}" />
-                            <Label Grid.Row="0" Grid.Column="2" Style="{StaticResource Priced}" FontSize="12.5" WidthRequest="100" VerticalOptions="Center" Text="{Binding BasicDisplay}" />
+                            <Label Grid.Row="0" Grid.Column="2" Style="{StaticResource Priced}" FontSize="{markup:Font 12.5}" WidthRequest="100" VerticalOptions="Center" Text="{Binding BasicDisplay}" />
 
                             <Label Grid.Row="1" Grid.Column="0" Style="{StaticResource Muted}" VerticalOptions="Center" Text="Regular OT" />
                             <Entry Grid.Row="1" Grid.Column="1" Style="{StaticResource Cell}" Text="{Binding RegularOt}" />
-                            <Label Grid.Row="1" Grid.Column="2" Style="{StaticResource Priced}" FontSize="12.5" WidthRequest="100" VerticalOptions="Center" Text="{Binding RegularOtDisplay}" />
+                            <Label Grid.Row="1" Grid.Column="2" Style="{StaticResource Priced}" FontSize="{markup:Font 12.5}" WidthRequest="100" VerticalOptions="Center" Text="{Binding RegularOtDisplay}" />
 
                             <Label Grid.Row="2" Grid.Column="0" Style="{StaticResource Muted}" VerticalOptions="Center" Text="Special hol. OT" />
                             <Entry Grid.Row="2" Grid.Column="1" Style="{StaticResource Cell}" Text="{Binding SpecialOt}" />
-                            <Label Grid.Row="2" Grid.Column="2" Style="{StaticResource Priced}" FontSize="12.5" WidthRequest="100" VerticalOptions="Center" Text="{Binding SpecialOtDisplay}" />
+                            <Label Grid.Row="2" Grid.Column="2" Style="{StaticResource Priced}" FontSize="{markup:Font 12.5}" WidthRequest="100" VerticalOptions="Center" Text="{Binding SpecialOtDisplay}" />
 
                             <Label Grid.Row="3" Grid.Column="0" Style="{StaticResource Muted}" VerticalOptions="Center" Text="Legal hol. OT" />
                             <Entry Grid.Row="3" Grid.Column="1" Style="{StaticResource Cell}" Text="{Binding LegalOt}" />
-                            <Label Grid.Row="3" Grid.Column="2" Style="{StaticResource Priced}" FontSize="12.5" WidthRequest="100" VerticalOptions="Center" Text="{Binding LegalOtDisplay}" />
+                            <Label Grid.Row="3" Grid.Column="2" Style="{StaticResource Priced}" FontSize="{markup:Font 12.5}" WidthRequest="100" VerticalOptions="Center" Text="{Binding LegalOtDisplay}" />
 
                             <Label Grid.Row="4" Grid.Column="0" Style="{StaticResource Muted}" VerticalOptions="Center" Text="Night shift" />
                             <Entry Grid.Row="4" Grid.Column="1" Style="{StaticResource Cell}" Text="{Binding NightShift}" />
-                            <Label Grid.Row="4" Grid.Column="2" Style="{StaticResource Priced}" FontSize="12.5" WidthRequest="100" VerticalOptions="Center" Text="{Binding NightDisplay}" />
+                            <Label Grid.Row="4" Grid.Column="2" Style="{StaticResource Priced}" FontSize="{markup:Font 12.5}" WidthRequest="100" VerticalOptions="Center" Text="{Binding NightDisplay}" />
                         </Grid>
 
                         <BoxView Style="{StaticResource Divider}" />
@@ -347,7 +348,7 @@
                             <Label Grid.Row="0" Grid.Column="0" Style="{StaticResource Muted}" Text="Gross income" />
                             <Label Grid.Row="0" Grid.Column="1"
                                    Text="{Binding GrossDisplay}"
-                                   FontSize="14"
+                                   FontSize="{markup:Font 14}"
                                    FontAttributes="Bold"
                                    HorizontalTextAlignment="End"
                                    TextColor="{AppThemeBinding Light={StaticResource TextLight}, Dark={StaticResource TextDark}}" />
@@ -355,7 +356,7 @@
                             <Label Grid.Row="1" Grid.Column="0" Style="{StaticResource Muted}" Text="Less company loan" />
                             <Label Grid.Row="1" Grid.Column="1"
                                    Text="{Binding AfterDeductionsDisplay}"
-                                   FontSize="13"
+                                   FontSize="{markup:Font 13}"
                                    HorizontalTextAlignment="End"
                                    TextColor="{AppThemeBinding Light={StaticResource TextLight}, Dark={StaticResource TextDark}}" />
                         </Grid>

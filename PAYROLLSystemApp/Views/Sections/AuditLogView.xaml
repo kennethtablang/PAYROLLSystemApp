@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8" ?>
 <ContentView xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:markup="clr-namespace:PAYROLLSystemApp.Views.Markup"
              xmlns:vm="clr-namespace:PAYROLLSystemApp.ViewModels"
              xmlns:models="clr-namespace:PAYROLLSystemApp.Models"
              x:Class="PAYROLLSystemApp.Views.Sections.AuditLogView"
@@ -62,7 +63,7 @@
                                        Style="{StaticResource Muted}"
                                        Text="{Binding TimestampLocal, StringFormat='{0:dd MMM yyyy h:mm:ss tt}'}" />
                                 <Label Grid.Column="1"
-                                       FontSize="11"
+                                       FontSize="{markup:Font 11}"
                                        FontAttributes="Bold"
                                        LineBreakMode="TailTruncation"
                                        Text="{Binding Action}"

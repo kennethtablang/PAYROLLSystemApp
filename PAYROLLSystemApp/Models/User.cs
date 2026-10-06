@@ -43,9 +43,9 @@ public class User
     public DateTime PasswordChangedUtc { get; set; } = DateTime.UtcNow;
 
     /// <summary>
-    /// Set when someone other than the holder chose the password — a new
-    /// account, an administrator reset (FR-005) — so the holder must replace it
-    /// before reaching any screen (FR-004).
+    /// No longer used: there is no forced password change after sign-in. Kept
+    /// only so existing databases, whose users table has this column, still
+    /// accept inserts.
     /// </summary>
     public bool MustChangePassword { get; set; }
 

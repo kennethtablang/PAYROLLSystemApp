@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8" ?>
 <ContentView xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:markup="clr-namespace:PAYROLLSystemApp.Views.Markup"
              xmlns:vm="clr-namespace:PAYROLLSystemApp.ViewModels"
              xmlns:controls="clr-namespace:PAYROLLSystemApp.Views.Controls"
              x:Class="PAYROLLSystemApp.Views.Sections.DetachmentsView"
@@ -45,7 +46,7 @@
                 </Grid>
 
                 <Label Grid.Row="1"
-                       FontSize="12"
+                       FontSize="{markup:Font 12}"
                        TextColor="{StaticResource Success}"
                        Text="{Binding StatusMessage}"
                        IsVisible="{Binding HasStatus}" />
@@ -102,14 +103,14 @@
                                                         VerticalOptions="Center"
                                                         BackgroundColor="{AppThemeBinding Light={StaticResource BrandSoftLight}, Dark={StaticResource BrandSoftDark}}">
                                                     <Label Text="{Binding Code}"
-                                                           FontSize="10.5"
+                                                           FontSize="{markup:Font 10.5}"
                                                            FontAttributes="Bold"
                                                            TextColor="{StaticResource Brand}" />
                                                 </Border>
 
                                                 <VerticalStackLayout Grid.Column="1" Spacing="0" VerticalOptions="Center">
                                                     <Label Text="{Binding Name}"
-                                                           FontSize="12.5"
+                                                           FontSize="{markup:Font 12.5}"
                                                            FontAttributes="Bold"
                                                            LineBreakMode="TailTruncation"
                                                            TextColor="{AppThemeBinding Light={StaticResource TextLight}, Dark={StaticResource TextDark}}" />
@@ -119,7 +120,7 @@
 
                                                     <!-- People standing at a post with no posted rate
                                                          stop a payroll run, so the row says so. -->
-                                                    <Label FontSize="10.5"
+                                                    <Label FontSize="{markup:Font 10.5}"
                                                            TextColor="{StaticResource Danger}"
                                                            IsVisible="{Binding NeedsRates}"
                                                            Text="No rate posted — payroll cannot be computed for this post" />
@@ -198,7 +199,7 @@
 
                                                 <VerticalStackLayout Grid.Column="0" Spacing="0" VerticalOptions="Center">
                                                     <Label Text="{Binding Position}"
-                                                           FontSize="12.5"
+                                                           FontSize="{markup:Font 12.5}"
                                                            FontAttributes="Bold"
                                                            LineBreakMode="TailTruncation"
                                                            TextColor="{AppThemeBinding Light={StaticResource TextLight}, Dark={StaticResource TextDark}}" />
@@ -209,7 +210,7 @@
 
                                                 <Label Grid.Column="1"
                                                        Text="{Binding Amount}"
-                                                       FontSize="12.5"
+                                                       FontSize="{markup:Font 12.5}"
                                                        FontAttributes="Bold"
                                                        VerticalOptions="Center"
                                                        HorizontalTextAlignment="End"

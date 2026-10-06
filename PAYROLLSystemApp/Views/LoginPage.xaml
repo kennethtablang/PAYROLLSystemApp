@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8" ?>
 <ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:markup="clr-namespace:PAYROLLSystemApp.Views.Markup"
              xmlns:vm="clr-namespace:PAYROLLSystemApp.ViewModels"
              xmlns:controls="clr-namespace:PAYROLLSystemApp.Views.Controls"
              x:Class="PAYROLLSystemApp.Views.LoginPage"
@@ -26,7 +27,7 @@
                         <RoundRectangle CornerRadius="10" />
                     </Border.StrokeShape>
                     <Label Text="P"
-                           FontSize="21"
+                           FontSize="{markup:Font 21}"
                            FontAttributes="Bold"
                            TextColor="White"
                            HorizontalOptions="Center"
@@ -34,20 +35,20 @@
                 </Border>
 
                 <Label Text="Payroll Management System"
-                       FontSize="27"
+                       FontSize="{markup:Font 27}"
                        FontAttributes="Bold"
                        TextColor="White" />
 
                 <Label Text="Employee records, attendance, statutory deductions and payslips — in one place."
-                       FontSize="13.5"
+                       FontSize="{markup:Font 13.5}"
                        TextColor="{StaticResource SidebarText}" />
 
                 <BoxView HeightRequest="1" Color="{StaticResource SidebarDivider}" Margin="0,8" />
 
                 <VerticalStackLayout Spacing="7">
-                    <Label Text="✓   Role-based access control" FontSize="12" TextColor="{StaticResource SidebarText}" />
-                    <Label Text="✓   Every sign-in recorded in the audit trail" FontSize="12" TextColor="{StaticResource SidebarText}" />
-                    <Label Text="✓   Passwords stored only as salted hashes" FontSize="12" TextColor="{StaticResource SidebarText}" />
+                    <Label Text="✓   Role-based access control" FontSize="{markup:Font 12}" TextColor="{StaticResource SidebarText}" />
+                    <Label Text="✓   Every sign-in recorded in the audit trail" FontSize="{markup:Font 12}" TextColor="{StaticResource SidebarText}" />
+                    <Label Text="✓   Passwords stored only as salted hashes" FontSize="{markup:Font 12}" TextColor="{StaticResource SidebarText}" />
                 </VerticalStackLayout>
             </VerticalStackLayout>
         </Grid>
@@ -71,7 +72,7 @@
                             HorizontalOptions="Fill"
                             BackgroundColor="{AppThemeBinding Light=#EEF4FF, Dark=#182742}">
                         <Label Text="{Binding FirstRunHint}"
-                               FontSize="11.5"
+                               FontSize="{markup:Font 11.5}"
                                TextColor="{AppThemeBinding Light=#1B4F87, Dark=#BBD8F5}" />
                     </Border>
 
@@ -112,11 +113,11 @@
                             HorizontalOptions="Fill"
                             BackgroundColor="{AppThemeBinding Light={StaticResource WarningSoftLight}, Dark={StaticResource WarningSoftDark}}">
                         <Label Text="{Binding WarningMessage}"
-                               FontSize="11.5"
+                               FontSize="{markup:Font 11.5}"
                                TextColor="{AppThemeBinding Light={StaticResource Warning}, Dark=#F5C77E}" />
                     </Border>
 
-                    <Label FontSize="12"
+                    <Label FontSize="{markup:Font 12}"
                            TextColor="{StaticResource Success}"
                            Text="{Binding StatusMessage}"
                            IsVisible="{Binding HasStatus}" />

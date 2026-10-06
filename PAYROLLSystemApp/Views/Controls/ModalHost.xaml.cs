@@ -47,7 +47,7 @@ public partial class ModalHost : ContentView
         nameof(IsDestructive), typeof(bool), typeof(ModalHost), false,
         propertyChanged: (b, _, _) => ((ModalHost)b).OnPropertyChanged(nameof(IsNotDestructive)));
 
-    /// <summary>False for a dialog the user must resolve, e.g. a forced password change.</summary>
+    /// <summary>False for a dialog the user must resolve, e.g. one whose outcome must be acknowledged.</summary>
     public static readonly BindableProperty IsDismissibleProperty = BindableProperty.Create(
         nameof(IsDismissible), typeof(bool), typeof(ModalHost), true);
 

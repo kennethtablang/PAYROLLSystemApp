@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8" ?>
 <ContentView xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:markup="clr-namespace:PAYROLLSystemApp.Views.Markup"
              xmlns:vm="clr-namespace:PAYROLLSystemApp.ViewModels"
              xmlns:models="clr-namespace:PAYROLLSystemApp.Models"
              xmlns:controls="clr-namespace:PAYROLLSystemApp.Views.Controls"
@@ -53,7 +54,7 @@
                     <!-- Inline result banner -->
                     <Label Grid.Row="1"
                            Margin="16,0,16,10"
-                           FontSize="12"
+                           FontSize="{markup:Font 12}"
                            TextColor="{StaticResource Success}"
                            Text="{Binding StatusMessage}"
                            IsVisible="{Binding HasStatus}" />
@@ -89,7 +90,7 @@
 
                                     <VerticalStackLayout Grid.Column="0" Spacing="0" VerticalOptions="Center">
                                         <Label Text="{Binding Username}"
-                                               FontSize="12.5"
+                                               FontSize="{markup:Font 12.5}"
                                                FontAttributes="Bold"
                                                LineBreakMode="TailTruncation"
                                                TextColor="{AppThemeBinding Light={StaticResource TextLight}, Dark={StaticResource TextDark}}" />
@@ -105,7 +106,7 @@
                                            Text="{Binding Email}" />
 
                                     <Label Grid.Column="2"
-                                           FontSize="11.5"
+                                           FontSize="{markup:Font 11.5}"
                                            VerticalOptions="Center"
                                            LineBreakMode="TailTruncation"
                                            Text="{Binding RoleDisplayName}"
@@ -274,14 +275,14 @@
                             HorizontalOptions="Fill"
                             BackgroundColor="{AppThemeBinding Light={StaticResource SurfaceAltLight}, Dark={StaticResource SurfaceAltDark}}">
                         <Label Text="{Binding TempPassword}"
-                               FontSize="16"
+                               FontSize="{markup:Font 16}"
                                FontAttributes="Bold"
                                HorizontalTextAlignment="Center"
                                TextColor="{AppThemeBinding Light={StaticResource TextLight}, Dark={StaticResource TextDark}}" />
                     </Border>
 
                     <Label Style="{StaticResource Faint}"
-                           Text="They will be required to set a new password at their next sign-in." />
+                           Text="They can change it from Change password in the top bar after signing in." />
                 </VerticalStackLayout>
             </controls:ModalHost.Body>
         </controls:ModalHost>

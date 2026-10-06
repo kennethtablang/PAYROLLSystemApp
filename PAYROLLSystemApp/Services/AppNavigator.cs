@@ -19,7 +19,8 @@ public enum AppSection
     Reports,
     Users,
     AuditLog,
-    DataManagement
+    DataManagement,
+    Settings
 }
 
 /// <summary>
@@ -40,6 +41,7 @@ public static class AppSections
     public const string GroupMain = "MAIN";
     public const string GroupPayroll = "PAYROLL";
     public const string GroupAdmin = "ADMINISTRATION";
+    public const string GroupSystem = "SYSTEM";
 
     public static readonly IReadOnlyList<SectionInfo> All =
     [
@@ -101,7 +103,12 @@ public static class AppSections
 
         new(AppSection.DataManagement, "Backup & Archive", GroupAdmin,
             "Database backups, restore, and closed payroll years",
-            Permission.ManageBackups, true, "")
+            Permission.ManageBackups, true, ""),
+
+        // Every signed-in account holds ViewOwnPayslip, so everyone reaches it.
+        new(AppSection.Settings, "Settings", GroupSystem,
+            "Appearance, your account, printing and the screen you start on",
+            Permission.ViewOwnPayslip, true, "")
     ];
 
     public static SectionInfo Get(AppSection section) =>

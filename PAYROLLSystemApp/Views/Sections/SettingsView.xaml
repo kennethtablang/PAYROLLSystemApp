@@ -1,0 +1,237 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentView xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:markup="clr-namespace:PAYROLLSystemApp.Views.Markup"
+             xmlns:vm="clr-namespace:PAYROLLSystemApp.ViewModels"
+             x:Class="PAYROLLSystemApp.Views.Sections.SettingsView"
+             x:DataType="vm:SettingsViewModel">
+
+    <ScrollView>
+        <VerticalStackLayout Padding="20" Spacing="12" MaximumWidthRequest="980" HorizontalOptions="Fill">
+
+            <!-- Inline result banner (NFR-023) -->
+            <Label FontSize="{markup:Font 12}"
+                   TextColor="{StaticResource Success}"
+                   LineBreakMode="WordWrap"
+                   Text="{Binding StatusMessage}"
+                   IsVisible="{Binding HasStatus}" />
+
+            <Label Style="{StaticResource ErrorText}"
+                   LineBreakMode="WordWrap"
+                   Text="{Binding ErrorMessage}"
+                   IsVisible="{Binding HasError}" />
+
+            <Grid ColumnDefinitions="*,*" ColumnSpacing="14" RowDefinitions="Auto,Auto" RowSpacing="14">
+
+                <!-- ============ APPEARANCE ============ -->
+                <Border Grid.Row="0" Grid.Column="0" Style="{StaticResource Card}">
+                    <VerticalStackLayout Spacing="10">
+                        <VerticalStackLayout Spacing="1">
+                            <Label Style="{StaticResource SectionHeading}" Text="Appearance" />
+                            <Label Style="{StaticResource Faint}"
+                                   LineBreakMode="WordWrap"
+                                   Text="Changes straight away and is remembered on this PC." />
+                        </VerticalStackLayout>
+
+                        <VerticalStackLayout Spacing="0">
+                            <Label Style="{StaticResource FieldLabel}" Text="THEME" />
+                            <Border Style="{StaticResource FieldFrame}">
+                                <Picker ItemsSource="{Binding ThemeOptions}"
+                                        SelectedItem="{Binding SelectedTheme}"
+                                        ItemDisplayBinding="{Binding Label, x:DataType=vm:EnumOption}" />
+                            </Border>
+                        </VerticalStackLayout>
+
+                        <Label Style="{StaticResource Faint}"
+                               LineBreakMode="WordWrap"
+                               Text="Match Windows follows the light or dark setting in Windows Settings → Personalisation → Colours." />
+
+                        <VerticalStackLayout Spacing="0">
+                            <Label Style="{StaticResource FieldLabel}" Text="TEXT SIZE" />
+                            <Border Style="{StaticResource FieldFrame}">
+                                <Picker ItemsSource="{Binding TextSizeOptions}"
+                                        SelectedItem="{Binding SelectedTextSize}"
+                                        ItemDisplayBinding="{Binding Label, x:DataType=vm:EnumOption}" />
+                            </Border>
+                        </VerticalStackLayout>
+
+                        <Label Style="{StaticResource Faint}"
+                               LineBreakMode="WordWrap"
+                               TextColor="{StaticResource Warning}"
+                               IsVisible="{Binding TextSizeNeedsRestart}"
+                               Text="Close and reopen the app to see the new text size." />
+
+                        <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10">
+                            <VerticalStackLayout Grid.Column="0" Spacing="1" VerticalOptions="Center">
+                                <Label Style="{StaticResource Body}" Text="Compact sidebar" />
+                                <Label Style="{StaticResource Faint}"
+                                       LineBreakMode="WordWrap"
+                                       Text="Icons only, with the name shown when you point at one. More room for wide tables." />
+                            </VerticalStackLayout>
+                            <Switch Grid.Column="1"
+                                    IsToggled="{Binding CompactSidebar}"
+                                    VerticalOptions="Center"
+                                    OnColor="{StaticResource Brand}" />
+                        </Grid>
+                    </VerticalStackLayout>
+                </Border>
+
+                <!-- ============ START-UP AND BEHAVIOUR ============ -->
+                <Border Grid.Row="0" Grid.Column="1" Style="{StaticResource Card}">
+                    <VerticalStackLayout Spacing="10">
+                        <VerticalStackLayout Spacing="1">
+                            <Label Style="{StaticResource SectionHeading}" Text="Start-up and behaviour" />
+                            <Label Style="{StaticResource Faint}"
+                                   LineBreakMode="WordWrap"
+                                   Text="Saved on this PC. The start-up screen and remembered report are kept for each account." />
+                        </VerticalStackLayout>
+
+                        <VerticalStackLayout Spacing="0">
+                            <Label Style="{StaticResource FieldLabel}" Text="OPEN AFTER SIGN-IN" />
+                            <Border Style="{StaticResource FieldFrame}">
+                                <Picker ItemsSource="{Binding StartOptions}"
+                                        SelectedItem="{Binding SelectedStart}"
+                                        ItemDisplayBinding="{Binding Label, x:DataType=vm:EnumOption}" />
+                            </Border>
+                        </VerticalStackLayout>
+
+                        <BoxView Style="{StaticResource Divider}" />
+
+                        <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10">
+                            <VerticalStackLayout Grid.Column="0" Spacing="1" VerticalOptions="Center">
+                                <Label Style="{StaticResource Body}" Text="Confirm before signing out" />
+                                <Label Style="{StaticResource Faint}"
+                                       LineBreakMode="WordWrap"
+                                       Text="Asks &quot;Are you sure?&quot; when you click Sign out." />
+                            </VerticalStackLayout>
+                            <Switch Grid.Column="1"
+                                    IsToggled="{Binding ConfirmSignOut}"
+                                    VerticalOptions="Center"
+                                    OnColor="{StaticResource Brand}" />
+                        </Grid>
+
+                        <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10">
+                            <VerticalStackLayout Grid.Column="0" Spacing="1" VerticalOptions="Center">
+                                <Label Style="{StaticResource Body}" Text="Remember my last report" />
+                                <Label Style="{StaticResource Faint}"
+                                       LineBreakMode="WordWrap"
+                                       Text="Reports opens on the report and department you used last." />
+                            </VerticalStackLayout>
+                            <Switch Grid.Column="1"
+                                    IsToggled="{Binding RememberReportChoice}"
+                                    VerticalOptions="Center"
+                                    OnColor="{StaticResource Brand}" />
+                        </Grid>
+                    </VerticalStackLayout>
+                </Border>
+
+                <!-- ============ MY ACCOUNT ============ -->
+                <Border Grid.Row="1" Grid.Column="0" Style="{StaticResource Card}">
+                    <VerticalStackLayout Spacing="10">
+                        <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10">
+                            <VerticalStackLayout Grid.Column="0" Spacing="1">
+                                <Label Style="{StaticResource SectionHeading}" Text="My account" />
+                                <Label Style="{StaticResource Faint}"
+                                       LineBreakMode="WordWrap"
+                                       Text="Name, e-mail and role are changed by an administrator in User Accounts." />
+                            </VerticalStackLayout>
+
+                            <Button Grid.Column="1"
+                                    Style="{StaticResource SecondaryButton}"
+                                    Text="Change password"
+                                    VerticalOptions="Start"
+                                    Command="{Binding ChangePasswordCommand}" />
+                        </Grid>
+
+                        <Grid ColumnDefinitions="Auto,*" ColumnSpacing="16" RowSpacing="6"
+                              RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto">
+                            <Label Grid.Row="0" Style="{StaticResource FieldLabel}" Text="NAME" VerticalOptions="Center" />
+                            <Label Grid.Row="0" Grid.Column="1" Style="{StaticResource Body}" Text="{Binding AccountName}" />
+
+                            <Label Grid.Row="1" Style="{StaticResource FieldLabel}" Text="USERNAME" VerticalOptions="Center" />
+                            <Label Grid.Row="1" Grid.Column="1" Style="{StaticResource Body}" Text="{Binding AccountUsername}" />
+
+                            <Label Grid.Row="2" Style="{StaticResource FieldLabel}" Text="E-MAIL" VerticalOptions="Center" />
+                            <Label Grid.Row="2" Grid.Column="1" Style="{StaticResource Body}" Text="{Binding AccountEmail}" />
+
+                            <Label Grid.Row="3" Style="{StaticResource FieldLabel}" Text="ROLE" VerticalOptions="Center" />
+                            <Label Grid.Row="3" Grid.Column="1" Style="{StaticResource Body}" Text="{Binding AccountRole}" />
+
+                            <Label Grid.Row="4" Style="{StaticResource FieldLabel}" Text="SIGNED IN" VerticalOptions="Center" />
+                            <Label Grid.Row="4" Grid.Column="1" Style="{StaticResource Body}" Text="{Binding AccountLastSignIn}" />
+
+                            <Label Grid.Row="5" Style="{StaticResource FieldLabel}" Text="PASSWORD CHANGED" VerticalOptions="Center" />
+                            <Label Grid.Row="5" Grid.Column="1" Style="{StaticResource Body}" Text="{Binding AccountPasswordChanged}" />
+                        </Grid>
+                    </VerticalStackLayout>
+                </Border>
+
+                <!-- ============ PRINTING AND EXPORTS ============ -->
+                <Border Grid.Row="1" Grid.Column="1" Style="{StaticResource Card}">
+                    <VerticalStackLayout Spacing="10">
+                        <VerticalStackLayout Spacing="1">
+                            <Label Style="{StaticResource SectionHeading}" Text="Printing and exports" />
+                            <Label Style="{StaticResource Faint}"
+                                   LineBreakMode="WordWrap"
+                                   Text="The paper applies to everyone's printed reports. The other choices are for this PC only." />
+                        </VerticalStackLayout>
+
+                        <VerticalStackLayout Spacing="0">
+                            <Label Style="{StaticResource FieldLabel}" Text="PAPER FOR PRINTED REPORTS" />
+                            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
+                                <Border Grid.Column="0" Style="{StaticResource FieldFrame}">
+                                    <Picker ItemsSource="{Binding PaperOptions}"
+                                            SelectedItem="{Binding SelectedPaper}"
+                                            IsEnabled="{Binding CanEditPaper}"
+                                            ItemDisplayBinding="{Binding Label, x:DataType=vm:EnumOption}" />
+                                </Border>
+                                <Button Grid.Column="1"
+                                        Style="{StaticResource PrimaryButton}"
+                                        Text="Save paper"
+                                        IsVisible="{Binding CanEditPaper}"
+                                        Command="{Binding SavePaperCommand}" />
+                            </Grid>
+                        </VerticalStackLayout>
+
+                        <Label Style="{StaticResource Faint}" LineBreakMode="WordWrap" Text="{Binding PaperDetail}" />
+
+                        <Label Style="{StaticResource Faint}"
+                               LineBreakMode="WordWrap"
+                               IsVisible="{Binding CannotEditPaper}"
+                               Text="Only an account that can change the payroll setup can change the paper." />
+
+                        <BoxView Style="{StaticResource Divider}" />
+
+                        <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10">
+                            <VerticalStackLayout Grid.Column="0" Spacing="1" VerticalOptions="Center">
+                                <Label Style="{StaticResource Body}" Text="Open files after export" />
+                                <Label Style="{StaticResource Faint}"
+                                       LineBreakMode="WordWrap"
+                                       Text="Opens a saved payslip or report PDF so it is ready to print." />
+                            </VerticalStackLayout>
+                            <Switch Grid.Column="1"
+                                    IsToggled="{Binding OpenAfterExport}"
+                                    VerticalOptions="Center"
+                                    OnColor="{StaticResource Brand}" />
+                        </Grid>
+
+                        <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10">
+                            <VerticalStackLayout Grid.Column="0" Spacing="1" VerticalOptions="Center">
+                                <Label Style="{StaticResource Body}" Text="Saved files" />
+                                <Label Style="{StaticResource Faint}"
+                                       LineBreakMode="CharacterWrap"
+                                       Text="{Binding ExportsFolder}" />
+                            </VerticalStackLayout>
+                            <Button Grid.Column="1"
+                                    Style="{StaticResource SecondaryButton}"
+                                    Text="Open folder"
+                                    VerticalOptions="Center"
+                                    Command="{Binding OpenExportsFolderCommand}" />
+                        </Grid>
+                    </VerticalStackLayout>
+                </Border>
+            </Grid>
+        </VerticalStackLayout>
+    </ScrollView>
+
+</ContentView>

@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8" ?>
 <ContentView xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:markup="clr-namespace:PAYROLLSystemApp.Views.Markup"
              xmlns:controls="clr-namespace:PAYROLLSystemApp.Views.Controls"
              x:Class="PAYROLLSystemApp.Views.Controls.ModalHost"
              x:Name="Root"
@@ -31,7 +32,7 @@
                 <Grid Grid.Row="0" ColumnDefinitions="*,Auto" Padding="18,14,12,12">
                     <VerticalStackLayout Grid.Column="0" Spacing="2">
                         <Label Text="{Binding Title, Source={x:Reference Root}, x:DataType=controls:ModalHost}"
-                               FontSize="15"
+                               FontSize="{markup:Font 15}"
                                FontAttributes="Bold"
                                TextColor="{AppThemeBinding Light={StaticResource TextLight}, Dark={StaticResource TextDark}}" />
                         <Label Style="{StaticResource Muted}"
@@ -42,7 +43,7 @@
                     <Button Grid.Column="1"
                             Text="✕"
                             Style="{StaticResource GhostButton}"
-                            FontSize="13"
+                            FontSize="{markup:Font 13}"
                             WidthRequest="28"
                             HeightRequest="28"
                             Padding="0"

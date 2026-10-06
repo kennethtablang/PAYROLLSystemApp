@@ -10,6 +10,6 @@ public partial class ChangePasswordPage : ContentPage
         BindingContext = viewModel;
     }
 
-    /// <summary>The hardware back button must not skip a forced change.</summary>
+    /// <summary>Cancel is the way back to the workspace; the hardware back button is ignored.</summary>
     protected override bool OnBackButtonPressed() => true;
 }

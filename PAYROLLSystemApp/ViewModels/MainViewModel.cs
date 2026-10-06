@@ -33,26 +33,51 @@ public sealed partial class NavItemViewModel : ObservableObject
 
     public string Title => Info.Title;
 
+    /// <summary>A Segoe MDL2 Assets glyph; see the IconFont resource.</summary>
+    public string Icon => Section switch
+    {
+        AppSection.Dashboard => "\uE80F",       // Home
+        AppSection.Employees => "\uE716",       // People
+        AppSection.Organization => "\uE821",    // Work
+        AppSection.Detachments => "\uE707",     // MapPin
+        AppSection.Attendance => "\uE823",      // Recent
+        AppSection.Timesheets => "\uE7C3",      // Page
+        AppSection.Leave => "\uE787",           // Calendar
+        AppSection.PayrollSetup => "\uE8EF",    // Calculator
+        AppSection.PayrollRuns => "\uE8C7",     // PaymentCard
+        AppSection.Approvals => "\uE8FB",       // Accept
+        AppSection.Payslips => "\uE8A5",        // Document
+        AppSection.Reports => "\uE9D2",         // AreaChart
+        AppSection.Users => "\uE77B",           // Contact
+        AppSection.AuditLog => "\uE81C",        // History
+        AppSection.DataManagement => "\uE74E",  // Save
+        AppSection.Settings => "\uE713",        // Settings
+        _ => string.Empty
+    };
+
     public AppSection Section => Info.Section;
 
     public string Badge { get; }
 
     public bool HasBadge => !string.IsNullOrEmpty(Badge);
 
+    /// <summary>The colours that show it live in MainPage.xaml, so they follow the theme.</summary>
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(LabelColor))]
-    [NotifyPropertyChangedFor(nameof(RowColor))]
-    [NotifyPropertyChangedFor(nameof(IndicatorColor))]
     public partial bool IsActive { get; set; }
 
-    public Color LabelColor => IsActive ? Color.FromArgb("#FFFFFF") : Color.FromArgb("#B9BACB");
+    /// <summary>Settings → compact sidebar: the icon alone, with the title as a tooltip.</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(ShowsLabel))]
+    public partial bool IsCompact { get; set; }
 
-    public Color RowColor => IsActive ? Color.FromArgb("#2A2748") : Colors.Transparent;
+    public bool ShowsLabel => !IsCompact;
 
-    public Color IndicatorColor => IsActive ? Color.FromArgb("#8B85FF") : Colors.Transparent;
+    public bool ShowsBadge => HasBadge && !IsCompact;
+
+    partial void OnIsCompactChanged(bool value) => OnPropertyChanged(nameof(ShowsBadge));
 }
 
-public sealed partial class NavGroupViewModel
+public sealed partial class NavGroupViewModel : ObservableObject
 {
     public NavGroupViewModel(string name, IEnumerable<NavItemViewModel> items)
     {
@@ -63,6 +88,12 @@ public sealed partial class NavGroupViewModel
     public string Name { get; }
 
     public ObservableCollection<NavItemViewModel> Items { get; }
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(ShowsName))]
+    public partial bool IsCompact { get; set; }
+
+    public bool ShowsName => !IsCompact;
 }
 
 /// <summary>
@@ -73,16 +104,19 @@ public sealed partial class MainViewModel : BaseViewModel, IDisposable
 {
     private readonly IAppNavigator _navigator;
     private readonly IDialogService _dialogs;
+    private readonly IUserPreferences _preferences;
     private IDispatcherTimer? _clock;
 
     public MainViewModel(
         ISessionService session,
         IAppNavigator navigator,
-        IDialogService dialogs)
+        IDialogService dialogs,
+        IUserPreferences preferences)
         : base(session)
     {
         _navigator = navigator;
         _dialogs = dialogs;
+        _preferences = preferences;
 
         UserName = string.Empty;
         UserRole = string.Empty;
@@ -93,7 +127,10 @@ public sealed partial class MainViewModel : BaseViewModel, IDisposable
         FooterStatus = string.Empty;
 
         BuildNavigation();
+        ApplyCompact(_preferences.CompactSidebar);
+
         _navigator.Navigated += OnNavigated;
+        _preferences.Changed += OnPreferenceChanged;
     }
 
     public ObservableCollection<NavGroupViewModel> NavGroups { get; } = new();
@@ -148,18 +185,46 @@ public sealed partial class MainViewModel : BaseViewModel, IDisposable
     [RelayCommand]
     private Task SignOutAsync() => RunAsync(async () =>
     {
-        // NFR-022
-        if (!await _dialogs.ConfirmAsync("Sign out", "Are you sure you want to sign out?", "Sign out", "Stay"))
+        // Settings → Confirm before signing out (on unless switched off).
+        if (_preferences.ConfirmSignOut &&
+            !await _dialogs.ConfirmAsync("Sign out", "Are you sure you want to sign out?", "Sign out", "Stay"))
             return;
 
         await Session.SignOutAsync();
     });
 
-    /// <summary>FR-004.</summary>
-    [RelayCommand]
-    private void ChangePassword() => Session.RequestPasswordChange();
-
     private void OnNavigated(object? sender, AppSection section) => SetActive(section);
+
+    // ===================================================== compact sidebar
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsExpanded))]
+    [NotifyPropertyChangedFor(nameof(SidebarWidth))]
+    public partial bool IsCompact { get; set; }
+
+    public bool IsExpanded => !IsCompact;
+
+    /// <summary>Grows with the text size, or longer titles would be cut off.</summary>
+    public double SidebarWidth => Math.Round((IsCompact ? 56 : 228) * TextScale.Factor);
+
+    private void OnPreferenceChanged(object? sender, string name)
+    {
+        if (name == nameof(IUserPreferences.CompactSidebar))
+            MainThread.BeginInvokeOnMainThread(() => ApplyCompact(_preferences.CompactSidebar));
+    }
+
+    private void ApplyCompact(bool compact)
+    {
+        IsCompact = compact;
+
+        foreach (var group in NavGroups)
+        {
+            group.IsCompact = compact;
+
+            foreach (var item in group.Items)
+                item.IsCompact = compact;
+        }
+    }
 
     private void SetActive(AppSection section)
     {
@@ -213,5 +278,6 @@ public sealed partial class MainViewModel : BaseViewModel, IDisposable
         _clock?.Stop();
         _clock = null;
         _navigator.Navigated -= OnNavigated;
+        _preferences.Changed -= OnPreferenceChanged;
     }
 }

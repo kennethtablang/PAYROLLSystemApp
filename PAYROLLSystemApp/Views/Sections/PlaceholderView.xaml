@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8" ?>
 <ContentView xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:markup="clr-namespace:PAYROLLSystemApp.Views.Markup"
              x:Class="PAYROLLSystemApp.Views.Sections.PlaceholderView">
 
     <Grid Padding="20">
@@ -21,7 +22,7 @@
                         <RoundRectangle CornerRadius="10" />
                     </Border.StrokeShape>
                     <Label Text="◷"
-                           FontSize="18"
+                           FontSize="{markup:Font 18}"
                            TextColor="{StaticResource Brand}"
                            HorizontalOptions="Center"
                            VerticalOptions="Center" />
@@ -29,7 +30,7 @@
 
                 <Label x:Name="TitleLabel"
                        Style="{StaticResource PageTitle}"
-                       FontSize="16"
+                       FontSize="{markup:Font 16}"
                        HorizontalTextAlignment="Center" />
 
                 <Label x:Name="DescriptionLabel"

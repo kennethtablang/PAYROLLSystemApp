@@ -1,6 +1,7 @@
 ﻿<?xml version="1.0" encoding="utf-8" ?>
 <ContentView xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:markup="clr-namespace:PAYROLLSystemApp.Views.Markup"
              xmlns:vm="clr-namespace:PAYROLLSystemApp.ViewModels"
              xmlns:models="clr-namespace:PAYROLLSystemApp.Models"
              xmlns:controls="clr-namespace:PAYROLLSystemApp.Views.Controls"
@@ -78,7 +79,7 @@
 
                 <!-- Inline result banner (NFR-023) -->
                 <Label Grid.Row="1"
-                       FontSize="12"
+                       FontSize="{markup:Font 12}"
                        TextColor="{StaticResource Success}"
                        Text="{Binding StatusMessage}"
                        IsVisible="{Binding HasStatus}" />
@@ -124,7 +125,7 @@
 
                                                     <VerticalStackLayout Grid.Column="0" Spacing="1">
                                                         <Label Text="{Binding Reference}"
-                                                               FontSize="12.5"
+                                                               FontSize="{markup:Font 12.5}"
                                                                FontAttributes="Bold"
                                                                LineBreakMode="TailTruncation"
                                                                TextColor="{AppThemeBinding Light={StaticResource TextLight}, Dark={StaticResource TextDark}}" />
@@ -138,14 +139,14 @@
 
                                                     <VerticalStackLayout Grid.Column="1" Spacing="1" HorizontalOptions="End">
                                                         <Label Text="{Binding StatusDisplay}"
-                                                               FontSize="11"
+                                                               FontSize="{markup:Font 11}"
                                                                FontAttributes="Bold"
                                                                HorizontalTextAlignment="End"
                                                                TextColor="{Binding StatusColor}" />
                                                         <Label Style="{StaticResource Body}"
                                                                HorizontalTextAlignment="End"
                                                                Text="{Binding NetDisplay}" />
-                                                        <Label FontSize="10.5"
+                                                        <Label FontSize="{markup:Font 10.5}"
                                                                HorizontalTextAlignment="End"
                                                                TextColor="{StaticResource Warning}"
                                                                IsVisible="{Binding HasExceptions}"
@@ -240,7 +241,7 @@
                                         HorizontalOptions="Fill"
                                         IsVisible="{Binding HasBlockers}"
                                         BackgroundColor="{AppThemeBinding Light={StaticResource WarningSoftLight}, Dark={StaticResource WarningSoftDark}}">
-                                    <Label FontSize="11.5"
+                                    <Label FontSize="{markup:Font 11.5}"
                                            TextColor="{StaticResource Warning}"
                                            Text="{Binding BlockerText}" />
                                 </Border>
@@ -260,7 +261,7 @@
                                                 <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="8" Padding="0,4">
                                                     <VerticalStackLayout Grid.Column="0" Spacing="0">
                                                         <Label Text="{Binding Name}"
-                                                               FontSize="12"
+                                                               FontSize="{markup:Font 12}"
                                                                LineBreakMode="TailTruncation"
                                                                TextColor="{AppThemeBinding Light={StaticResource TextLight}, Dark={StaticResource TextDark}}" />
                                                         <Label Style="{StaticResource Faint}"
@@ -269,7 +270,7 @@
                                                     </VerticalStackLayout>
 
                                                     <Label Grid.Column="1"
-                                                           FontSize="12"
+                                                           FontSize="{markup:Font 12}"
                                                            FontAttributes="Bold"
                                                            VerticalOptions="Center"
                                                            TextColor="{Binding AmountColor}"
@@ -312,14 +313,14 @@
 
                                                 <VerticalStackLayout Grid.Column="0" Spacing="0" VerticalOptions="Center">
                                                     <Label Text="{Binding EmployeeName}"
-                                                           FontSize="12.5"
+                                                           FontSize="{markup:Font 12.5}"
                                                            FontAttributes="Bold"
                                                            LineBreakMode="TailTruncation"
                                                            TextColor="{AppThemeBinding Light={StaticResource TextLight}, Dark={StaticResource TextDark}}" />
                                                     <Label Style="{StaticResource Faint}"
                                                            LineBreakMode="TailTruncation"
                                                            Text="{Binding TimeDisplay}" />
-                                                    <Label FontSize="10.5"
+                                                    <Label FontSize="{markup:Font 10.5}"
                                                            LineBreakMode="TailTruncation"
                                                            TextColor="{StaticResource Warning}"
                                                            IsVisible="{Binding IsFlagged}"
@@ -330,7 +331,7 @@
                                                 <Label Grid.Column="2" Style="{StaticResource Body}" VerticalOptions="Center" Text="{Binding DeductionsDisplay}" />
 
                                                 <Label Grid.Column="3"
-                                                       FontSize="12.5"
+                                                       FontSize="{markup:Font 12.5}"
                                                        FontAttributes="Bold"
                                                        VerticalOptions="Center"
                                                        TextColor="{Binding NetColor}"
@@ -413,7 +414,7 @@
 
                                         <VerticalStackLayout Grid.Column="0" Spacing="0" VerticalOptions="Center">
                                             <Label Text="{Binding Name}"
-                                                   FontSize="12.5"
+                                                   FontSize="{markup:Font 12.5}"
                                                    FontAttributes="Bold"
                                                    LineBreakMode="TailTruncation"
                                                    TextColor="{AppThemeBinding Light={StaticResource TextLight}, Dark={StaticResource TextDark}}" />
@@ -509,7 +510,7 @@
 
                                         <VerticalStackLayout Grid.Column="0" Spacing="0" VerticalOptions="Center">
                                             <Label Text="{Binding Name}"
-                                                   FontSize="12.5"
+                                                   FontSize="{markup:Font 12.5}"
                                                    FontAttributes="Bold"
                                                    LineBreakMode="TailTruncation"
                                                    TextColor="{AppThemeBinding Light={StaticResource TextLight}, Dark={StaticResource TextDark}}" />
@@ -621,7 +622,7 @@
 
                                         <VerticalStackLayout Grid.Column="1" Spacing="0" VerticalOptions="Center">
                                             <Label Text="{Binding FullName}"
-                                                   FontSize="12"
+                                                   FontSize="{markup:Font 12}"
                                                    LineBreakMode="TailTruncation"
                                                    TextColor="{AppThemeBinding Light={StaticResource TextLight}, Dark={StaticResource TextDark}}" />
                                             <Label Style="{StaticResource Faint}"
@@ -659,7 +660,7 @@
                             HorizontalOptions="Fill"
                             IsVisible="{Binding HasPayslipNote}"
                             BackgroundColor="{AppThemeBinding Light={StaticResource WarningSoftLight}, Dark={StaticResource WarningSoftDark}}">
-                        <Label FontSize="11.5"
+                        <Label FontSize="{markup:Font 11.5}"
                                TextColor="{StaticResource Warning}"
                                Text="{Binding PayslipNote}" />
                     </Border>
@@ -671,7 +672,7 @@
 
                                     <VerticalStackLayout Grid.Column="0" Spacing="0">
                                         <Label Text="{Binding Name}"
-                                               FontSize="12.5"
+                                               FontSize="{markup:Font 12.5}"
                                                LineBreakMode="TailTruncation"
                                                TextColor="{AppThemeBinding Light={StaticResource TextLight}, Dark={StaticResource TextDark}}" />
                                         <Label Style="{StaticResource Faint}"
@@ -683,7 +684,7 @@
                                     </VerticalStackLayout>
 
                                     <Label Grid.Column="1"
-                                           FontSize="12.5"
+                                           FontSize="{markup:Font 12.5}"
                                            HorizontalTextAlignment="End"
                                            VerticalOptions="Center"
                                            Text="{Binding AmountDisplay}"
@@ -699,7 +700,7 @@
                             Padding="10,7"
                             HorizontalOptions="Fill"
                             BackgroundColor="{AppThemeBinding Light={StaticResource BrandSoftLight}, Dark={StaticResource BrandSoftDark}}">
-                        <Label FontSize="12"
+                        <Label FontSize="{markup:Font 12}"
                                FontAttributes="Bold"
                                TextColor="{StaticResource Brand}"
                                Text="{Binding PayslipTotals}" />

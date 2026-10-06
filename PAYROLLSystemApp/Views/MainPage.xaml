@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8" ?>
 <ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:markup="clr-namespace:PAYROLLSystemApp.Views.Markup"
              xmlns:vm="clr-namespace:PAYROLLSystemApp.ViewModels"
              x:Class="PAYROLLSystemApp.Views.MainPage"
              x:DataType="vm:MainViewModel"
@@ -13,11 +14,25 @@
         <!-- ==================== SIDEBAR ==================== -->
         <Grid Grid.Column="0"
               RowDefinitions="Auto,*,Auto"
-              WidthRequest="{StaticResource SidebarWidth}"
-              BackgroundColor="{StaticResource SidebarBg}">
+              WidthRequest="{Binding SidebarWidth}"
+              BackgroundColor="{AppThemeBinding Light={StaticResource SidebarBgLight}, Dark={StaticResource SidebarBg}}">
+
+            <!-- Edge against the workspace; the dark sidebar needs none -->
+            <BoxView Grid.RowSpan="3"
+                     HorizontalOptions="End"
+                     WidthRequest="1"
+                     Color="{AppThemeBinding Light={StaticResource SidebarDividerLight}, Dark=Transparent}" />
 
             <!-- Brand -->
             <Grid Grid.Row="0" ColumnDefinitions="Auto,*" ColumnSpacing="10" Padding="16,16,16,14">
+                <Grid.Triggers>
+                    <!-- Compact: the logo alone, centred -->
+                    <DataTrigger TargetType="Grid" Binding="{Binding IsCompact}" Value="True">
+                        <Setter Property="ColumnSpacing" Value="0" />
+                        <Setter Property="Padding" Value="0,16,0,14" />
+                        <Setter Property="HorizontalOptions" Value="Center" />
+                    </DataTrigger>
+                </Grid.Triggers>
                 <Border Grid.Column="0"
                         WidthRequest="32"
                         HeightRequest="32"
@@ -27,25 +42,25 @@
                         <RoundRectangle CornerRadius="8" />
                     </Border.StrokeShape>
                     <Label Text="P"
-                           FontSize="16"
+                           FontSize="{markup:Font 16}"
                            FontAttributes="Bold"
                            TextColor="White"
                            HorizontalOptions="Center"
                            VerticalOptions="Center" />
                 </Border>
 
-                <VerticalStackLayout Grid.Column="1" Spacing="0" VerticalOptions="Center">
+                <VerticalStackLayout Grid.Column="1" Spacing="0" VerticalOptions="Center" IsVisible="{Binding IsExpanded}">
                     <Label Text="Payroll"
-                           FontSize="14"
+                           FontSize="{markup:Font 14}"
                            FontAttributes="Bold"
-                           TextColor="{StaticResource SidebarTextActive}" />
+                           TextColor="{AppThemeBinding Light={StaticResource SidebarTitleLight}, Dark={StaticResource SidebarTextActive}}" />
                     <Label Text="Management System"
-                           FontSize="10"
-                           TextColor="{StaticResource SidebarText}" />
+                           FontSize="{markup:Font 10}"
+                           TextColor="{AppThemeBinding Light={StaticResource SidebarTextLight}, Dark={StaticResource SidebarText}}" />
                 </VerticalStackLayout>
             </Grid>
 
-            <BoxView Grid.Row="0" VerticalOptions="End" HeightRequest="1" Color="{StaticResource SidebarDivider}" />
+            <BoxView Grid.Row="0" VerticalOptions="End" HeightRequest="1" Color="{AppThemeBinding Light={StaticResource SidebarDividerLight}, Dark={StaticResource SidebarDivider}}" />
 
             <!-- Navigation, filtered by role (FR-002) -->
             <ScrollView Grid.Row="1" Padding="0,10">
@@ -55,44 +70,86 @@
                             <VerticalStackLayout Spacing="1" Margin="0,4,0,8">
 
                                 <Label Text="{Binding Name}"
-                                       FontSize="9.5"
+                                       IsVisible="{Binding ShowsName}"
+                                       FontSize="{markup:Font 9.5}"
                                        FontAttributes="Bold"
-                                       TextColor="#6F7192"
+                                       TextColor="{AppThemeBinding Light={StaticResource SidebarGroupLight}, Dark={StaticResource SidebarGroup}}"
                                        Margin="16,4,16,6" />
 
                                 <VerticalStackLayout Spacing="1" BindableLayout.ItemsSource="{Binding Items}">
                                     <BindableLayout.ItemTemplate>
                                         <DataTemplate x:DataType="vm:NavItemViewModel">
-                                            <Grid ColumnDefinitions="3,*,Auto"
-                                                  HeightRequest="34"
-                                                  BackgroundColor="{Binding RowColor}">
+                                            <Grid ColumnDefinitions="3,Auto,*,Auto"
+                                                  HeightRequest="{markup:Scaled 34}">
+                                                <Grid.Triggers>
+                                                    <DataTrigger TargetType="Grid" Binding="{Binding IsActive}" Value="True">
+                                                        <Setter Property="BackgroundColor" Value="{AppThemeBinding Light={StaticResource SidebarActiveRowLight}, Dark={StaticResource SidebarActiveRow}}" />
+                                                    </DataTrigger>
+                                                </Grid.Triggers>
 
                                                 <BoxView Grid.Column="0"
                                                          InputTransparent="True"
-                                                         Color="{Binding IndicatorColor}" />
+                                                         Color="Transparent">
+                                                    <BoxView.Triggers>
+                                                        <DataTrigger TargetType="BoxView" Binding="{Binding IsActive}" Value="True">
+                                                            <Setter Property="Color" Value="{AppThemeBinding Light={StaticResource SidebarIndicatorLight}, Dark={StaticResource SidebarIndicator}}" />
+                                                        </DataTrigger>
+                                                    </BoxView.Triggers>
+                                                </BoxView>
 
                                                 <Label Grid.Column="1"
                                                        InputTransparent="True"
-                                                       Text="{Binding Title}"
-                                                       FontSize="12.5"
+                                                       Text="{Binding Icon}"
+                                                       FontFamily="{StaticResource IconFont}"
+                                                       FontSize="{markup:Font 14}"
+                                                       WidthRequest="{markup:Scaled 16}"
+                                                       HorizontalTextAlignment="Center"
                                                        VerticalOptions="Center"
                                                        Margin="13,0,0,0"
-                                                       TextColor="{Binding LabelColor}" />
+                                                       TextColor="{AppThemeBinding Light={StaticResource SidebarTextLight}, Dark={StaticResource SidebarText}}">
+                                                    <Label.Triggers>
+                                                        <!-- Compact: centred across the whole row -->
+                                                        <DataTrigger TargetType="Label" Binding="{Binding IsCompact}" Value="True">
+                                                            <Setter Property="Grid.Column" Value="0" />
+                                                            <Setter Property="Grid.ColumnSpan" Value="4" />
+                                                            <Setter Property="Margin" Value="0" />
+                                                            <Setter Property="HorizontalOptions" Value="Center" />
+                                                        </DataTrigger>
+                                                        <DataTrigger TargetType="Label" Binding="{Binding IsActive}" Value="True">
+                                                            <Setter Property="TextColor" Value="{AppThemeBinding Light={StaticResource SidebarTextActiveLight}, Dark={StaticResource SidebarTextActive}}" />
+                                                        </DataTrigger>
+                                                    </Label.Triggers>
+                                                </Label>
 
-                                                <Border Grid.Column="2"
+                                                <Label Grid.Column="2"
+                                                       InputTransparent="True"
+                                                       Text="{Binding Title}"
+                                                       IsVisible="{Binding ShowsLabel}"
+                                                       FontSize="{markup:Font 12.5}"
+                                                       VerticalOptions="Center"
+                                                       Margin="11,0,0,0"
+                                                       TextColor="{AppThemeBinding Light={StaticResource SidebarTextLight}, Dark={StaticResource SidebarText}}">
+                                                    <Label.Triggers>
+                                                        <DataTrigger TargetType="Label" Binding="{Binding IsActive}" Value="True">
+                                                            <Setter Property="TextColor" Value="{AppThemeBinding Light={StaticResource SidebarTextActiveLight}, Dark={StaticResource SidebarTextActive}}" />
+                                                        </DataTrigger>
+                                                    </Label.Triggers>
+                                                </Label>
+
+                                                <Border Grid.Column="3"
                                                         InputTransparent="True"
-                                                        IsVisible="{Binding HasBadge}"
+                                                        IsVisible="{Binding ShowsBadge}"
                                                         Padding="5,1"
                                                         Margin="0,0,12,0"
                                                         StrokeThickness="0"
                                                         VerticalOptions="Center"
-                                                        BackgroundColor="#332F55">
+                                                        BackgroundColor="{AppThemeBinding Light={StaticResource SidebarBadgeBgLight}, Dark={StaticResource SidebarBadgeBg}}">
                                                     <Border.StrokeShape>
                                                         <RoundRectangle CornerRadius="3" />
                                                     </Border.StrokeShape>
                                                     <Label Text="{Binding Badge}"
-                                                           FontSize="8.5"
-                                                           TextColor="#9B9CBA" />
+                                                           FontSize="{markup:Font 8.5}"
+                                                           TextColor="{AppThemeBinding Light={StaticResource SidebarBadgeTextLight}, Dark={StaticResource SidebarBadgeText}}" />
                                                 </Border>
 
                                                 <!--
@@ -100,10 +157,11 @@
                                                     click. Underneath it the row visuals still show through,
                                                     because the button is transparent in every state bar hover.
                                                 -->
-                                                <Button Grid.ColumnSpan="3"
+                                                <Button Grid.ColumnSpan="4"
                                                         Style="{StaticResource SidebarNavButton}"
                                                         Command="{Binding SelectCommand}"
                                                         SemanticProperties.Description="{Binding Title}"
+                                                        ToolTipProperties.Text="{Binding Title}"
                                                         AutomationId="{Binding Title}" />
                                             </Grid>
                                         </DataTemplate>
@@ -117,34 +175,41 @@
 
             <!-- Signed-in user -->
             <VerticalStackLayout Grid.Row="2" Spacing="0">
-                <BoxView HeightRequest="1" Color="{StaticResource SidebarDivider}" />
+                <BoxView HeightRequest="1" Color="{AppThemeBinding Light={StaticResource SidebarDividerLight}, Dark={StaticResource SidebarDivider}}" />
                 <Grid ColumnDefinitions="Auto,*" ColumnSpacing="9" Padding="14,12">
+                    <Grid.Triggers>
+                        <DataTrigger TargetType="Grid" Binding="{Binding IsCompact}" Value="True">
+                            <Setter Property="ColumnSpacing" Value="0" />
+                            <Setter Property="Padding" Value="0,12" />
+                            <Setter Property="HorizontalOptions" Value="Center" />
+                        </DataTrigger>
+                    </Grid.Triggers>
                     <Border Grid.Column="0"
                             WidthRequest="30"
                             HeightRequest="30"
                             StrokeThickness="0"
-                            BackgroundColor="{StaticResource SidebarHover}">
+                            BackgroundColor="{AppThemeBinding Light={StaticResource SidebarHoverLight}, Dark={StaticResource SidebarHover}}">
                         <Border.StrokeShape>
                             <RoundRectangle CornerRadius="15" />
                         </Border.StrokeShape>
                         <Label Text="{Binding UserInitials}"
-                               FontSize="11"
+                               FontSize="{markup:Font 11}"
                                FontAttributes="Bold"
-                               TextColor="{StaticResource SidebarTextActive}"
+                               TextColor="{AppThemeBinding Light={StaticResource SidebarTitleLight}, Dark={StaticResource SidebarTextActive}}"
                                HorizontalOptions="Center"
                                VerticalOptions="Center" />
                     </Border>
 
-                    <VerticalStackLayout Grid.Column="1" Spacing="0" VerticalOptions="Center">
+                    <VerticalStackLayout Grid.Column="1" Spacing="0" VerticalOptions="Center" IsVisible="{Binding IsExpanded}">
                         <Label Text="{Binding UserName}"
-                               FontSize="11.5"
+                               FontSize="{markup:Font 11.5}"
                                FontAttributes="Bold"
                                LineBreakMode="TailTruncation"
-                               TextColor="{StaticResource SidebarTextActive}" />
+                               TextColor="{AppThemeBinding Light={StaticResource SidebarTitleLight}, Dark={StaticResource SidebarTextActive}}" />
                         <Label Text="{Binding UserRole}"
-                               FontSize="9.5"
+                               FontSize="{markup:Font 9.5}"
                                LineBreakMode="TailTruncation"
-                               TextColor="{StaticResource SidebarText}" />
+                               TextColor="{AppThemeBinding Light={StaticResource SidebarTextLight}, Dark={StaticResource SidebarText}}" />
                     </VerticalStackLayout>
                 </Grid>
             </VerticalStackLayout>
@@ -155,15 +220,15 @@
 
             <!-- Top bar -->
             <Grid Grid.Row="0"
-                  ColumnDefinitions="*,Auto,Auto,Auto"
+                  ColumnDefinitions="*,Auto,Auto"
                   ColumnSpacing="14"
                   Padding="20,0"
-                  HeightRequest="{StaticResource TopBarHeight}"
+                  HeightRequest="{markup:Scaled 52}"
                   BackgroundColor="{AppThemeBinding Light={StaticResource SurfaceLight}, Dark={StaticResource SurfaceDark}}">
 
                 <VerticalStackLayout Grid.Column="0" Spacing="0" VerticalOptions="Center">
                     <Label Text="{Binding PageTitle}"
-                           FontSize="15"
+                           FontSize="{markup:Font 15}"
                            FontAttributes="Bold"
                            TextColor="{AppThemeBinding Light={StaticResource TextLight}, Dark={StaticResource TextDark}}" />
                     <Label Style="{StaticResource Faint}" Text="{Binding PageSubtitle}" />
@@ -175,18 +240,12 @@
                        VerticalOptions="Center" />
 
                 <Button Grid.Column="2"
-                        Style="{StaticResource GhostButton}"
-                        Text="Change password"
-                        Command="{Binding ChangePasswordCommand}"
-                        VerticalOptions="Center" />
-
-                <Button Grid.Column="3"
                         Style="{StaticResource SecondaryButton}"
                         Text="Sign out"
                         Command="{Binding SignOutCommand}"
                         VerticalOptions="Center" />
 
-                <BoxView Grid.ColumnSpan="4" VerticalOptions="End" Style="{StaticResource Divider}" />
+                <BoxView Grid.ColumnSpan="3" VerticalOptions="End" Style="{StaticResource Divider}" />
             </Grid>
 
             <!-- Section content -->
@@ -196,7 +255,7 @@
             <Grid Grid.Row="2"
                   ColumnDefinitions="*,Auto"
                   Padding="20,0"
-                  HeightRequest="{StaticResource FooterHeight}"
+                  HeightRequest="{markup:Scaled 30}"
                   BackgroundColor="{AppThemeBinding Light={StaticResource SurfaceLight}, Dark={StaticResource SurfaceDark}}">
 
                 <BoxView Grid.ColumnSpan="2" VerticalOptions="Start" Style="{StaticResource Divider}" />

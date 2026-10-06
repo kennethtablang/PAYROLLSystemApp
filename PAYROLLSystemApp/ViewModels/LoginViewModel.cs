@@ -9,11 +9,16 @@ namespace PAYROLLSystemApp.ViewModels;
 public sealed partial class LoginViewModel : BaseViewModel
 {
     private readonly IAuthService _auth;
+    private readonly IAppNavigator _navigator;
+    private readonly IUserPreferences _preferences;
 
-    public LoginViewModel(IAuthService auth, ISessionService session)
+    public LoginViewModel(
+        IAuthService auth, IAppNavigator navigator, IUserPreferences preferences, ISessionService session)
         : base(session)
     {
         _auth = auth;
+        _navigator = navigator;
+        _preferences = preferences;
         Title = "Sign in";
 
         Identifier = string.Empty;
@@ -72,8 +77,11 @@ public sealed partial class LoginViewModel : BaseViewModel
         Password = string.Empty;
         Identifier = string.Empty;
 
-        // App listens for SessionStarted and shows the main layout, or the
-        // forced password change when the credential is temporary (FR-005).
+        // Chosen under Settings → Start-up. Set before SignIn, because the main
+        // layout opens on whatever section the navigator holds.
+        _navigator.NavigateTo(_preferences.StartSectionFor(result.User!));
+
+        // App listens for SessionStarted and shows the main layout.
         Session.SignIn(result.User!);
     });
 
@@ -99,7 +107,7 @@ public sealed partial class LoginViewModel : BaseViewModel
 
     public string FirstRunHint =>
         $"First run — sign in as '{PayrollDatabase.SeedAdminUsername}' with password " +
-        $"'{PayrollDatabase.SeedAdminPassword}'. You will be asked to choose your own password straight away.";
+        $"'{PayrollDatabase.SeedAdminPassword}'. Change it afterwards from Change password in the top bar.";
 
     public async Task LoadAsync()
     {

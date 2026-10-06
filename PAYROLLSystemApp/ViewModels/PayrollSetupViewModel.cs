@@ -289,7 +289,6 @@ public sealed partial class PayrollSetupViewModel : BaseViewModel
         MethodOptions = EnumOption.From<ComputationMethod>(PayrollEnumNames.Display);
         FrequencyOptions = EnumOption.From<PayFrequency>(EmployeeEnumNames.Display);
         ContributionOptions = EnumOption.From<ContributionSchedule>(PayrollEnumNames.Display);
-        PaperOptions = EnumOption.From<ReportPaper>(ReportPaperSizes.Display);
 
         CalendarSummary = string.Empty;
         EarningSummary = string.Empty;
@@ -355,9 +354,6 @@ public sealed partial class PayrollSetupViewModel : BaseViewModel
     public IReadOnlyList<EnumOption> FrequencyOptions { get; }
 
     public IReadOnlyList<EnumOption> ContributionOptions { get; }
-
-    /// <summary>FR-085. The stock report PDFs are laid out for.</summary>
-    public IReadOnlyList<EnumOption> PaperOptions { get; }
 
     /// <summary>
     /// The tax tables on offer: one per frequency the BIR publishes, plus the
@@ -1785,7 +1781,6 @@ public sealed partial class PayrollSetupViewModel : BaseViewModel
         SettingsAccrueSil = settings.AccrueServiceIncentiveLeave;
         SettingsSilDays = settings.ServiceIncentiveLeaveDays.ToString("0.##");
         SettingsSilDivisor = settings.ServiceIncentiveLeaveDivisor.ToString("0.##");
-        SettingsPaper = PaperOptions.FirstOrDefault(o => o.Value == (int)settings.ReportPaper);
 
         var missing = profile.MissingForPayslip;
 
@@ -1932,14 +1927,6 @@ public sealed partial class PayrollSetupViewModel : BaseViewModel
     }
 
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(PaperDetail))]
-    public partial EnumOption? SettingsPaper { get; set; }
-
-    /// <summary>What the chosen stock means for a wide report.</summary>
-    public string PaperDetail => ReportPaperSizes.Detail(
-        SettingsPaper?.As<ReportPaper>() ?? ReportPaper.DotMatrix11x14);
-
-    [ObservableProperty]
     public partial string RatePreview { get; set; }
 
     /// <summary>
@@ -2057,8 +2044,7 @@ public sealed partial class PayrollSetupViewModel : BaseViewModel
             FlagNegativeNetPay = SettingsFlagNegativeNet,
             AccrueServiceIncentiveLeave = SettingsAccrueSil,
             ServiceIncentiveLeaveDays = silDays,
-            ServiceIncentiveLeaveDivisor = silDivisor,
-            ReportPaper = SettingsPaper?.As<ReportPaper>() ?? ReportPaper.DotMatrix11x14
+            ServiceIncentiveLeaveDivisor = silDivisor
         };
 
         var result = await _config.SaveSettingsAsync(settings, performedBy);

@@ -1,6 +1,7 @@
 ﻿<?xml version="1.0" encoding="utf-8" ?>
 <ContentView xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:markup="clr-namespace:PAYROLLSystemApp.Views.Markup"
              xmlns:vm="clr-namespace:PAYROLLSystemApp.ViewModels"
              xmlns:models="clr-namespace:PAYROLLSystemApp.Models"
              xmlns:controls="clr-namespace:PAYROLLSystemApp.Views.Controls"
@@ -86,7 +87,7 @@
                     <!-- Inline result banner (NFR-023) -->
                     <Label Grid.Row="2"
                            Margin="16,0,16,10"
-                           FontSize="12"
+                           FontSize="{markup:Font 12}"
                            TextColor="{StaticResource Success}"
                            Text="{Binding StatusMessage}"
                            IsVisible="{Binding HasStatus}" />
@@ -135,7 +136,7 @@
                                                     <RoundRectangle CornerRadius="15" />
                                                 </Border.StrokeShape>
                                                 <Label Text="{Binding Initials}"
-                                                       FontSize="11"
+                                                       FontSize="{markup:Font 11}"
                                                        FontAttributes="Bold"
                                                        TextColor="{StaticResource Brand}"
                                                        HorizontalOptions="Center"
@@ -144,7 +145,7 @@
 
                                             <VerticalStackLayout Grid.Column="1" Spacing="0" VerticalOptions="Center">
                                                 <Label Text="{Binding FullName}"
-                                                       FontSize="12.5"
+                                                       FontSize="{markup:Font 12.5}"
                                                        FontAttributes="Bold"
                                                        LineBreakMode="TailTruncation"
                                                        TextColor="{AppThemeBinding Light={StaticResource TextLight}, Dark={StaticResource TextDark}}" />
@@ -172,7 +173,7 @@
                                         </VerticalStackLayout>
 
                                         <Label Grid.Column="3"
-                                               FontSize="11.5"
+                                               FontSize="{markup:Font 11.5}"
                                                VerticalOptions="Center"
                                                LineBreakMode="TailTruncation"
                                                Text="{Binding RateDisplay}"
@@ -723,7 +724,7 @@
                     <!-- Steps 2 and 3: what the file would do, then what it did -->
                     <VerticalStackLayout Spacing="10" IsVisible="{Binding HasImportResult}">
 
-                        <Label FontSize="13"
+                        <Label FontSize="{markup:Font 13}"
                                FontAttributes="Bold"
                                TextColor="{AppThemeBinding Light={StaticResource TextLight}, Dark={StaticResource TextDark}}"
                                Text="{Binding ImportSummary}" />
@@ -734,7 +735,7 @@
                                 HorizontalOptions="Fill"
                                 BackgroundColor="{AppThemeBinding Light={StaticResource WarningSoftLight}, Dark={StaticResource WarningSoftDark}}">
                             <Label Text="{Binding ImportWarnings}"
-                                   FontSize="11.5"
+                                   FontSize="{markup:Font 11.5}"
                                    TextColor="{AppThemeBinding Light={StaticResource Warning}, Dark=#F5C77E}" />
                         </Border>
 
@@ -753,7 +754,7 @@
                                                Style="{StaticResource Faint}"
                                                Text="{Binding LineNumber, StringFormat='Line {0}'}" />
                                         <Label Grid.Column="1"
-                                               FontSize="11.5"
+                                               FontSize="{markup:Font 11.5}"
                                                FontAttributes="Bold"
                                                TextColor="{StaticResource Success}"
                                                Text="{Binding OutcomeDisplay}">
@@ -818,13 +819,13 @@
                                     <Grid ColumnDefinitions="*,Auto" RowDefinitions="Auto,Auto,Auto" RowSpacing="2">
 
                                         <Label Grid.Row="0" Grid.Column="0"
-                                               FontSize="12.5"
+                                               FontSize="{markup:Font 12.5}"
                                                FontAttributes="Bold"
                                                TextColor="{AppThemeBinding Light={StaticResource TextLight}, Dark={StaticResource TextDark}}"
                                                Text="{Binding EffectiveDate, StringFormat='Effective {0:dd MMM yyyy}'}" />
 
                                         <Label Grid.Row="0" Grid.Column="1"
-                                               FontSize="12.5"
+                                               FontSize="{markup:Font 12.5}"
                                                FontAttributes="Bold"
                                                TextColor="{StaticResource Brand}"
                                                Text="{Binding ChangeDisplay}" />

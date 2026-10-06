@@ -1,6 +1,7 @@
 ﻿<?xml version="1.0" encoding="utf-8" ?>
 <ContentView xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:markup="clr-namespace:PAYROLLSystemApp.Views.Markup"
              xmlns:vm="clr-namespace:PAYROLLSystemApp.ViewModels"
              xmlns:controls="clr-namespace:PAYROLLSystemApp.Views.Controls"
              x:Class="PAYROLLSystemApp.Views.Sections.PayrollSetupView"
@@ -80,7 +81,7 @@
 
                 <!-- Inline result banner (NFR-023) -->
                 <Label Grid.Row="1"
-                       FontSize="12"
+                       FontSize="{markup:Font 12}"
                        TextColor="{StaticResource Success}"
                        Text="{Binding StatusMessage}"
                        IsVisible="{Binding HasStatus}" />
@@ -163,14 +164,14 @@
 
                                             <Label Grid.Column="0"
                                                    Text="{Binding Code}"
-                                                   FontSize="12"
+                                                   FontSize="{markup:Font 12}"
                                                    FontAttributes="Bold"
                                                    VerticalOptions="Center"
                                                    TextColor="{StaticResource Brand}" />
 
                                             <VerticalStackLayout Grid.Column="1" Spacing="0" VerticalOptions="Center">
                                                 <Label Text="{Binding RangeDisplay}"
-                                                       FontSize="12.5"
+                                                       FontSize="{markup:Font 12.5}"
                                                        LineBreakMode="TailTruncation"
                                                        TextColor="{AppThemeBinding Light={StaticResource TextLight}, Dark={StaticResource TextDark}}" />
                                                 <Label Style="{StaticResource Faint}"
@@ -189,7 +190,7 @@
                                                    Text="{Binding PayDateDisplay}" />
 
                                             <Label Grid.Column="4"
-                                                   FontSize="11.5"
+                                                   FontSize="{markup:Font 11.5}"
                                                    FontAttributes="Bold"
                                                    VerticalOptions="Center"
                                                    Text="{Binding StatusDisplay}"
@@ -298,14 +299,14 @@
                                                         VerticalOptions="Center"
                                                         BackgroundColor="{AppThemeBinding Light={StaticResource BrandSoftLight}, Dark={StaticResource BrandSoftDark}}">
                                                     <Label Text="{Binding Code}"
-                                                           FontSize="10.5"
+                                                           FontSize="{markup:Font 10.5}"
                                                            FontAttributes="Bold"
                                                            TextColor="{StaticResource Brand}" />
                                                 </Border>
 
                                                 <VerticalStackLayout Grid.Column="1" Spacing="0" VerticalOptions="Center">
                                                     <Label Text="{Binding Name}"
-                                                           FontSize="12.5"
+                                                           FontSize="{markup:Font 12.5}"
                                                            FontAttributes="Bold"
                                                            LineBreakMode="TailTruncation"
                                                            TextColor="{AppThemeBinding Light={StaticResource TextLight}, Dark={StaticResource TextDark}}" />
@@ -376,14 +377,14 @@
                                                         VerticalOptions="Center"
                                                         BackgroundColor="{AppThemeBinding Light={StaticResource BrandSoftLight}, Dark={StaticResource BrandSoftDark}}">
                                                     <Label Text="{Binding Code}"
-                                                           FontSize="10.5"
+                                                           FontSize="{markup:Font 10.5}"
                                                            FontAttributes="Bold"
                                                            TextColor="{StaticResource Brand}" />
                                                 </Border>
 
                                                 <VerticalStackLayout Grid.Column="1" Spacing="0" VerticalOptions="Center">
                                                     <Label Text="{Binding Name}"
-                                                           FontSize="12.5"
+                                                           FontSize="{markup:Font 12.5}"
                                                            FontAttributes="Bold"
                                                            LineBreakMode="TailTruncation"
                                                            TextColor="{AppThemeBinding Light={StaticResource TextLight}, Dark={StaticResource TextDark}}" />
@@ -444,7 +445,7 @@
                                 HorizontalOptions="Fill"
                                 IsVisible="{Binding HasPremiumWarning}"
                                 BackgroundColor="{AppThemeBinding Light={StaticResource DangerSoftLight}, Dark={StaticResource DangerSoftDark}}">
-                            <Label FontSize="11.5"
+                            <Label FontSize="{markup:Font 11.5}"
                                    TextColor="{StaticResource Danger}"
                                    Text="{Binding PremiumWarning}" />
                         </Border>
@@ -467,14 +468,14 @@
 
                                         <Label Grid.Column="0"
                                                Text="{Binding MultiplierDisplay}"
-                                               FontSize="14"
+                                               FontSize="{markup:Font 14}"
                                                FontAttributes="Bold"
                                                VerticalOptions="Center"
                                                TextColor="{Binding MultiplierColor}" />
 
                                         <VerticalStackLayout Grid.Column="1" Spacing="0" VerticalOptions="Center">
                                             <Label Text="{Binding Name}"
-                                                   FontSize="12.5"
+                                                   FontSize="{markup:Font 12.5}"
                                                    FontAttributes="Bold"
                                                    LineBreakMode="TailTruncation"
                                                    TextColor="{AppThemeBinding Light={StaticResource TextLight}, Dark={StaticResource TextDark}}" />
@@ -520,7 +521,7 @@
                             HorizontalOptions="Fill"
                             IsVisible="{Binding HasStatutoryWarning}"
                             BackgroundColor="{AppThemeBinding Light={StaticResource WarningSoftLight}, Dark={StaticResource WarningSoftDark}}">
-                        <Label FontSize="11.5"
+                        <Label FontSize="{markup:Font 11.5}"
                                TextColor="{StaticResource Warning}"
                                Text="{Binding StatutoryWarning}" />
                     </Border>
@@ -559,7 +560,7 @@
 
                                                 <VerticalStackLayout Grid.Column="0" Spacing="0" VerticalOptions="Center">
                                                     <Label Text="{Binding RangeDisplay}"
-                                                           FontSize="12"
+                                                           FontSize="{markup:Font 12}"
                                                            LineBreakMode="TailTruncation"
                                                            TextColor="{AppThemeBinding Light={StaticResource TextLight}, Dark={StaticResource TextDark}}" />
                                                     <Label Style="{StaticResource Faint}" Text="{Binding SplitDisplay}" />
@@ -645,7 +646,7 @@
                                             HorizontalOptions="Fill"
                                             IsVisible="{Binding HasTaxWarning}"
                                             BackgroundColor="{AppThemeBinding Light={StaticResource WarningSoftLight}, Dark={StaticResource WarningSoftDark}}">
-                                        <Label FontSize="11.5"
+                                        <Label FontSize="{markup:Font 11.5}"
                                                TextColor="{StaticResource Warning}"
                                                Text="{Binding TaxWarning}" />
                                     </Border>
@@ -667,7 +668,7 @@
 
                                                     <Label Grid.Column="0"
                                                            Text="{Binding RangeDisplay}"
-                                                           FontSize="12"
+                                                           FontSize="{markup:Font 12}"
                                                            VerticalOptions="Center"
                                                            TextColor="{AppThemeBinding Light={StaticResource TextLight}, Dark={StaticResource TextDark}}" />
 
@@ -718,7 +719,7 @@
                                         HorizontalOptions="Fill"
                                         IsVisible="{Binding HasCompanyWarning}"
                                         BackgroundColor="{AppThemeBinding Light={StaticResource WarningSoftLight}, Dark={StaticResource WarningSoftDark}}">
-                                    <Label FontSize="11.5"
+                                    <Label FontSize="{markup:Font 11.5}"
                                            TextColor="{StaticResource Warning}"
                                            Text="{Binding CompanyWarning}" />
                                 </Border>
@@ -832,7 +833,7 @@
                                         Padding="10,7"
                                         HorizontalOptions="Fill"
                                         BackgroundColor="{AppThemeBinding Light={StaticResource BrandSoftLight}, Dark={StaticResource BrandSoftDark}}">
-                                    <Label FontSize="11.5"
+                                    <Label FontSize="{markup:Font 11.5}"
                                            TextColor="{StaticResource Brand}"
                                            Text="{Binding RatePreview}" />
                                 </Border>
@@ -934,19 +935,8 @@
                                 <Label Style="{StaticResource Faint}"
                                        Text="365 spreads the entitlement over every calendar day, which is what the legacy system does. An agency accruing only over days that could have been worked uses 313 or 261 and pays more per day for the same five days a year." />
 
-                                <VerticalStackLayout Spacing="0" Margin="0,4,0,0">
-                                    <Label Style="{StaticResource FieldLabel}" Text="PAPER FOR PRINTED REPORTS" />
-                                    <Border Style="{StaticResource FieldFrame}">
-                                        <Picker ItemsSource="{Binding PaperOptions}"
-                                                SelectedItem="{Binding SettingsPaper}"
-                                                ItemDisplayBinding="{Binding Label, x:DataType=vm:EnumOption}" />
-                                    </Border>
-                                </VerticalStackLayout>
-
-                                <Label Style="{StaticResource Faint}" Text="{Binding PaperDetail}" />
-
                                 <Label Style="{StaticResource Faint}"
-                                       Text="Continuous form is fed one way through a tractor, so the two dot matrix sizes are never turned to suit a table — a report too wide for them is carried onto a further page instead, repeating each employee's code and name. Only A4 turns itself." />
+                                       Text="The paper reports print on is chosen under Settings → Printing and exports." />
 
                                 <Button Style="{StaticResource PrimaryButton}"
                                         Text="Save payroll rules"
@@ -1040,7 +1030,7 @@
                             Padding="10,7"
                             HorizontalOptions="Fill"
                             BackgroundColor="{AppThemeBinding Light={StaticResource BrandSoftLight}, Dark={StaticResource BrandSoftDark}}">
-                        <Label FontSize="11.5"
+                        <Label FontSize="{markup:Font 11.5}"
                                TextColor="{StaticResource Brand}"
                                Text="{Binding PeriodPreview}" />
                     </Border>
@@ -1288,7 +1278,7 @@
                                 VerticalOptions="Center"
                                 BackgroundColor="{AppThemeBinding Light={StaticResource BrandSoftLight}, Dark={StaticResource BrandSoftDark}}">
                             <Label Text="{Binding PremiumCodeDisplay}"
-                                   FontSize="10.5"
+                                   FontSize="{markup:Font 10.5}"
                                    FontAttributes="Bold"
                                    TextColor="{StaticResource Brand}" />
                         </Border>
@@ -1318,7 +1308,7 @@
                             HorizontalOptions="Fill"
                             IsVisible="{Binding PremiumWasInForce}"
                             BackgroundColor="{AppThemeBinding Light={StaticResource WarningSoftLight}, Dark={StaticResource WarningSoftDark}}">
-                        <Label FontSize="11.5"
+                        <Label FontSize="{markup:Font 11.5}"
                                TextColor="{StaticResource Warning}"
                                Text="This rate has already been in force and may have priced payslips. Changing the multiplier adds a new row from the date above and keeps the old one, so runs before that date are unaffected." />
                     </Border>
@@ -1480,7 +1470,7 @@
                             HorizontalOptions="Fill"
                             IsVisible="{Binding TaxWasInForce}"
                             BackgroundColor="{AppThemeBinding Light={StaticResource WarningSoftLight}, Dark={StaticResource WarningSoftDark}}">
-                        <Label FontSize="11.5"
+                        <Label FontSize="{markup:Font 11.5}"
                                TextColor="{StaticResource Warning}"
                                Text="This table is in force and may have withheld tax already. Give the change a later effective date rather than editing what history was computed from." />
                     </Border>

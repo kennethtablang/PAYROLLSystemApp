@@ -156,14 +156,16 @@ public sealed class ReportNoteView
 public sealed partial class ReportsViewModel : BaseViewModel
 {
     private readonly IReportService _reports;
+    private readonly IUserPreferences _preferences;
 
     private ReportGrid? _grid;
     private bool _suspendRebuild;
 
-    public ReportsViewModel(IReportService reports, ISessionService session)
+    public ReportsViewModel(IReportService reports, IUserPreferences preferences, ISessionService session)
         : base(session)
     {
         _reports = reports;
+        _preferences = preferences;
 
         Title = "Reports";
         ScopeSummary = string.Empty;
@@ -254,7 +256,7 @@ public sealed partial class ReportsViewModel : BaseViewModel
             await LoadScopeOptionsAsync();
 
             if (SelectedReport is null)
-                await SelectAsync(Reports.FirstOrDefault());
+                await SelectAsync(RememberedReport() ?? Reports.FirstOrDefault());
             else
                 await BuildAsync();
         });
@@ -302,7 +304,9 @@ public sealed partial class ReportsViewModel : BaseViewModel
             foreach (var department in await _reports.GetDepartmentsAsync())
                 DepartmentOptions.Add(new LookupOption(department.Id, department.Name));
 
-            SelectedDepartment = DepartmentOptions.FirstOrDefault(o => o.Id == SelectedDepartment?.Id)
+            var wanted = SelectedDepartment?.Id ?? RememberedDepartmentId();
+
+            SelectedDepartment = DepartmentOptions.FirstOrDefault(o => o.Id == wanted)
                                  ?? DepartmentOptions[0];
         }
         finally
@@ -337,7 +341,15 @@ public sealed partial class ReportsViewModel : BaseViewModel
 
     partial void OnSelectedMonthChanged(LookupOption? value) => Rebuild();
 
-    partial void OnSelectedDepartmentChanged(LookupOption? value) => Rebuild();
+    partial void OnSelectedDepartmentChanged(LookupOption? value)
+    {
+        // A report without a department filter resets it under _suspendRebuild;
+        // that is not the user's choice, so it is not remembered.
+        if (!_suspendRebuild && value is not null)
+            Remember(DepartmentMemory, value.Id?.ToString(CultureInfo.InvariantCulture));
+
+        Rebuild();
+    }
 
     partial void OnFromChanged(DateTime value) => Rebuild();
 
@@ -371,6 +383,8 @@ public sealed partial class ReportsViewModel : BaseViewModel
         if (choice is null)
             return;
 
+        Remember(ReportMemory, choice.Kind.ToString());
+
         var definition = choice.Definition;
 
         NeedsRun = definition.Scope == ReportScope.Run;
@@ -395,6 +409,32 @@ public sealed partial class ReportsViewModel : BaseViewModel
         await LoadScopeOptionsAsync();
         await BuildAsync();
     });
+
+    // ====================================== Settings → remember last report
+
+    private const string ReportMemory = "reports.report";
+    private const string DepartmentMemory = "reports.department";
+
+    private void Remember(string name, string? value)
+    {
+        if (_preferences.RememberReportChoice && Session.CurrentUser is { } user)
+            _preferences.SetRemembered(user, name, value);
+    }
+
+    private string? Recall(string name) =>
+        _preferences.RememberReportChoice && Session.CurrentUser is { } user
+            ? _preferences.GetRemembered(user, name)
+            : null;
+
+    private ReportChoice? RememberedReport() =>
+        Recall(ReportMemory) is { } kind
+            ? Reports.FirstOrDefault(r => r.Kind.ToString() == kind)
+            : null;
+
+    private int? RememberedDepartmentId() =>
+        int.TryParse(Recall(DepartmentMemory), NumberStyles.Integer, CultureInfo.InvariantCulture, out var id)
+            ? id
+            : null;
 
     // ========================================================== building
 
@@ -542,6 +582,9 @@ public sealed partial class ReportsViewModel : BaseViewModel
 
         ExportedPath = result.FilePath;
         ShowStatus(result.Message);
+
+        if (_preferences.OpenAfterExport)
+            await OpenSilentlyAsync(result.FilePath, "Report");
     });
 
     /// <summary>
@@ -569,4 +612,20 @@ public sealed partial class ReportsViewModel : BaseViewModel
             ShowError($"No application is available to open the file. It is saved at {ExportedPath}");
         }
     });
+
+    /// <summary>
+    /// Settings → "Open files after export". Failing to open is not an error:
+    /// the status line already says where the file was saved.
+    /// </summary>
+    private static async Task OpenSilentlyAsync(string path, string title)
+    {
+        try
+        {
+            await Launcher.Default.OpenAsync(new OpenFileRequest(title, new ReadOnlyFile(path)));
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"[OpenAfterExport] {ex}");
+        }
+    }
 }
