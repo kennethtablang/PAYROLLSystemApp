@@ -177,4 +177,8 @@ public static class AuditActions
     public const string BackupSettingsUpdated = "BACKUP_SETTINGS_UPDATED";
     public const string YearArchived = "YEAR_ARCHIVED";
     public const string YearPurged = "YEAR_PURGED";
+
+    // Help & Updates - installing a new version and asking the developer for one.
+    public const string UpdateStarted = "UPDATE_STARTED";
+    public const string SupportRequestCreated = "SUPPORT_REQUEST_CREATED";
 }

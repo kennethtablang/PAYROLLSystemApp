@@ -80,6 +80,11 @@ namespace PAYROLLSystemApp
             services.AddSingleton<IDialogService, DialogService>();
             services.AddSingleton<IAppNavigator, AppNavigator>();
             services.AddSingleton<IUserPreferences, UserPreferences>();
+
+            // Help & Updates — new versions from GitHub Releases, and the
+            // problem reports and change requests sent back to the developer.
+            services.AddSingleton<IUpdateService, UpdateService>();
+            services.AddSingleton<ISupportRequestService, SupportRequestService>();
         }
 
         private static void RegisterViewModels(IServiceCollection services)
@@ -103,6 +108,7 @@ namespace PAYROLLSystemApp
             services.AddTransient<AuditLogViewModel>();
             services.AddTransient<DataManagementViewModel>();
             services.AddTransient<SettingsViewModel>();
+            services.AddTransient<HelpViewModel>();
         }
 
         private static void RegisterViews(IServiceCollection services)
@@ -128,6 +134,7 @@ namespace PAYROLLSystemApp
             services.AddTransient<AuditLogView>();
             services.AddTransient<DataManagementView>();
             services.AddTransient<SettingsView>();
+            services.AddTransient<HelpView>();
         }
     }
 }

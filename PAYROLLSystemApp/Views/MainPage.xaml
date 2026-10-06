@@ -220,7 +220,7 @@
 
             <!-- Top bar -->
             <Grid Grid.Row="0"
-                  ColumnDefinitions="*,Auto,Auto"
+                  ColumnDefinitions="*,Auto,Auto,Auto"
                   ColumnSpacing="14"
                   Padding="20,0"
                   HeightRequest="{markup:Scaled 52}"
@@ -234,18 +234,26 @@
                     <Label Style="{StaticResource Faint}" Text="{Binding PageSubtitle}" />
                 </VerticalStackLayout>
 
-                <Label Grid.Column="1"
+                <!-- Shown once a newer version is published; opens Help & Updates. -->
+                <Button Grid.Column="1"
+                        Style="{StaticResource PrimaryButton}"
+                        Text="{Binding UpdateBadge}"
+                        IsVisible="{Binding HasUpdate}"
+                        Command="{Binding OpenUpdatesCommand}"
+                        VerticalOptions="Center" />
+
+                <Label Grid.Column="2"
                        Style="{StaticResource Muted}"
                        Text="{Binding Clock}"
                        VerticalOptions="Center" />
 
-                <Button Grid.Column="2"
+                <Button Grid.Column="3"
                         Style="{StaticResource SecondaryButton}"
                         Text="Sign out"
                         Command="{Binding SignOutCommand}"
                         VerticalOptions="Center" />
 
-                <BoxView Grid.ColumnSpan="3" VerticalOptions="End" Style="{StaticResource Divider}" />
+                <BoxView Grid.ColumnSpan="4" VerticalOptions="End" Style="{StaticResource Divider}" />
             </Grid>
 
             <!-- Section content -->

@@ -132,6 +132,17 @@ if ($LASTEXITCODE -ne 0) { Fail 'Inno Setup could not compile the installer. Rea
 $setup = Join-Path $root "PAYROLLSystemApp\Installer\PayrollSystemSetup-$currentVersion.exe"
 if (-not (Test-Path $setup)) { Fail "Expected $setup but it is not there." }
 
+# The in-app updater refuses an installer whose SHA-256 does not match this file.
+$hash = (Get-FileHash $setup -Algorithm SHA256).Hash.ToLowerInvariant()
+$setupName = Split-Path $setup -Leaf
+[IO.File]::WriteAllText("$setup.sha256", "$hash  $setupName`n", (New-Object Text.UTF8Encoding($false)))
+
+# Signed with the private key kept outside the repo, so the updater can tell
+# this release from one uploaded by anyone else (tools/release-signing.cs).
+Step 'Signing the release checksum'
+& dotnet run (Join-Path $root 'tools\release-signing.cs') -- sign "$setup.sha256"
+if ($LASTEXITCODE -ne 0) { Fail 'The checksum could not be signed. Read the message above.' }
+
 $sizeMb = [math]::Round((Get-Item $setup).Length / 1MB, 1)
 
 Write-Host "`nDONE  Installer for version $currentVersion ($sizeMb MB):" -ForegroundColor Green

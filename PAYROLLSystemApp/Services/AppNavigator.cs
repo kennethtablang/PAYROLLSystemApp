@@ -20,7 +20,8 @@ public enum AppSection
     Users,
     AuditLog,
     DataManagement,
-    Settings
+    Settings,
+    Help
 }
 
 /// <summary>
@@ -108,6 +109,10 @@ public static class AppSections
         // Every signed-in account holds ViewOwnPayslip, so everyone reaches it.
         new(AppSection.Settings, "Settings", GroupSystem,
             "Appearance, your account, printing and the screen you start on",
+            Permission.ViewOwnPayslip, true, ""),
+
+        new(AppSection.Help, "Help & Updates", GroupSystem,
+            "Install new versions, report a problem or request a change",
             Permission.ViewOwnPayslip, true, "")
     ];
 

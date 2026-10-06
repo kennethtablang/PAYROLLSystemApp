@@ -58,3 +58,7 @@
 #*.rtf   diff=astextplain
 #*.RTF   diff=astextplain
 PAYROLLSystemApp/Installer/*.exe filter=lfs diff=lfs merge=lfs -text
+
+# Signed release files: a line-ending change would break the signature.
+*.sha256 -text
+*.sig -text

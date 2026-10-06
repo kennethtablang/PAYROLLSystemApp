@@ -143,6 +143,7 @@ public partial class MainPage : ContentPage
         AppSection.AuditLog => _services.GetRequiredService<AuditLogView>(),
         AppSection.DataManagement => _services.GetRequiredService<DataManagementView>(),
         AppSection.Settings => _services.GetRequiredService<SettingsView>(),
+        AppSection.Help => _services.GetRequiredService<HelpView>(),
         _ => new PlaceholderView(AppSections.Get(section))
     };
 }

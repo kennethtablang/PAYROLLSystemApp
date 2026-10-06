@@ -52,6 +52,7 @@ public sealed partial class NavItemViewModel : ObservableObject
         AppSection.AuditLog => "\uE81C",        // History
         AppSection.DataManagement => "\uE74E",  // Save
         AppSection.Settings => "\uE713",        // Settings
+        AppSection.Help => "\uE897",            // Help
         _ => string.Empty
     };
 
@@ -105,18 +106,21 @@ public sealed partial class MainViewModel : BaseViewModel, IDisposable
     private readonly IAppNavigator _navigator;
     private readonly IDialogService _dialogs;
     private readonly IUserPreferences _preferences;
+    private readonly IUpdateService _updates;
     private IDispatcherTimer? _clock;
 
     public MainViewModel(
         ISessionService session,
         IAppNavigator navigator,
         IDialogService dialogs,
-        IUserPreferences preferences)
+        IUserPreferences preferences,
+        IUpdateService updates)
         : base(session)
     {
         _navigator = navigator;
         _dialogs = dialogs;
         _preferences = preferences;
+        _updates = updates;
 
         UserName = string.Empty;
         UserRole = string.Empty;
@@ -125,12 +129,14 @@ public sealed partial class MainViewModel : BaseViewModel, IDisposable
         PageSubtitle = string.Empty;
         Clock = string.Empty;
         FooterStatus = string.Empty;
+        UpdateBadge = string.Empty;
 
         BuildNavigation();
         ApplyCompact(_preferences.CompactSidebar);
 
         _navigator.Navigated += OnNavigated;
         _preferences.Changed += OnPreferenceChanged;
+        _updates.AvailableChanged += OnUpdateAvailableChanged;
     }
 
     public ObservableCollection<NavGroupViewModel> NavGroups { get; } = new();
@@ -156,7 +162,41 @@ public sealed partial class MainViewModel : BaseViewModel, IDisposable
     [ObservableProperty]
     public partial string FooterStatus { get; set; }
 
-    public string AppVersion => $"Payroll MS v{AppInfo.Current.VersionString}";
+    public string AppVersion => $"Payroll MS v{Services.AppVersion.Display}";
+
+    // ===================================================== update badge
+
+    /// <summary>"Update 1.2 available" in the top bar; empty when up to date.</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasUpdate))]
+    public partial string UpdateBadge { get; set; }
+
+    public bool HasUpdate => !string.IsNullOrEmpty(UpdateBadge);
+
+    [RelayCommand]
+    private void OpenUpdates() => _navigator.NavigateTo(AppSection.Help);
+
+    private void OnUpdateAvailableChanged(object? sender, EventArgs e) =>
+        MainThread.BeginInvokeOnMainThread(ShowUpdateBadge);
+
+    private void ShowUpdateBadge() =>
+        UpdateBadge = _updates.Available is { } update ? $"Update {update.VersionDisplay} available" : string.Empty;
+
+    /// <summary>
+    /// Once per sign-in, in the background. No internet, or GitHub not
+    /// answering, simply leaves the badge hidden.
+    /// </summary>
+    private async Task CheckForUpdateQuietlyAsync()
+    {
+        try
+        {
+            await _updates.CheckAsync();
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"[MainViewModel] update check: {ex}");
+        }
+    }
 
     /// <summary>
     /// FR-002: a destination the role cannot use is never rendered. The section
@@ -250,6 +290,9 @@ public sealed partial class MainViewModel : BaseViewModel, IDisposable
 
         Tick();
 
+        ShowUpdateBadge();
+        _ = CheckForUpdateQuietlyAsync();
+
         _clock = Application.Current?.Dispatcher.CreateTimer();
         if (_clock is not null)
         {
@@ -279,5 +322,6 @@ public sealed partial class MainViewModel : BaseViewModel, IDisposable
         _clock = null;
         _navigator.Navigated -= OnNavigated;
         _preferences.Changed -= OnPreferenceChanged;
+        _updates.AvailableChanged -= OnUpdateAvailableChanged;
     }
 }

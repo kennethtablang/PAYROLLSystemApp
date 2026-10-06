@@ -14,7 +14,7 @@
 ; alone so an uninstall or reinstall never loses payroll data.
 
 #define AppName "Payroll Management System"
-#define AppVersion "1.0"
+#define AppVersion "1.1"
 #define AppPublisher "Payroll MS"
 #define AppExe "PAYROLLSystemApp.exe"
 
@@ -62,3 +62,6 @@ Name: "{autodesktop}\{#AppName}"; Filename: "{app}\{#AppExe}"; Tasks: desktopico
 
 [Run]
 Filename: "{app}\{#AppExe}"; Description: "{cm:LaunchProgram,{#AppName}}"; Flags: nowait postinstall skipifsilent
+; The in-app updater (Help & Updates) runs this installer with /SILENT after
+; closing the app; reopen it so the update looks like a restart.
+Filename: "{app}\{#AppExe}"; Flags: nowait; Check: WizardSilent

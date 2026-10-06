@@ -127,6 +127,10 @@ public sealed partial class PayrollDatabase
             await _connection.CreateTableAsync<BackupSettings>().ConfigureAwait(false);
             await _connection.CreateTableAsync<ArchiveRecord>().ConfigureAwait(false);
 
+            // Help & Updates — the company's record of what it has asked the
+            // developer for.
+            await _connection.CreateTableAsync<SupportRequest>().ConfigureAwait(false);
+
             await MigrateUserRolesAsync(_connection).ConfigureAwait(false);
 
             await SeedAdministratorAsync(_connection).ConfigureAwait(false);

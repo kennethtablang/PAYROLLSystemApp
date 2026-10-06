@@ -1,0 +1,245 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentView xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:markup="clr-namespace:PAYROLLSystemApp.Views.Markup"
+             xmlns:vm="clr-namespace:PAYROLLSystemApp.ViewModels"
+             x:Class="PAYROLLSystemApp.Views.Sections.HelpView"
+             x:DataType="vm:HelpViewModel">
+
+    <ScrollView>
+        <VerticalStackLayout Padding="20" Spacing="12" MaximumWidthRequest="980" HorizontalOptions="Fill">
+
+            <!-- Inline result banner (NFR-023) -->
+            <Label FontSize="{markup:Font 12}"
+                   TextColor="{StaticResource Success}"
+                   LineBreakMode="WordWrap"
+                   Text="{Binding StatusMessage}"
+                   IsVisible="{Binding HasStatus}" />
+
+            <Label Style="{StaticResource ErrorText}"
+                   LineBreakMode="WordWrap"
+                   Text="{Binding ErrorMessage}"
+                   IsVisible="{Binding HasError}" />
+
+            <!-- ============ UPDATES ============ -->
+            <Border Style="{StaticResource Card}">
+                <VerticalStackLayout Spacing="10">
+                    <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10">
+                        <VerticalStackLayout Grid.Column="0" Spacing="1">
+                            <Label Style="{StaticResource SectionHeading}" Text="Updates" />
+                            <Label Style="{StaticResource Faint}"
+                                   LineBreakMode="WordWrap"
+                                   Text="{Binding CurrentVersion, StringFormat='You are using {0}. New versions are checked for each time someone signs in.'}" />
+                        </VerticalStackLayout>
+
+                        <Button Grid.Column="1"
+                                Style="{StaticResource SecondaryButton}"
+                                Text="Check now"
+                                VerticalOptions="Start"
+                                IsEnabled="{Binding IsNotBusy}"
+                                Command="{Binding CheckForUpdatesCommand}" />
+                    </Grid>
+
+                    <Label Style="{StaticResource Body}" Text="{Binding UpdateStatus}" LineBreakMode="WordWrap" />
+
+                    <VerticalStackLayout Spacing="8" IsVisible="{Binding HasUpdate}">
+                        <BoxView Style="{StaticResource Divider}" />
+
+                        <VerticalStackLayout Spacing="1">
+                            <Label Text="{Binding UpdateTitle}"
+                                   FontSize="{markup:Font 14}"
+                                   FontAttributes="Bold"
+                                   TextColor="{AppThemeBinding Light={StaticResource TextLight}, Dark={StaticResource TextDark}}" />
+                            <Label Style="{StaticResource Faint}" Text="{Binding UpdateMeta}" />
+                        </VerticalStackLayout>
+
+                        <Label Style="{StaticResource FieldLabel}" Text="WHAT'S NEW" />
+                        <Label Style="{StaticResource Body}" LineBreakMode="WordWrap" Text="{Binding UpdateNotes}" />
+
+                        <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10" IsVisible="{Binding IsDownloading}">
+                            <VerticalStackLayout Grid.Column="0" Spacing="4" VerticalOptions="Center">
+                                <ProgressBar Progress="{Binding DownloadProgress}" ProgressColor="{StaticResource Brand}" />
+                                <Label Style="{StaticResource Faint}" Text="{Binding DownloadText}" />
+                            </VerticalStackLayout>
+                            <Button Grid.Column="1"
+                                    Style="{StaticResource SecondaryButton}"
+                                    Text="Cancel"
+                                    Command="{Binding CancelDownloadCommand}" />
+                        </Grid>
+
+                        <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10" IsVisible="{Binding ShowsInstall}">
+                            <Label Grid.Column="0"
+                                   Style="{StaticResource Faint}"
+                                   LineBreakMode="WordWrap"
+                                   VerticalOptions="Center"
+                                   Text="A backup is taken first, so the current data can be restored from Backup &amp; Archive if anything goes wrong." />
+                            <Button Grid.Column="1"
+                                    Style="{StaticResource PrimaryButton}"
+                                    Text="Back up and install"
+                                    IsEnabled="{Binding IsNotBusy}"
+                                    Command="{Binding InstallUpdateCommand}" />
+                        </Grid>
+
+                        <Label Style="{StaticResource Faint}"
+                               LineBreakMode="WordWrap"
+                               TextColor="{StaticResource Warning}"
+                               IsVisible="{Binding ShowsAskAdmin}"
+                               Text="Ask an administrator to sign in and install it. Installing backs up the database first, which only an administrator can do." />
+                    </VerticalStackLayout>
+                </VerticalStackLayout>
+            </Border>
+
+            <!-- ============ REPORT A PROBLEM / REQUEST A CHANGE ============ -->
+            <Border Style="{StaticResource Card}">
+                <VerticalStackLayout Spacing="10">
+                    <VerticalStackLayout Spacing="1">
+                        <Label Style="{StaticResource SectionHeading}" Text="Report a problem or request a change" />
+                        <Label Style="{StaticResource Faint}"
+                               LineBreakMode="WordWrap"
+                               Text="Saves everything the developer needs into one zip file. Send that file by Messenger, e-mail or Google Drive — the app does not send anything by itself." />
+                    </VerticalStackLayout>
+
+                    <Grid ColumnDefinitions="*,*,*" ColumnSpacing="10">
+                        <VerticalStackLayout Grid.Column="0" Spacing="0">
+                            <Label Style="{StaticResource FieldLabel}" Text="WHAT KIND" />
+                            <Border Style="{StaticResource FieldFrame}">
+                                <Picker ItemsSource="{Binding KindOptions}"
+                                        SelectedItem="{Binding SelectedKind}"
+                                        ItemDisplayBinding="{Binding Label, x:DataType=vm:EnumOption}" />
+                            </Border>
+                        </VerticalStackLayout>
+
+                        <VerticalStackLayout Grid.Column="1" Spacing="0">
+                            <Label Style="{StaticResource FieldLabel}" Text="HOW URGENT" />
+                            <Border Style="{StaticResource FieldFrame}">
+                                <Picker ItemsSource="{Binding PriorityOptions}"
+                                        SelectedItem="{Binding SelectedPriority}"
+                                        ItemDisplayBinding="{Binding Label, x:DataType=vm:EnumOption}" />
+                            </Border>
+                        </VerticalStackLayout>
+
+                        <VerticalStackLayout Grid.Column="2" Spacing="0">
+                            <Label Style="{StaticResource FieldLabel}" Text="WHICH SCREEN" />
+                            <Border Style="{StaticResource FieldFrame}">
+                                <Picker ItemsSource="{Binding ScreenOptions}"
+                                        SelectedItem="{Binding SelectedScreen}" />
+                            </Border>
+                        </VerticalStackLayout>
+                    </Grid>
+
+                    <VerticalStackLayout Spacing="0">
+                        <Label Style="{StaticResource FieldLabel}" Text="TITLE" />
+                        <Border Style="{StaticResource FieldFrame}">
+                            <Entry Text="{Binding RequestTitle}"
+                                   MaxLength="150"
+                                   Placeholder="e.g. Night differential is wrong for Batangas guards" />
+                        </Border>
+                    </VerticalStackLayout>
+
+                    <VerticalStackLayout Spacing="0">
+                        <Label Style="{StaticResource FieldLabel}" Text="DETAILS" />
+                        <Border Style="{StaticResource FieldFrame}">
+                            <Editor Text="{Binding RequestDetails}"
+                                    MaxLength="4000"
+                                    HeightRequest="{markup:Scaled 130}"
+                                    Placeholder="What did you do, what did you expect, and what happened instead? For a change: what should it do, and an example with real figures if you have one." />
+                        </Border>
+                    </VerticalStackLayout>
+
+                    <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="8">
+                        <VerticalStackLayout Grid.Column="0" Spacing="1" VerticalOptions="Center">
+                            <Label Style="{StaticResource Body}" Text="Screenshots or files" />
+                            <Label Style="{StaticResource Faint}"
+                                   LineBreakMode="WordWrap"
+                                   Text="Tip: press Windows + Shift + S to take a screenshot, then save it and add it here." />
+                            <Label Style="{StaticResource Faint}"
+                                   LineBreakMode="WordWrap"
+                                   IsVisible="{Binding HasAttachments}"
+                                   Text="{Binding AttachmentsText, StringFormat='Added: {0}'}" />
+                        </VerticalStackLayout>
+                        <Button Grid.Column="1"
+                                Style="{StaticResource SecondaryButton}"
+                                Text="Add files"
+                                VerticalOptions="Center"
+                                Command="{Binding AddAttachmentsCommand}" />
+                        <Button Grid.Column="2"
+                                Style="{StaticResource SecondaryButton}"
+                                Text="Clear"
+                                VerticalOptions="Center"
+                                IsVisible="{Binding HasAttachments}"
+                                Command="{Binding ClearAttachmentsCommand}" />
+                    </Grid>
+
+                    <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10" IsVisible="{Binding CanIncludeDatabase}">
+                        <VerticalStackLayout Grid.Column="0" Spacing="1" VerticalOptions="Center">
+                            <Label Style="{StaticResource Body}" Text="Include a copy of the database" />
+                            <Label Style="{StaticResource Faint}"
+                                   LineBreakMode="WordWrap"
+                                   Text="Only when the developer asks for it. It contains every employee's pay and personal data, so send it privately." />
+                        </VerticalStackLayout>
+                        <Switch Grid.Column="1"
+                                IsToggled="{Binding IncludeDatabase}"
+                                VerticalOptions="Center"
+                                OnColor="{StaticResource Brand}" />
+                    </Grid>
+
+                    <HorizontalStackLayout Spacing="8" HorizontalOptions="End">
+                        <Button Style="{StaticResource SecondaryButton}"
+                                Text="Open requests folder"
+                                Command="{Binding OpenRequestsFolderCommand}" />
+                        <Button Style="{StaticResource PrimaryButton}"
+                                Text="Save request file"
+                                IsEnabled="{Binding IsNotBusy}"
+                                Command="{Binding SaveRequestCommand}" />
+                    </HorizontalStackLayout>
+                </VerticalStackLayout>
+            </Border>
+
+            <!-- ============ REQUESTS ALREADY WRITTEN ============ -->
+            <Border Style="{StaticResource Card}" Padding="0" IsVisible="{Binding HasRequests}">
+                <VerticalStackLayout Spacing="0">
+                    <VerticalStackLayout Spacing="1" Padding="16,12,16,8">
+                        <Label Style="{StaticResource SectionHeading}" Text="Requests written on this PC" />
+                        <Label Style="{StaticResource Faint}"
+                               LineBreakMode="WordWrap"
+                               Text="Quote the reference when you talk to the developer. Release notes name the references each version answers." />
+                    </VerticalStackLayout>
+
+                    <BoxView Style="{StaticResource Divider}" />
+
+                    <VerticalStackLayout BindableLayout.ItemsSource="{Binding Requests}">
+                        <BindableLayout.ItemTemplate>
+                            <DataTemplate x:DataType="vm:SupportRequestRow">
+                                <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="12" Padding="16,9">
+                                    <Label Grid.Column="0"
+                                           Text="{Binding Reference}"
+                                           FontSize="{markup:Font 12}"
+                                           FontAttributes="Bold"
+                                           VerticalOptions="Center"
+                                           TextColor="{StaticResource Brand}" />
+                                    <VerticalStackLayout Grid.Column="1" Spacing="1">
+                                        <Label Text="{Binding Title}"
+                                               FontSize="{markup:Font 12.5}"
+                                               LineBreakMode="TailTruncation"
+                                               TextColor="{AppThemeBinding Light={StaticResource TextLight}, Dark={StaticResource TextDark}}" />
+                                        <Label Style="{StaticResource Faint}"
+                                               LineBreakMode="TailTruncation"
+                                               Text="{Binding Detail}" />
+                                    </VerticalStackLayout>
+                                    <Button Grid.Column="2"
+                                            Style="{StaticResource RowAction}"
+                                            Text="Show file"
+                                            VerticalOptions="Center"
+                                            Command="{Binding Source={RelativeSource AncestorType={x:Type vm:HelpViewModel}}, Path=ShowFileCommand}"
+                                            CommandParameter="{Binding .}" />
+                                    <BoxView Grid.ColumnSpan="3" VerticalOptions="End" Style="{StaticResource Divider}" />
+                                </Grid>
+                            </DataTemplate>
+                        </BindableLayout.ItemTemplate>
+                    </VerticalStackLayout>
+                </VerticalStackLayout>
+            </Border>
+        </VerticalStackLayout>
+    </ScrollView>
+
+</ContentView>
