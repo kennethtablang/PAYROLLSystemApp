@@ -46,6 +46,7 @@ The **Dashboard** opens first. Its **Needs attention** list shows what is waitin
 | Detachments with guards but no daily rate in force today | Both |
 | Draft runs in progress: not calculated, flagged for review, or ready to submit | Both |
 | A cut-off that has closed with no payroll run yet (amber from three days before its pay date) | Both |
+| No pay calendar for this year, or (in December) none yet for next year | Both |
 | Runs with the Administrator | Accounting |
 | Leave requests waiting for a decision | Both |
 | No backup since the last posted run, or a scheduled backup due | Administrator |
@@ -303,9 +304,12 @@ Draft ──Calculate──► Draft (computed) ──Submit──► For approv
 
 **Payroll Runs → + New run**
 
-1. Choose the **pay period**.
+1. Choose the **pay period**. The window picks the period whose cut-off closed most recently, which is normally the one about to be paid. Check it before you continue.
 2. Choose the **kind of run**. **Regular** is the normal kind. See [Part 5](#5-special-runs-13th-month-and-final-pay) for the others.
-3. Choose which employees to include (**All** or **None**, then tick individuals), add optional remarks, and click **Create run**.
+3. Choose which employees to include. Everyone available starts ticked. Each name shows the person's detachment code, or *head office*.
+   - **All** / **None** tick or untick everybody.
+   - **Tick one detachment** ticks only the people at the detachment you pick. Use it to make one run per client sheet.
+4. Add optional remarks and click **Create run**.
 
 The run starts as a **Draft**. You can recalculate or discard a draft as often as you need; nothing outside the run changes.
 
@@ -324,7 +328,7 @@ Detachment staff and head-office staff are entered in different places.
 
 The client sends a printed cut-off sheet with period **totals** per person, not daily punches. Key those totals exactly as written.
 
-1. Open **Timesheets** and choose the draft run under **PERIOD COVERED**. Only **draft regular and final-pay runs** are listed. 13th-month and adjustment runs pay no hours, so they have no timesheet.
+1. On **Payroll Runs**, select the draft run and click **Key timesheets**. Timesheets opens on that run. You can also open **Timesheets** from the sidebar and choose the run under **PERIOD COVERED**. Only **draft regular and final-pay runs** are listed. 13th-month and adjustment runs pay no hours, so they have no timesheet.
 2. The people **on this run** are banded by detachment code. If a guard is missing, they were not ticked when the run was created, so the run will not pay them. Click a person to open their card and enter:
 
 | Column | Enter | Paid as |
@@ -340,6 +344,8 @@ The client sends a printed cut-off sheet with period **totals** per person, not 
 
 3. The card shows a running **Gross income** and **Less company loan**. This is not take-home pay yet: SSS, PhilHealth, Pag-IBIG and tax come off when the run is calculated.
 4. Click **Save sheet**. **Discard changes** throws away unsaved edits, and **Clear** empties one person's figures.
+
+If you switch to another run or another screen with unsaved figures, the system asks whether to **Save them**, **Discard them** or **Stay here**. If a figure is wrong and cannot be saved, you stay on the sheet with your figures intact.
 
 A timesheet **replaces** attendance for that employee in that run. It belongs to the run, so a discarded run's figures never carry over into a new one.
 
@@ -383,12 +389,14 @@ The run lists every employee with gross, deductions and net pay. Click **Payslip
 
 If you find a mistake, correct it at the source (timesheet, attendance, leave, loan or employee record) and click **Calculate** again.
 
+**Calculate** is for checking figures as you go. You do not need to press it before submitting, because **Submit** always recalculates first.
+
 ### Step 5 — Adjustments, then Submit (Accounting)
 
 - **Adjustment** adds a one-off earning or deduction to one employee, such as a retroactive increase or a refund. The amount is always positive; the **kind** decides whether it adds to or comes off the pay. A **remark is required** and is written to the audit trail.
 - **Manual tax override (E-Withtax):** an adjustment coded `WTAX` replaces the computed withholding tax for that employee.
 - Adjustments to other system-computed lines are refused, because they would be paid twice.
-- When the run is right, click **Submit**. It moves to **For approval**. **Discard** cancels a draft; its reference number is never reused.
+- When the run is right, click **Submit**. The run is **recalculated first**, so the approver sees figures that match every timesheet, adjustment, leave decision and loan as they stand at that moment, even if something changed after your last Calculate. If any payslip is flagged, the run stays a draft and the flags are listed. Otherwise it moves to **For approval**, and the confirmation shows the final gross and net. **Discard** cancels a draft; its reference number is never reused.
 
 ### Step 6 — Approve (Administrator)
 
@@ -410,6 +418,11 @@ On the approved run in **Approvals**, click **Post**. Posting:
 - makes the payslips the permanent record and publishes them to **Payslips** and **Reports**.
 
 > **Posting cannot be undone.** Check the register first.
+
+After posting, Approvals shows the next steps in one row:
+- **Export all payslips (PDF)** saves one PDF of the whole run and opens it for printing.
+- **Back up now** goes to Backup & Archive.
+- **Reports** goes to the register, remittances and summary.
 
 ### Step 8 — Payslips (either role)
 
@@ -562,7 +575,7 @@ Backups are saved in your **Documents** folder, not next to the live database, s
 
 **Every cut-off, in one line:**
 
-> Accounting: **New run → Timesheets / Attendance → Leave & loans → Lock period (optional) → Calculate → Adjust → Submit**  
+> Accounting: **New run → Key timesheets / Attendance → Leave & loans → Lock period (optional) → Calculate to check → Adjust → Submit** (Submit recalculates)  
 > Administrator: **Approvals → Approve → Post → Back up now**  
 > Either: **Payslips → Export whole run**, **Reports → Register, remittances, summary**
 

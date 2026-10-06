@@ -346,19 +346,28 @@ public sealed partial class TimesheetsViewModel : BaseViewModel
     private readonly ITimesheetService _timesheets;
     private readonly IPayrollRunService _runs;
     private readonly IPayrollConfigService _config;
+    private readonly IAppNavigator _navigator;
+    private readonly IDialogService _dialogs;
 
     private TimesheetRow? _rowToClear;
+
+    /// <summary>Set while the run picker is being put back after "Stay", so the change is not handled twice.</summary>
+    private bool _revertingRun;
 
     public TimesheetsViewModel(
         ITimesheetService timesheets,
         IPayrollRunService runs,
         IPayrollConfigService config,
+        IAppNavigator navigator,
+        IDialogService dialogs,
         ISessionService session)
         : base(session)
     {
         _timesheets = timesheets;
         _runs = runs;
         _config = config;
+        _navigator = navigator;
+        _dialogs = dialogs;
 
         Title = "Timesheets";
 
@@ -412,7 +421,82 @@ public sealed partial class TimesheetsViewModel : BaseViewModel
 
     public bool HasNoRuns => Runs.Count == 0;
 
-    partial void OnSelectedRunChanged(RunOption? value) => _ = RunAsync(LoadSheetsAsync);
+    partial void OnSelectedRunChanged(RunOption? oldValue, RunOption? newValue)
+    {
+        if (_revertingRun)
+            return;
+
+        _ = SwitchRunAsync(oldValue);
+    }
+
+    /// <summary>
+    /// Switching run reloads the grid, which would throw away anything typed
+    /// and not saved. The figures keyed so far still belong to the old run, so
+    /// they can be saved to it on the way out.
+    /// </summary>
+    private async Task SwitchRunAsync(RunOption? previous)
+    {
+        if (HasChanges && previous is not null)
+        {
+            var choice = await AskAboutUnsavedAsync($"You have unsaved figures on {previous.Run.ReferenceNumber}.");
+
+            if (choice == UnsavedChoice.Stay)
+            {
+                _revertingRun = true;
+                SelectedRun = previous;
+                _revertingRun = false;
+                return;
+            }
+
+            if (choice == UnsavedChoice.Save && !await SaveChangesAsync())
+            {
+                _revertingRun = true;
+                SelectedRun = previous;
+                _revertingRun = false;
+                return;
+            }
+        }
+
+        await RunAsync(LoadSheetsAsync);
+    }
+
+    private enum UnsavedChoice { Save, Discard, Stay }
+
+    private async Task<UnsavedChoice> AskAboutUnsavedAsync(string lead)
+    {
+        const string save = "Save them";
+        const string discard = "Discard them";
+
+        var answer = await _dialogs.ActionSheetAsync(
+            lead + " What should happen to them?", "Stay here", save, discard);
+
+        return answer switch
+        {
+            save => UnsavedChoice.Save,
+            discard => UnsavedChoice.Discard,
+            _ => UnsavedChoice.Stay
+        };
+    }
+
+    /// <summary>
+    /// Asked by the page before another section replaces this one. False keeps
+    /// the keyer here with their figures intact.
+    /// </summary>
+    public async Task<bool> CanLeaveAsync()
+    {
+        if (!HasChanges || SelectedRun is null)
+            return true;
+
+        var choice = await AskAboutUnsavedAsync(
+            $"You have unsaved timesheet figures on {SelectedRun.Run.ReferenceNumber}.");
+
+        return choice switch
+        {
+            UnsavedChoice.Discard => true,
+            UnsavedChoice.Save => await SaveChangesAsync(),
+            _ => false
+        };
+    }
 
     public async Task LoadAsync()
     {
@@ -448,14 +532,19 @@ public sealed partial class TimesheetsViewModel : BaseViewModel
                 _ => $"{Runs.Count} draft runs open."
             };
 
-            SelectedRun = Runs.FirstOrDefault();
+            // Opened from a run on Payroll Runs: that run, not the newest one.
+            var requested = _navigator.TakeRecordFor(AppSection.Timesheets);
+
+            _revertingRun = true;
+            SelectedRun = Runs.FirstOrDefault(r => r.Id == requested) ?? Runs.FirstOrDefault();
+            _revertingRun = false;
+
+            // Loaded here rather than by the selection handler: that handler
+            // goes through RunAsync, which does nothing while this load is busy.
+            await LoadSheetsAsync();
 
             if (SelectedRun is null)
-            {
-                Bands.Clear();
-                HasBands = false;
                 SheetSubtitle = "Choose a payroll run to key its sheets.";
-            }
         });
     }
 
@@ -536,18 +625,29 @@ public sealed partial class TimesheetsViewModel : BaseViewModel
     [RelayCommand(CanExecute = nameof(CanSave))]
     private Task SaveAsync() => RunAsync(async () =>
     {
+        if (await SaveChangesAsync())
+            await LoadSheetsAsync();
+    });
+
+    /// <summary>
+    /// Saves every changed row. The rows carry the run they were keyed
+    /// against, so this is safe to call while the picker is moving to another.
+    /// </summary>
+    private async Task<bool> SaveChangesAsync()
+    {
         ClearMessages();
 
         var performedBy = Session.CurrentUser;
         if (performedBy is null)
-            return;
+            return false;
 
         var bad = Bands.SelectMany(b => b.Rows).FirstOrDefault(r => r.HasProblem);
 
         if (bad is not null)
         {
             ShowError($"{bad.Name}: {bad.Problem}");
-            return;
+            await _dialogs.AlertAsync("Not saved", $"{bad.Name}: {bad.Problem}");
+            return false;
         }
 
         var changed = Bands
@@ -557,19 +657,21 @@ public sealed partial class TimesheetsViewModel : BaseViewModel
             .ToList();
 
         if (changed.Count == 0)
-            return;
+            return true;
 
         var result = await _timesheets.SaveManyAsync(changed, performedBy);
 
         if (!result.Succeeded)
         {
             ShowError(result.Message);
-            return;
+            await _dialogs.AlertAsync("Not saved", result.Message);
+            return false;
         }
 
+        HasChanges = false;
         ShowStatus(result.Message);
-        await LoadSheetsAsync();
-    });
+        return true;
+    }
 
     [RelayCommand]
     private Task DiscardAsync() => RunAsync(LoadSheetsAsync);

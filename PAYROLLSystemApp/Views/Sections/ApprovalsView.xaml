@@ -38,17 +38,32 @@
                             Command="{Binding RefreshCommand}" />
                 </Grid>
 
-                <!-- Inline result banner (NFR-023) -->
-                <Label Grid.Row="1"
-                       FontSize="12"
-                       TextColor="{StaticResource Success}"
-                       Text="{Binding StatusMessage}"
-                       IsVisible="{Binding HasStatus}" />
+                <!-- Inline result banner (NFR-023), and the next steps after a post -->
+                <VerticalStackLayout Grid.Row="1" Spacing="6">
+                    <Label FontSize="12"
+                           TextColor="{StaticResource Success}"
+                           Text="{Binding StatusMessage}"
+                           IsVisible="{Binding HasStatus}" />
 
-                <Label Grid.Row="1"
-                       Style="{StaticResource ErrorText}"
-                       Text="{Binding ErrorMessage}"
-                       IsVisible="{Binding HasError}" />
+                    <Label Style="{StaticResource ErrorText}"
+                           Text="{Binding ErrorMessage}"
+                           IsVisible="{Binding HasError}" />
+
+                    <HorizontalStackLayout Spacing="8" IsVisible="{Binding HasPostedRun}">
+                        <Label Style="{StaticResource Muted}"
+                               VerticalOptions="Center"
+                               Text="Next:" />
+                        <Button Style="{StaticResource PrimaryButton}"
+                                Text="Export all payslips (PDF)"
+                                Command="{Binding ExportPostedPayslipsCommand}" />
+                        <Button Style="{StaticResource SecondaryButton}"
+                                Text="Back up now"
+                                Command="{Binding GoToBackupCommand}" />
+                        <Button Style="{StaticResource SecondaryButton}"
+                                Text="Reports"
+                                Command="{Binding GoToReportsCommand}" />
+                    </HorizontalStackLayout>
+                </VerticalStackLayout>
 
                 <Border Grid.Row="2"
                         Style="{StaticResource Card}"

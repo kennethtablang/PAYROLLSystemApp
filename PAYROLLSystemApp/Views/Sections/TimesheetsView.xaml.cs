@@ -7,7 +7,7 @@ namespace PAYROLLSystemApp.Views.Sections;
 /// code, seven figures against each name, every figure pricing itself as it is
 /// typed.
 /// </summary>
-public partial class TimesheetsView : ContentView, ISectionView, IModalOwner
+public partial class TimesheetsView : ContentView, ISectionView, IModalOwner, ILeaveGuard
 {
     private readonly TimesheetsViewModel _viewModel;
 
@@ -18,6 +18,8 @@ public partial class TimesheetsView : ContentView, ISectionView, IModalOwner
     }
 
     public Task OnShownAsync() => _viewModel.LoadAsync();
+
+    public Task<bool> CanLeaveAsync() => _viewModel.CanLeaveAsync();
 
     /// <summary>
     /// Hands the dialog layer to the page so it can be shown above the whole

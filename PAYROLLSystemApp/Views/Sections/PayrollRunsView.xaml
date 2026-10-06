@@ -205,6 +205,10 @@
 
                                     <HorizontalStackLayout Grid.Column="1" Spacing="6" VerticalOptions="Center">
                                         <Button Style="{StaticResource SecondaryButton}"
+                                                Text="Key timesheets"
+                                                IsVisible="{Binding CanKeyTimesheets}"
+                                                Command="{Binding KeyTimesheetsCommand}" />
+                                        <Button Style="{StaticResource SecondaryButton}"
                                                 Text="Calculate"
                                                 IsEnabled="{Binding CanEditRun}"
                                                 Command="{Binding CalculateCommand}" />
@@ -583,16 +587,22 @@
                     <Label Style="{StaticResource Faint}"
                            Text="A 13th month run pays the PD 851 entitlement and takes no contributions or loan instalments. A final pay run adds unused leave conversion and a pro-rated 13th month, and settles the year's tax." />
 
-                    <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="6">
+                    <Grid ColumnDefinitions="*,Auto,Auto,Auto" ColumnSpacing="6">
                         <Label Grid.Column="0"
                                Style="{StaticResource Body}"
                                VerticalOptions="Center"
                                Text="{Binding CreateSummary}" />
-                        <Button Grid.Column="1"
+                        <Border Grid.Column="1" Style="{StaticResource FieldFrame}">
+                            <Picker Title="Tick one detachment"
+                                    WidthRequest="190"
+                                    ItemsSource="{Binding TickByDetachmentOptions}"
+                                    SelectedItem="{Binding TickByDetachment}" />
+                        </Border>
+                        <Button Grid.Column="2"
                                 Style="{StaticResource RowAction}"
                                 Text="All"
                                 Command="{Binding SelectAllCandidatesCommand}" />
-                        <Button Grid.Column="2"
+                        <Button Grid.Column="3"
                                 Style="{StaticResource RowAction}"
                                 Text="None"
                                 Command="{Binding SelectNoCandidatesCommand}" />

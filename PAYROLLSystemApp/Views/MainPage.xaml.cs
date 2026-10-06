@@ -12,6 +12,15 @@ public interface ISectionView
 }
 
 /// <summary>
+/// A section holding work that would be lost if another section replaced it.
+/// Asked before the swap; false keeps it on screen.
+/// </summary>
+public interface ILeaveGuard
+{
+    Task<bool> CanLeaveAsync();
+}
+
+/// <summary>
 /// A section whose dialogs must float above the whole window rather than only
 /// the content region.
 /// </summary>
@@ -31,6 +40,8 @@ public partial class MainPage : ContentPage
     private readonly IAppNavigator _navigator;
     private readonly ISessionService _session;
     private View? _modalLayer;
+    private AppSection? _shown;
+    private bool _returning;
 
     public MainPage(
         MainViewModel viewModel,
@@ -71,6 +82,22 @@ public partial class MainPage : ContentPage
 
     private async Task ShowSectionAsync(AppSection section)
     {
+        // Putting the sidebar back after a refused leave re-raises Navigated
+        // for the section still on screen; there is nothing to swap.
+        if (_returning)
+            return;
+
+        if (SectionHost.Content is ILeaveGuard guard && _shown is { } shown && shown != section &&
+            !await guard.CanLeaveAsync())
+        {
+            _returning = true;
+            _navigator.NavigateTo(shown);
+            _returning = false;
+            return;
+        }
+
+        _shown = section;
+
         var view = Resolve(section);
 
         // Dialogs are hoisted out of the section and added directly to the page

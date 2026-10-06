@@ -730,11 +730,20 @@ public sealed class PayrollRunService : IPayrollRunService
         if (run.Status != PayrollRunStatus.Draft)
             return SaveResult<PayrollRun>.Fail($"{run.ReferenceNumber} is already {run.StatusDisplay.ToLowerInvariant()}.");
 
-        if (!run.HasBeenCalculated)
-            return SaveResult<PayrollRun>.Fail("Calculate the run before submitting it for approval.");
+        // Nothing marks a calculation stale when a timesheet, adjustment, leave
+        // decision, loan or rate changes after it, so the run is recalculated
+        // here: what goes to the approver is always what the inputs say now.
+        // A recalculation is cheap; an approver signing off stale figures is not.
+        var recalculated = await CalculateAsync(runId, performedBy).ConfigureAwait(false);
 
-        // A recalculation is cheap; an approver signing off figures that were
-        // never checked is not. A flagged payslip has to be dealt with first.
+        if (!recalculated.Succeeded)
+            return SaveResult<PayrollRun>.Fail(recalculated.Message);
+
+        run = await GetRunAsync(runId).ConfigureAwait(false);
+        if (run is null)
+            return SaveResult<PayrollRun>.Fail("That run no longer exists.");
+
+        // A flagged payslip has to be dealt with first.
         if (run.ExceptionCount > 0)
         {
             return SaveResult<PayrollRun>.Fail(

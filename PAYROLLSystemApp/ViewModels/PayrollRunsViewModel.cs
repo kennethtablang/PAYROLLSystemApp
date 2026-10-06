@@ -97,11 +97,15 @@ public sealed class PayslipRow
 /// <summary>An employee offered for a new run, with a tick box.</summary>
 public sealed partial class RunCandidateRow : ObservableObject
 {
-    public RunCandidateRow(RunCandidate candidate)
+    public RunCandidateRow(RunCandidate candidate, string detachmentCode)
     {
         Candidate = candidate;
+        DetachmentCode = detachmentCode;
         IsSelected = candidate.IsAvailable;
     }
+
+    /// <summary>Empty for head-office staff, who have no detachment.</summary>
+    public string DetachmentCode { get; }
 
     public RunCandidate Candidate { get; }
 
@@ -113,9 +117,10 @@ public sealed partial class RunCandidateRow : ObservableObject
 
     public bool IsAvailable => Candidate.IsAvailable;
 
-    public string Detail => Candidate.IsAvailable
-        ? Candidate.EmployeeNumber
-        : $"{Candidate.EmployeeNumber} · {Candidate.Reason}";
+    public string Detail =>
+        Candidate.EmployeeNumber +
+        (DetachmentCode.Length > 0 ? $" · {DetachmentCode}" : " · head office") +
+        (Candidate.IsAvailable ? string.Empty : $" · {Candidate.Reason}");
 
     [ObservableProperty]
     public partial bool IsSelected { get; set; }
@@ -262,6 +267,9 @@ public sealed partial class PayrollRunsViewModel : BaseViewModel
     private readonly IPayrollConfigService _config;
     private readonly IEmployeeService _employees;
     private readonly IDialogService _dialogs;
+    private readonly IAppNavigator _navigator;
+    private readonly IDetachmentService _detachments;
+    private IReadOnlyDictionary<int, string> _detachmentCodes = new Dictionary<int, string>();
 
     private IReadOnlyList<PayPeriod> _periods = [];
     private IReadOnlyList<Employee> _roster = [];
@@ -280,6 +288,8 @@ public sealed partial class PayrollRunsViewModel : BaseViewModel
         IPayrollConfigService config,
         IEmployeeService employees,
         IDialogService dialogs,
+        IAppNavigator navigator,
+        IDetachmentService detachments,
         ISessionService session)
         : base(session)
     {
@@ -287,6 +297,8 @@ public sealed partial class PayrollRunsViewModel : BaseViewModel
         _config = config;
         _employees = employees;
         _dialogs = dialogs;
+        _navigator = navigator;
+        _detachments = detachments;
 
         Title = "Payroll runs";
 
@@ -438,6 +450,7 @@ public sealed partial class PayrollRunsViewModel : BaseViewModel
         ClearMessages();
 
         _roster = await _employees.GetAllAsync();
+        _detachmentCodes = (await _detachments.GetAllAsync(includeInactive: true)).ToDictionary(d => d.Id, d => d.Code);
         _periods = await _config.GetPayPeriodsAsync(SelectedYear);
 
         var years = await _config.GetCalendarYearsAsync();
@@ -531,12 +544,25 @@ public sealed partial class PayrollRunsViewModel : BaseViewModel
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(HasNoRunSelected))]
     [NotifyPropertyChangedFor(nameof(CanEditRun))]
+    [NotifyPropertyChangedFor(nameof(CanKeyTimesheets))]
     public partial bool HasRunSelected { get; set; }
 
     public bool HasNoRunSelected => !HasRunSelected;
 
     /// <summary>FR-058. Everything on the detail pane that writes is gated on this.</summary>
     public bool CanEditRun => SelectedRun?.Run.IsEditable == true;
+
+    /// <summary>Only the kinds that pay time take a sheet; see the Timesheets screen.</summary>
+    public bool CanKeyTimesheets =>
+        CanEditRun && SelectedRun!.Run.RunType is PayrollRunType.Regular or PayrollRunType.FinalPay;
+
+    /// <summary>Straight to this run's sheets, rather than the newest draft.</summary>
+    [RelayCommand]
+    private void KeyTimesheets()
+    {
+        if (SelectedRun is not null)
+            _navigator.NavigateTo(AppSection.Timesheets, SelectedRun.Id);
+    }
 
     [ObservableProperty]
     public partial bool CanSubmitRun { get; set; }
@@ -561,6 +587,7 @@ public sealed partial class PayrollRunsViewModel : BaseViewModel
         BlockerText = string.Empty;
 
         OnPropertyChanged(nameof(CanEditRun));
+        OnPropertyChanged(nameof(CanKeyTimesheets));
 
         if (row is null)
         {
@@ -597,9 +624,9 @@ public sealed partial class PayrollRunsViewModel : BaseViewModel
 
         HasAdjustments = Adjustments.Count > 0;
 
-        CanSubmitRun = run.Status == PayrollRunStatus.Draft &&
-                       run.HasBeenCalculated &&
-                       run.ExceptionCount == 0;
+        // Submitting recalculates, so it needs neither a prior Calculate nor
+        // a clean last calculation — only the one it runs itself.
+        CanSubmitRun = run.Status == PayrollRunStatus.Draft;
 
         if (run.ExceptionCount > 0)
         {
@@ -653,7 +680,25 @@ public sealed partial class PayrollRunsViewModel : BaseViewModel
         // handed a selection again, and the candidates are re-read for the
         // new kind even when the period stays the same.
         CreatePeriod = null;
-        CreatePeriod = PeriodOptions.FirstOrDefault(o => o.Id == keep) ?? PeriodOptions.FirstOrDefault();
+        CreatePeriod = PeriodOptions.FirstOrDefault(o => o.Id == keep) ?? DefaultPeriod();
+    }
+
+    /// <summary>
+    /// The period about to be paid: the one whose cut-off closed most recently.
+    /// Before any has closed, the first one still to come. Never simply the
+    /// first in the list — for a company that started mid-year that is January.
+    /// </summary>
+    private LookupOption? DefaultPeriod()
+    {
+        var offered = _periods.Where(p => PeriodOptions.Any(o => o.Id == p.Id)).ToList();
+
+        var due = offered
+                      .Where(p => p.CutOffEnd.Date < DateTime.Today)
+                      .OrderByDescending(p => p.CutOffEnd)
+                      .FirstOrDefault()
+                  ?? offered.OrderBy(p => p.CutOffEnd).FirstOrDefault();
+
+        return PeriodOptions.FirstOrDefault(o => o.Id == due?.Id) ?? PeriodOptions.FirstOrDefault();
     }
 
     [ObservableProperty]
@@ -702,9 +747,26 @@ public sealed partial class PayrollRunsViewModel : BaseViewModel
         var candidates = await _runs.GetCandidatesAsync(periodId, runType);
 
         foreach (var candidate in candidates)
-            Candidates.Add(new RunCandidateRow(candidate));
+        {
+            var code = candidate.Employee.DetachmentId is { } id && _detachmentCodes.TryGetValue(id, out var c)
+                ? c
+                : string.Empty;
+
+            Candidates.Add(new RunCandidateRow(candidate, code));
+        }
 
         var available = Candidates.Count(c => c.IsAvailable);
+
+        // One option per detachment with someone available, so a run can be
+        // made per client sheet with one pick instead of ticking names.
+        TickByDetachmentOptions.Clear();
+        foreach (var code in Candidates.Where(c => c.IsAvailable).Select(c => c.DetachmentCode).Distinct()
+                     .OrderBy(c => c.Length == 0).ThenBy(c => c, StringComparer.OrdinalIgnoreCase))
+        {
+            TickByDetachmentOptions.Add(code.Length == 0 ? HeadOfficeOption : code);
+        }
+
+        TickByDetachment = null;
 
         CreateSummary = available == 0
             ? "Nobody is available for this period and run type."
@@ -714,13 +776,38 @@ public sealed partial class PayrollRunsViewModel : BaseViewModel
     [RelayCommand]
     private void SelectAllCandidates()
     {
+        TickByDetachment = null;
+
         foreach (var candidate in Candidates.Where(c => c.IsAvailable))
             candidate.IsSelected = true;
+    }
+
+    private const string HeadOfficeOption = "Head office (no detachment)";
+
+    public ObservableCollection<string> TickByDetachmentOptions { get; } = new();
+
+    /// <summary>Ticks exactly the available people at one detachment.</summary>
+    [ObservableProperty]
+    public partial string? TickByDetachment { get; set; }
+
+    partial void OnTickByDetachmentChanged(string? value)
+    {
+        if (value is null)
+            return;
+
+        var code = value == HeadOfficeOption ? string.Empty : value;
+
+        foreach (var candidate in Candidates)
+            candidate.IsSelected = candidate.IsAvailable && candidate.DetachmentCode == code;
+
+        CreateSummary = $"{Candidates.Count(c => c.IsSelected)} ticked at {value}.";
     }
 
     [RelayCommand]
     private void SelectNoCandidates()
     {
+        TickByDetachment = null;
+
         foreach (var candidate in Candidates)
             candidate.IsSelected = false;
     }
@@ -819,7 +906,9 @@ public sealed partial class PayrollRunsViewModel : BaseViewModel
         _confirmTarget = ConfirmTarget.Submit;
         ConfirmTitle = $"Submit {run.ReferenceNumber} for approval";
         ConfirmMessage =
-            $"{run.HeadcountDisplay}, gross {run.GrossDisplay}, net {run.NetDisplay}.\n\n" +
+            "The run is recalculated first, so the approver sees every timesheet, adjustment, leave " +
+            "decision and loan as they stand now. If any payslip is flagged, it stays a draft and the " +
+            "flags are listed.\n\n" +
             "It stays returnable to draft until an approver signs it off — after that the figures are frozen.";
         ConfirmAction = "Submit";
         IsConfirmDestructive = false;
@@ -1339,15 +1428,19 @@ public sealed partial class PayrollRunsViewModel : BaseViewModel
 
                     var result = await _runs.SubmitForApprovalAsync(SelectedRun.Id, performedBy);
 
+                    // Submitting recalculated the run whether or not it went
+                    // through, so the payslips and flags on screen are stale.
+                    IsConfirmOpen = false;
+                    await ReloadRunsAsync();
+
                     if (!result.Succeeded)
                     {
-                        ModalError = result.Message;
+                        ShowError(result.Message);
                         return;
                     }
 
-                    IsConfirmOpen = false;
-                    await ReloadRunsAsync();
-                    ShowStatus(result.Message);
+                    ShowStatus(result.Message +
+                               $" Gross {result.Value!.GrossDisplay}, net {result.Value.NetDisplay}.");
                     break;
                 }
 

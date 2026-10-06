@@ -295,6 +295,24 @@ public sealed partial class DashboardViewModel : BaseViewModel
     {
         var today = DateTime.Today;
         var periods = (await _config.GetPayPeriodsAsync(today.Year)).ToList();
+
+        // No calendar means no run can be created at all, and next year's is
+        // easy to forget until the first January cut-off has already closed.
+        if (periods.Count == 0)
+        {
+            Attention.Add(new AttentionItem(
+                $"No pay calendar for {today.Year}",
+                "No payroll run can be created until the year's pay periods are generated.",
+                true, "Generate", () => Go(AppSection.PayrollSetup)));
+        }
+        else if (today.Month == 12 && (await _config.GetPayPeriodsAsync(today.Year + 1)).Count == 0)
+        {
+            Attention.Add(new AttentionItem(
+                $"Generate the {today.Year + 1} pay calendar",
+                "Do it before the first January cut-off, and add next year's movable holidays while you are there.",
+                false, "Generate", () => Go(AppSection.PayrollSetup)));
+        }
+
         if (today.Month == 1)
             periods.AddRange(await _config.GetPayPeriodsAsync(today.Year - 1));
 

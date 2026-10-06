@@ -23,15 +23,20 @@ namespace PAYROLLSystemApp.ViewModels;
 public sealed partial class ApprovalsViewModel : BaseViewModel
 {
     private readonly IPayrollRunService _runs;
+    private readonly IPayslipService _payslips;
+    private readonly IAppNavigator _navigator;
 
     private enum ConfirmTarget { Approve, Return, Post }
 
     private ConfirmTarget _confirmTarget;
 
-    public ApprovalsViewModel(IPayrollRunService runs, ISessionService session)
+    public ApprovalsViewModel(
+        IPayrollRunService runs, IPayslipService payslips, IAppNavigator navigator, ISessionService session)
         : base(session)
     {
         _runs = runs;
+        _payslips = payslips;
+        _navigator = navigator;
 
         Title = "Approvals";
 
@@ -388,7 +393,53 @@ public sealed partial class ApprovalsViewModel : BaseViewModel
 
         IsConfirmOpen = false;
 
+        // A posted run leaves the queue, and with it the only place its next
+        // steps were visible. They are offered here instead.
+        PostedRunId = _confirmTarget == ConfirmTarget.Post ? result.Value?.Id : null;
+
         await ReloadAsync();
         ShowStatus(result.Message);
     });
+
+    // =================================================== after posting
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasPostedRun))]
+    public partial int? PostedRunId { get; set; }
+
+    public bool HasPostedRun => PostedRunId is not null;
+
+    /// <summary>The whole run's payslips in one PDF, opened for printing.</summary>
+    [RelayCommand]
+    private Task ExportPostedPayslipsAsync() => RunAsync(async () =>
+    {
+        var user = Session.CurrentUser;
+        if (user is null || PostedRunId is not { } runId)
+            return;
+
+        var result = await _payslips.ExportRunAsync(runId, user);
+
+        if (!result.Succeeded)
+        {
+            ShowError(result.Message);
+            return;
+        }
+
+        ShowStatus(result.Message);
+
+        try
+        {
+            await Launcher.Default.OpenAsync(new OpenFileRequest("Payslips", new ReadOnlyFile(result.FilePath)));
+        }
+        catch
+        {
+            // No PDF viewer registered; the status line already says where the file is.
+        }
+    });
+
+    [RelayCommand]
+    private void GoToBackup() => _navigator.NavigateTo(AppSection.DataManagement);
+
+    [RelayCommand]
+    private void GoToReports() => _navigator.NavigateTo(AppSection.Reports);
 }

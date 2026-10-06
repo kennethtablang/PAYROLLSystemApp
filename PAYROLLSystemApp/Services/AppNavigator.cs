@@ -115,6 +115,15 @@ public interface IAppNavigator
     event EventHandler<AppSection>? Navigated;
 
     void NavigateTo(AppSection section);
+
+    /// <summary>
+    /// Opens a section on a particular record — a run's timesheets, say. The
+    /// section takes the value once, when it next loads.
+    /// </summary>
+    void NavigateTo(AppSection section, int recordId);
+
+    /// <summary>The record a section was opened on, if any; cleared once read.</summary>
+    int? TakeRecordFor(AppSection section);
 }
 
 /// <summary>
@@ -127,6 +136,23 @@ public sealed class AppNavigator : IAppNavigator
     public AppSection Current { get; private set; } = AppSection.Dashboard;
 
     public event EventHandler<AppSection>? Navigated;
+
+    private (AppSection Section, int Id)? _record;
+
+    public void NavigateTo(AppSection section, int recordId)
+    {
+        _record = (section, recordId);
+        NavigateTo(section);
+    }
+
+    public int? TakeRecordFor(AppSection section)
+    {
+        if (_record is not { } record || record.Section != section)
+            return null;
+
+        _record = null;
+        return record.Id;
+    }
 
     public void NavigateTo(AppSection section)
     {
