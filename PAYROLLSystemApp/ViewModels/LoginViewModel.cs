@@ -99,15 +99,16 @@ public sealed partial class LoginViewModel : BaseViewModel
     }
 
     /// <summary>
-    /// First-run helper. Shown only while the seeded administrator is the sole
-    /// account, so it disappears as soon as real accounts exist.
+    /// First-run helper. Shown only while the seeded accounts are the only
+    /// ones, so it disappears as soon as a real account exists.
     /// </summary>
     [ObservableProperty]
     public partial bool ShowFirstRunHint { get; set; }
 
     public string FirstRunHint =>
-        $"First run — sign in as '{PayrollDatabase.SeedAdminUsername}' with password " +
-        $"'{PayrollDatabase.SeedAdminPassword}'. Change it afterwards from Change password in the top bar.";
+        $"First run — sign in as '{PayrollDatabase.SeedAdminUsername}' (password " +
+        $"'{PayrollDatabase.SeedAdminPassword}') or '{PayrollDatabase.SeedOfficerUsername}' (password " +
+        $"'{PayrollDatabase.SeedOfficerPassword}'). Change both afterwards from Change password in the top bar.";
 
     public async Task LoadAsync()
     {
@@ -116,7 +117,8 @@ public sealed partial class LoginViewModel : BaseViewModel
         Password = string.Empty;
 
         var users = await _auth.GetAllUsersAsync();
-        ShowFirstRunHint = users.Count == 1
-                           && users[0].Username == PayrollDatabase.SeedAdminUsername;
+        ShowFirstRunHint = users.Count > 0 && users.All(u =>
+            u.Username == PayrollDatabase.SeedAdminUsername ||
+            u.Username == PayrollDatabase.SeedOfficerUsername);
     }
 }

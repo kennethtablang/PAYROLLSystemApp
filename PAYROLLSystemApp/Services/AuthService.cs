@@ -181,7 +181,9 @@ public sealed class AuthService : IAuthService
         if (!policy.IsValid)
             return PasswordChangeResult.Fail("The new password does not meet the policy:\n" + policy.FailureSummary);
 
-        if (newPassword == currentPassword || newPassword == PayrollDatabase.SeedAdminPassword)
+        if (newPassword == currentPassword ||
+            newPassword == PayrollDatabase.SeedAdminPassword ||
+            newPassword == PayrollDatabase.SeedOfficerPassword)
             return PasswordChangeResult.Fail("Choose a password different from the one being replaced.");
 
         stored.PasswordHash = _hasher.Hash(newPassword);

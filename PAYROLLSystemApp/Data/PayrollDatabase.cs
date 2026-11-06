@@ -38,14 +38,19 @@ public sealed partial class PayrollDatabase
     public string DatabasePath { get; }
 
     /// <summary>
-    /// Credentials for the account seeded on a brand new database.
+    /// Credentials for the two accounts seeded on a brand new database: the
+    /// administrator, and the payroll officer who does the day-to-day work.
     ///
-    /// There is no forced password change, so this password stays valid until
-    /// an administrator changes it from User Accounts. Change it before the
-    /// system holds real payroll data.
+    /// <para>Usernames name the job, not a person, so the account outlives
+    /// whoever holds it. There is no forced password change, so these
+    /// passwords stay valid until changed from Change password or User
+    /// Accounts. Change both before the system holds real payroll data.</para>
     /// </summary>
     public const string SeedAdminUsername = "admin";
     public const string SeedAdminPassword = "Admin@123";
+
+    public const string SeedOfficerUsername = "payroll.officer";
+    public const string SeedOfficerPassword = "Officer@123";
 
     public async Task<SQLiteAsyncConnection> GetConnectionAsync()
     {
@@ -133,7 +138,7 @@ public sealed partial class PayrollDatabase
 
             await MigrateUserRolesAsync(_connection).ConfigureAwait(false);
 
-            await SeedAdministratorAsync(_connection).ConfigureAwait(false);
+            await SeedAccountsAsync(_connection).ConfigureAwait(false);
             await SeedOrganizationAsync(_connection).ConfigureAwait(false);
             await SeedHolidaysAsync(_connection).ConfigureAwait(false);
             await SeedLeaveTypesAsync(_connection).ConfigureAwait(false);
@@ -302,37 +307,53 @@ public sealed partial class PayrollDatabase
     }
 
     /// <summary>
-    /// Creates the bootstrap administrator on an empty database. Without it
-    /// there would be no way to sign in and create the first real account.
+    /// Creates the administrator and payroll officer accounts on an empty
+    /// database. Without the administrator there would be no way to sign in
+    /// and create the first real account.
+    ///
+    /// <para><b>Empty databases only.</b> A database that already has accounts
+    /// — the company's, after an update — never gains one here: an account
+    /// with a published password appearing on a live payroll by itself is the
+    /// one thing a seed must not do.</para>
     /// </summary>
-    private async Task SeedAdministratorAsync(SQLiteAsyncConnection connection)
+    private async Task SeedAccountsAsync(SQLiteAsyncConnection connection)
     {
         var userCount = await connection.Table<User>().CountAsync().ConfigureAwait(false);
         if (userCount > 0)
             return;
 
-        var admin = new User
+        await SeedAccountAsync(connection, SeedAdminUsername, SeedAdminPassword,
+            "System Administrator", UserRole.Administrator).ConfigureAwait(false);
+
+        await SeedAccountAsync(connection, SeedOfficerUsername, SeedOfficerPassword,
+            "Payroll Officer", UserRole.PayrollOfficer).ConfigureAwait(false);
+    }
+
+    private async Task SeedAccountAsync(SQLiteAsyncConnection connection,
+        string username, string password, string fullName, UserRole role)
+    {
+        var account = new User
         {
-            Username = SeedAdminUsername,
-            Email = "admin@payrollsystem.local",
-            FullName = "System Administrator",
-            PasswordHash = _passwordHasher.Hash(SeedAdminPassword),
-            Role = UserRole.Administrator,
+            Username = username,
+            Email = $"{username}@payrollsystem.local",
+            FullName = fullName,
+            PasswordHash = _passwordHasher.Hash(password),
+            Role = role,
             IsActive = true,
             CreatedUtc = DateTime.UtcNow,
             PasswordChangedUtc = DateTime.UtcNow
         };
 
-        await connection.InsertAsync(admin).ConfigureAwait(false);
+        await connection.InsertAsync(account).ConfigureAwait(false);
 
         await connection.InsertAsync(new AuditEntry
         {
             Actor = "system",
             Action = AuditActions.UserCreated,
             Entity = nameof(User),
-            EntityId = admin.Id,
+            EntityId = account.Id,
             Success = true,
-            Details = "Bootstrap administrator account seeded on database creation."
+            Details = $"Bootstrap {RolePermissions.DisplayName(role)} account '{username}' seeded on database creation."
         }).ConfigureAwait(false);
     }
 
