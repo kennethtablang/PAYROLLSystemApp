@@ -43,27 +43,19 @@ public sealed partial class HelpViewModel : BaseViewModel, IDisposable
     private const string OtherScreen = "Other / not sure";
 
     private readonly IUpdateService _updates;
+    private readonly IUpdateInstaller _installer;
     private readonly ISupportRequestService _requests;
-    private readonly IDataManagementService _data;
-    private readonly IDialogService _dialogs;
-    private readonly IAuditService _audit;
-
-    private CancellationTokenSource? _download;
 
     public HelpViewModel(
         ISessionService session,
         IUpdateService updates,
-        ISupportRequestService requests,
-        IDataManagementService data,
-        IDialogService dialogs,
-        IAuditService audit)
+        IUpdateInstaller installer,
+        ISupportRequestService requests)
         : base(session)
     {
         _updates = updates;
+        _installer = installer;
         _requests = requests;
-        _data = data;
-        _dialogs = dialogs;
-        _audit = audit;
         Title = "Help & Updates";
 
         UpdateStatus = string.Empty;
@@ -95,7 +87,7 @@ public sealed partial class HelpViewModel : BaseViewModel, IDisposable
         SelectedPriority = PriorityOptions[1];
         SelectedScreen = OtherScreen;
 
-        _updates.AvailableChanged += OnAvailableChanged;
+        _updates.Changed += OnUpdatesChanged;
         ShowAvailable();
     }
 
@@ -104,19 +96,29 @@ public sealed partial class HelpViewModel : BaseViewModel, IDisposable
     public string CurrentVersion => $"Version {AppVersion.Display}";
 
     /// <summary>Installing backs the database up first, so it needs the backup permission.</summary>
-    public bool CanInstall => Session.Has(Permission.ManageBackups);
+    public bool CanInstall => _installer.CanInstall;
 
     [ObservableProperty]
     public partial string UpdateStatus { get; set; }
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(ShowsDownload))]
+    [NotifyPropertyChangedFor(nameof(IsDownloading))]
     [NotifyPropertyChangedFor(nameof(ShowsInstall))]
     [NotifyPropertyChangedFor(nameof(ShowsAskAdmin))]
+    public partial UpdateStage Stage { get; set; }
+
+    [ObservableProperty]
     public partial bool HasUpdate { get; set; }
 
-    public bool ShowsInstall => HasUpdate && CanInstall;
+    /// <summary>Found, not yet downloaded. Anyone may download; it changes nothing.</summary>
+    public bool ShowsDownload => Stage == UpdateStage.Available;
 
-    public bool ShowsAskAdmin => HasUpdate && !CanInstall;
+    public bool IsDownloading => Stage == UpdateStage.Downloading;
+
+    public bool ShowsInstall => Stage == UpdateStage.Ready && CanInstall;
+
+    public bool ShowsAskAdmin => Stage == UpdateStage.Ready && !CanInstall;
 
     [ObservableProperty]
     public partial string UpdateTitle { get; set; }
@@ -128,21 +130,23 @@ public sealed partial class HelpViewModel : BaseViewModel, IDisposable
     public partial string UpdateNotes { get; set; }
 
     [ObservableProperty]
-    public partial bool IsDownloading { get; set; }
-
-    [ObservableProperty]
     public partial double DownloadProgress { get; set; }
 
     [ObservableProperty]
     public partial string DownloadText { get; set; }
 
-    private void OnAvailableChanged(object? sender, EventArgs e) =>
+    private void OnUpdatesChanged(object? sender, EventArgs e) =>
         MainThread.BeginInvokeOnMainThread(ShowAvailable);
 
     private void ShowAvailable()
     {
         var update = _updates.Available;
+        Stage = _updates.Stage;
         HasUpdate = update is not null;
+        DownloadProgress = _updates.DownloadProgress;
+        DownloadText = Stage == UpdateStage.Downloading ? $"Downloading… {_updates.DownloadProgress:P0}" : string.Empty;
+
+        UpdateStatus = Describe();
 
         if (update is null)
             return;
@@ -152,107 +156,54 @@ public sealed partial class HelpViewModel : BaseViewModel, IDisposable
         UpdateNotes = string.IsNullOrWhiteSpace(update.Notes) ? "No notes were written for this version." : Plain(update.Notes);
     }
 
+    /// <summary>The one line under the heading: where things stand, including "offline".</summary>
+    private string Describe()
+    {
+        var update = _updates.Available;
+        var last = _updates.LastCheck;
+
+        if (_updates.Stage == UpdateStage.Available && _updates.DownloadError is { } error)
+            return error;
+
+        return _updates.Stage switch
+        {
+            UpdateStage.Downloading => $"Downloading version {update?.VersionDisplay}…",
+            UpdateStage.Ready => $"Version {update?.VersionDisplay} is downloaded and ready to install.",
+            UpdateStage.Available => $"Version {update?.VersionDisplay} is available. Download it when convenient; it is not installed until you choose Install.",
+            _ when last is null => "Checking for updates…",
+            _ when !last.Succeeded => last.Message + " Updates are checked again automatically once the PC is back online.",
+            _ => $"{last.Message} Last checked {_updates.LastCheckedAt:h:mm tt}."
+        };
+    }
+
     [RelayCommand]
     private Task CheckForUpdatesAsync() => RunAsync(async () =>
     {
         ClearMessages();
         UpdateStatus = "Checking…";
 
-        var result = await _updates.CheckAsync();
-
-        UpdateStatus = result.Message;
+        await _updates.CheckAsync();
         ShowAvailable();
     });
+
+    [RelayCommand]
+    private void DownloadUpdate()
+    {
+        ClearMessages();
+        _ = _updates.DownloadAsync();
+    }
+
+    [RelayCommand]
+    private void CancelDownload() => _updates.CancelDownload();
 
     [RelayCommand]
     private Task InstallUpdateAsync() => RunAsync(async () =>
     {
         ClearMessages();
 
-        var user = Session.CurrentUser;
-        var update = _updates.Available;
-
-        if (user is null || update is null)
-            return;
-
-        if (!CanInstall)
-        {
-            ShowError("Only an administrator can install updates.");
-            return;
-        }
-
-        if (!await _dialogs.ConfirmAsync(
-                $"Install version {update.VersionDisplay}",
-                "The app will back up the database, close, install the new version and open again. " +
-                "It takes a minute or two.\n\nMake sure no one else is using the app and that nothing is half-saved.",
-                "Back up and install", "Not now"))
-            return;
-
-        // 1. Download and verify before touching anything.
-        string installer;
-        _download = new CancellationTokenSource();
-        IsDownloading = true;
-        DownloadProgress = 0;
-        DownloadText = "Downloading…";
-
-        try
-        {
-            var progress = new Progress<double>(p =>
-            {
-                DownloadProgress = p;
-                DownloadText = $"Downloading… {p:P0}";
-            });
-
-            installer = await _updates.DownloadAsync(update, progress, _download.Token);
-        }
-        catch (UpdateException ex)
-        {
-            ShowError(ex.Message);
-            return;
-        }
-        catch (OperationCanceledException)
-        {
-            ShowStatus("Download cancelled. Nothing was installed.");
-            return;
-        }
-        finally
-        {
-            IsDownloading = false;
-            _download?.Dispose();
-            _download = null;
-        }
-
-        // 2. A backup the new version can be rolled back to.
-        DownloadText = "Backing up the database…";
-        var backup = await _data.CreateBackupAsync(user);
-
-        if (!backup.Succeeded)
-        {
-            ShowError($"The update was not installed because the backup failed: {backup.Message}");
-            return;
-        }
-
-        await _audit.WriteAsync(AuditActions.UpdateStarted, "Application", null, true,
-            $"Updating from {AppVersion.Display} to {update.VersionDisplay}. {backup.Message}",
-            user.Username, user.Id);
-
-        // 3. Hand over to the installer, which reopens the app when it is done.
-        try
-        {
-            _updates.StartInstaller(installer);
-        }
-        catch (Exception ex)
-        {
-            System.Diagnostics.Debug.WriteLine($"[HelpViewModel] {ex}");
-            ShowError("The installer could not be started. If Windows asked for permission, choose Yes and try again.");
-            return;
-        }
-
-        Application.Current?.Quit();
+        if (await _installer.InstallAsync() is { } problem)
+            ShowError(problem);
     });
-
-    [RelayCommand]
-    private void CancelDownload() => _download?.Cancel();
 
     /// <summary>Release notes are written in Markdown; shown here as plain text.</summary>
     private static string Plain(string markdown) =>
@@ -435,23 +386,17 @@ public sealed partial class HelpViewModel : BaseViewModel, IDisposable
     {
         await LoadRequestsAsync();
 
-        // The sign-in check may have already found one; otherwise look now.
-        if (_updates.Available is null)
-        {
-            var result = await _updates.CheckAsync();
-            UpdateStatus = result.Message;
-        }
-        else
-        {
-            UpdateStatus = $"Version {_updates.Available.VersionDisplay} is available.";
-        }
+        // The background check normally has an answer already; if it has never
+        // succeeded (offline at sign-in), try once more now.
+        if (_updates.LastCheck is not { Succeeded: true })
+            await _updates.CheckAsync();
 
         ShowAvailable();
     });
 
     public void Dispose()
     {
-        _updates.AvailableChanged -= OnAvailableChanged;
-        _download?.Cancel();
+        // The download belongs to the app, not this screen: it carries on.
+        _updates.Changed -= OnUpdatesChanged;
     }
 }

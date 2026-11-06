@@ -29,7 +29,7 @@
                             <Label Style="{StaticResource SectionHeading}" Text="Updates" />
                             <Label Style="{StaticResource Faint}"
                                    LineBreakMode="WordWrap"
-                                   Text="{Binding CurrentVersion, StringFormat='You are using {0}. New versions are checked for each time someone signs in.'}" />
+                                   Text="{Binding CurrentVersion, StringFormat='You are using {0}. While this PC is connected to the internet, new versions are looked for automatically. Nothing is downloaded or installed until you choose to.'}" />
                         </VerticalStackLayout>
 
                         <Button Grid.Column="1"
@@ -67,6 +67,18 @@
                                     Command="{Binding CancelDownloadCommand}" />
                         </Grid>
 
+                        <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10" IsVisible="{Binding ShowsDownload}">
+                            <Label Grid.Column="0"
+                                   Style="{StaticResource Faint}"
+                                   LineBreakMode="WordWrap"
+                                   VerticalOptions="Center"
+                                   Text="{Binding UpdateMeta, StringFormat='Downloading only saves the installer on this PC ({0}). The app keeps working while it downloads.'}" />
+                            <Button Grid.Column="1"
+                                    Style="{StaticResource PrimaryButton}"
+                                    Text="Download"
+                                    Command="{Binding DownloadUpdateCommand}" />
+                        </Grid>
+
                         <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10" IsVisible="{Binding ShowsInstall}">
                             <Label Grid.Column="0"
                                    Style="{StaticResource Faint}"
@@ -75,7 +87,7 @@
                                    Text="A backup is taken first, so the current data can be restored from Backup &amp; Archive if anything goes wrong." />
                             <Button Grid.Column="1"
                                     Style="{StaticResource PrimaryButton}"
-                                    Text="Back up and install"
+                                    Text="Install"
                                     IsEnabled="{Binding IsNotBusy}"
                                     Command="{Binding InstallUpdateCommand}" />
                         </Grid>
@@ -84,7 +96,7 @@
                                LineBreakMode="WordWrap"
                                TextColor="{StaticResource Warning}"
                                IsVisible="{Binding ShowsAskAdmin}"
-                               Text="Ask an administrator to sign in and install it. Installing backs up the database first, which only an administrator can do." />
+                               Text="It is downloaded. Ask an administrator to sign in and choose Install. Installing backs up the database first, which only an administrator can do." />
                     </VerticalStackLayout>
                 </VerticalStackLayout>
             </Border>

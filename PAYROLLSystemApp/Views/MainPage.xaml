@@ -216,7 +216,7 @@
         </Grid>
 
         <!-- ==================== WORKSPACE ==================== -->
-        <Grid Grid.Column="1" RowDefinitions="Auto,*,Auto">
+        <Grid Grid.Column="1" RowDefinitions="Auto,Auto,*,Auto">
 
             <!-- Top bar -->
             <Grid Grid.Row="0"
@@ -234,7 +234,7 @@
                     <Label Style="{StaticResource Faint}" Text="{Binding PageSubtitle}" />
                 </VerticalStackLayout>
 
-                <!-- Shown once a newer version is published; opens Help & Updates. -->
+                <!-- Shown while a newer version is available, downloading or ready; opens Help & Updates. -->
                 <Button Grid.Column="1"
                         Style="{StaticResource PrimaryButton}"
                         Text="{Binding UpdateBadge}"
@@ -256,11 +256,59 @@
                 <BoxView Grid.ColumnSpan="4" VerticalOptions="End" Style="{StaticResource Divider}" />
             </Grid>
 
+            <!--
+                Update notice: appears as soon as the background check finds a
+                new release, then follows it through Download to Install.
+            -->
+            <Grid Grid.Row="1"
+                  IsVisible="{Binding ShowsBanner}"
+                  ColumnDefinitions="*,Auto"
+                  ColumnSpacing="12"
+                  Padding="20,10"
+                  BackgroundColor="{AppThemeBinding Light={StaticResource BrandSoftLight}, Dark={StaticResource BrandSoftDark}}">
+
+                <VerticalStackLayout Grid.Column="0" Spacing="3" VerticalOptions="Center">
+                    <Label Style="{StaticResource Body}"
+                           FontAttributes="Bold"
+                           LineBreakMode="WordWrap"
+                           Text="{Binding BannerText}" />
+                    <ProgressBar Progress="{Binding BannerProgress}"
+                                 ProgressColor="{StaticResource Brand}"
+                                 IsVisible="{Binding BannerIsDownloading}" />
+                    <Label Style="{StaticResource Faint}"
+                           LineBreakMode="WordWrap"
+                           Text="{Binding BannerDetail}" />
+                </VerticalStackLayout>
+
+                <HorizontalStackLayout Grid.Column="1" Spacing="8" VerticalOptions="Center">
+                    <Button Style="{StaticResource PrimaryButton}"
+                            Text="Download"
+                            IsVisible="{Binding BannerShowsDownload}"
+                            Command="{Binding DownloadUpdateCommand}" />
+                    <Button Style="{StaticResource PrimaryButton}"
+                            Text="Install"
+                            IsVisible="{Binding BannerShowsInstall}"
+                            Command="{Binding InstallUpdateCommand}" />
+                    <Button Style="{StaticResource SecondaryButton}"
+                            Text="Cancel"
+                            IsVisible="{Binding BannerIsDownloading}"
+                            Command="{Binding CancelUpdateDownloadCommand}" />
+                    <Button Style="{StaticResource SecondaryButton}"
+                            Text="What's new"
+                            Command="{Binding OpenUpdatesCommand}" />
+                    <Button Style="{StaticResource SecondaryButton}"
+                            Text="Later"
+                            IsVisible="{Binding BannerShowsLater}"
+                            Command="{Binding DismissUpdateBannerCommand}" />
+                </HorizontalStackLayout>
+
+            </Grid>
+
             <!-- Section content -->
-            <ContentView Grid.Row="1" x:Name="SectionHost" />
+            <ContentView Grid.Row="2" x:Name="SectionHost" />
 
             <!-- Footer -->
-            <Grid Grid.Row="2"
+            <Grid Grid.Row="3"
                   ColumnDefinitions="*,Auto"
                   Padding="20,0"
                   HeightRequest="{markup:Scaled 30}"

@@ -26,6 +26,13 @@ Format for a new version (newest at the top, heading must be `## <version>`):
   and reports. They cannot change employees, detachment rates or Payroll
   Setup, and they cannot approve a run. Accounting and Administrator accounts
   work the same as before.
+- **Updates announce themselves.** While the PC is connected to the internet,
+  the app looks for a new version every half hour (and again soon after the
+  internet comes back). When one is found, a blue strip appears at the top:
+  click **Download** to fetch it while you keep working, then an administrator
+  clicks **Install** when it is a good moment. Nothing is downloaded or
+  installed until someone chooses to. If the internet drops during the
+  download, it carries on by itself once the connection is back.
 - **Notes** box at the bottom of each employee's record, for anything the
   record has no field for yet. It holds about 400 words, keeps line breaks,
   and shows a word count as you type. Notes are never printed on payslips or

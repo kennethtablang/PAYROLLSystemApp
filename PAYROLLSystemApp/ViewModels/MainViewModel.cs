@@ -107,6 +107,7 @@ public sealed partial class MainViewModel : BaseViewModel, IDisposable
     private readonly IDialogService _dialogs;
     private readonly IUserPreferences _preferences;
     private readonly IUpdateService _updates;
+    private readonly IUpdateInstaller _installer;
     private IDispatcherTimer? _clock;
 
     public MainViewModel(
@@ -114,13 +115,15 @@ public sealed partial class MainViewModel : BaseViewModel, IDisposable
         IAppNavigator navigator,
         IDialogService dialogs,
         IUserPreferences preferences,
-        IUpdateService updates)
+        IUpdateService updates,
+        IUpdateInstaller installer)
         : base(session)
     {
         _navigator = navigator;
         _dialogs = dialogs;
         _preferences = preferences;
         _updates = updates;
+        _installer = installer;
 
         UserName = string.Empty;
         UserRole = string.Empty;
@@ -130,13 +133,15 @@ public sealed partial class MainViewModel : BaseViewModel, IDisposable
         Clock = string.Empty;
         FooterStatus = string.Empty;
         UpdateBadge = string.Empty;
+        BannerText = string.Empty;
+        BannerDetail = string.Empty;
 
         BuildNavigation();
         ApplyCompact(_preferences.CompactSidebar);
 
         _navigator.Navigated += OnNavigated;
         _preferences.Changed += OnPreferenceChanged;
-        _updates.AvailableChanged += OnUpdateAvailableChanged;
+        _updates.Changed += OnUpdatesChanged;
     }
 
     public ObservableCollection<NavGroupViewModel> NavGroups { get; } = new();
@@ -164,7 +169,7 @@ public sealed partial class MainViewModel : BaseViewModel, IDisposable
 
     public string AppVersion => $"Payroll MS v{Services.AppVersion.Display}";
 
-    // ===================================================== update badge
+    // ===================================================== update notice
 
     /// <summary>"Update 1.2 available" in the top bar; empty when up to date.</summary>
     [ObservableProperty]
@@ -173,29 +178,116 @@ public sealed partial class MainViewModel : BaseViewModel, IDisposable
 
     public bool HasUpdate => !string.IsNullOrEmpty(UpdateBadge);
 
+    /// <summary>
+    /// The strip under the top bar that announces a release the moment the
+    /// background check finds it, then follows it through download to Install.
+    /// </summary>
+    [ObservableProperty]
+    public partial bool ShowsBanner { get; set; }
+
+    [ObservableProperty]
+    public partial string BannerText { get; set; }
+
+    [ObservableProperty]
+    public partial string BannerDetail { get; set; }
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(BannerShowsDownload))]
+    [NotifyPropertyChangedFor(nameof(BannerIsDownloading))]
+    [NotifyPropertyChangedFor(nameof(BannerShowsInstall))]
+    [NotifyPropertyChangedFor(nameof(BannerShowsLater))]
+    public partial UpdateStage BannerStage { get; set; }
+
+    [ObservableProperty]
+    public partial double BannerProgress { get; set; }
+
+    public bool BannerShowsDownload => BannerStage == UpdateStage.Available;
+
+    public bool BannerIsDownloading => BannerStage == UpdateStage.Downloading;
+
+    public bool BannerShowsInstall => BannerStage == UpdateStage.Ready && _installer.CanInstall;
+
+    public bool BannerShowsLater => BannerStage != UpdateStage.Downloading;
+
+    /// <summary>
+    /// "Later" hides the banner for this version at this stage until the next
+    /// sign-in. When it moves on (finishes downloading) it shows again.
+    /// </summary>
+    private (Version Version, UpdateStage Stage)? _dismissed;
+
     [RelayCommand]
     private void OpenUpdates() => _navigator.NavigateTo(AppSection.Help);
 
-    private void OnUpdateAvailableChanged(object? sender, EventArgs e) =>
-        MainThread.BeginInvokeOnMainThread(ShowUpdateBadge);
+    [RelayCommand]
+    private void DownloadUpdate() => _ = _updates.DownloadAsync();
 
-    private void ShowUpdateBadge() =>
-        UpdateBadge = _updates.Available is { } update ? $"Update {update.VersionDisplay} available" : string.Empty;
+    [RelayCommand]
+    private void CancelUpdateDownload() => _updates.CancelDownload();
 
-    /// <summary>
-    /// Once per sign-in, in the background. No internet, or GitHub not
-    /// answering, simply leaves the badge hidden.
-    /// </summary>
-    private async Task CheckForUpdateQuietlyAsync()
+    [RelayCommand]
+    private async Task InstallUpdateAsync()
     {
-        try
+        if (await _installer.InstallAsync() is { } problem)
         {
-            await _updates.CheckAsync();
+            BannerDetail = problem;
+            ShowUpdateNotice();
         }
-        catch (Exception ex)
+    }
+
+    [RelayCommand]
+    private void DismissUpdateBanner()
+    {
+        if (_updates.Available is { } update)
+            _dismissed = (update.Version, _updates.Stage);
+
+        ShowsBanner = false;
+    }
+
+    private void OnUpdatesChanged(object? sender, EventArgs e) =>
+        MainThread.BeginInvokeOnMainThread(ShowUpdateNotice);
+
+    private void ShowUpdateNotice()
+    {
+        var update = _updates.Available;
+        var stage = update is null ? UpdateStage.UpToDate : _updates.Stage;
+
+        UpdateBadge = (update, stage) switch
         {
-            System.Diagnostics.Debug.WriteLine($"[MainViewModel] update check: {ex}");
+            (null, _) => string.Empty,
+            (_, UpdateStage.Downloading) => $"Downloading {update.VersionDisplay}… {_updates.DownloadProgress:P0}",
+            (_, UpdateStage.Ready) => $"Update {update.VersionDisplay} ready to install",
+            _ => $"Update {update.VersionDisplay} available"
+        };
+
+        if (update is null)
+        {
+            ShowsBanner = false;
+            return;
         }
+
+        var stageChanged = BannerStage != stage;
+        BannerStage = stage;
+        BannerProgress = _updates.DownloadProgress;
+
+        BannerText = stage switch
+        {
+            UpdateStage.Downloading => $"Downloading version {update.VersionDisplay}… {_updates.DownloadProgress:P0}",
+            UpdateStage.Ready => $"Version {update.VersionDisplay} is downloaded and ready to install.",
+            _ => $"A new version is available: {update.Title} ({update.VersionDisplay})."
+        };
+
+        if (stage == UpdateStage.Available && _updates.DownloadError is { } error)
+            BannerDetail = error;
+        else if (stage == UpdateStage.Ready && !_installer.CanInstall)
+            BannerDetail = "An administrator can install it from Help & Updates.";
+        else if (stage == UpdateStage.Available)
+            BannerDetail = $"{update.SizeDisplay}. Download it now; nothing is installed until you choose Install.";
+        else if (stageChanged || stage == UpdateStage.Downloading)
+            BannerDetail = stage == UpdateStage.Ready
+                ? "The app backs up the database before installing and reopens by itself."
+                : "You can keep working while it downloads.";
+
+        ShowsBanner = _dismissed != (update.Version, stage);
     }
 
     /// <summary>
@@ -290,8 +382,10 @@ public sealed partial class MainViewModel : BaseViewModel, IDisposable
 
         Tick();
 
-        ShowUpdateBadge();
-        _ = CheckForUpdateQuietlyAsync();
+        // Checks now, then every half hour while online and soon after the PC
+        // reconnects. No internet simply means no banner until there is.
+        ShowUpdateNotice();
+        _updates.StartMonitoring();
 
         _clock = Application.Current?.Dispatcher.CreateTimer();
         if (_clock is not null)
@@ -322,6 +416,6 @@ public sealed partial class MainViewModel : BaseViewModel, IDisposable
         _clock = null;
         _navigator.Navigated -= OnNavigated;
         _preferences.Changed -= OnPreferenceChanged;
-        _updates.AvailableChanged -= OnUpdateAvailableChanged;
+        _updates.Changed -= OnUpdatesChanged;
     }
 }

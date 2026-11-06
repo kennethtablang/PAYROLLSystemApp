@@ -1,7 +1,8 @@
 <#
 .SYNOPSIS
     Publishes the built installer as a GitHub Release, so every installed copy
-    offers it under Help & Updates on the next sign-in.
+    announces it within half an hour while online (1.1 and older: at the
+    next sign-in).
 
 .DESCRIPTION
     Run after build-installer.ps1 -Version x.y, after testing the installer,
@@ -138,5 +139,5 @@ Remove-Item $notesFile -ErrorAction SilentlyContinue
 if ($Draft) {
     Write-Host "`nDONE  Draft $tag created. Installed apps will not see it until you publish it on GitHub." -ForegroundColor Green
 } else {
-    Write-Host "`nDONE  $tag is live. Installed apps will offer it the next time someone signs in." -ForegroundColor Green
+    Write-Host "`nDONE  $tag is live. Installed apps that are online will announce it within 30 minutes." -ForegroundColor Green
 }

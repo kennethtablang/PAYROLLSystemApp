@@ -84,6 +84,7 @@ namespace PAYROLLSystemApp
             // Help & Updates — new versions from GitHub Releases, and the
             // problem reports and change requests sent back to the developer.
             services.AddSingleton<IUpdateService, UpdateService>();
+            services.AddSingleton<IUpdateInstaller, UpdateInstaller>();
             services.AddSingleton<ISupportRequestService, SupportRequestService>();
         }
 

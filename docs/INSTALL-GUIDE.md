@@ -35,11 +35,19 @@ For the person installing the app at the company. It takes about five minutes.
 
 You do **not** download or install updates by hand any more.
 
-1. When a new version is ready, a blue **Update 1.x available** button appears
-   at the top of the app after signing in.
-2. An **administrator** clicks it, reads **What's new**, and clicks
-   **Back up and install**.
-3. The app takes a backup, closes, updates itself and opens again. This takes
+1. Keep the PC connected to the internet. The app looks for new versions by
+   itself every half hour, and soon after the internet comes back. When the
+   developer publishes one, a blue strip appears at the top of the app:
+   *"A new version is available"*. (Versions 1.1 and older only look when
+   someone signs in.)
+2. Anyone can click **Download**. The app keeps working while it downloads; a
+   progress bar shows how far it is. If the internet drops, the download
+   carries on by itself once it is back. **Later** hides the strip until the
+   next sign-in.
+3. When the strip says *"ready to install"*, an **administrator** clicks
+   **Install** (also under **Help & Updates**). **What's new** shows what
+   changed.
+4. The app takes a backup, closes, updates itself and opens again. This takes
    about a minute. You will not see the "Windows protected your PC" warning
    again, because the app downloads and checks the file itself.
 

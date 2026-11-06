@@ -2,7 +2,7 @@
 
 How a request from the company in Manila becomes an installed update, with the
 developer working remotely (Pangasinan). The company only does two things: it
-**sends request files** and it **clicks "Back up and install"**.
+**sends request files** and it **clicks Download, then Install**.
 
 ```
  MANILA                                   PANGASINAN (developer)
@@ -13,9 +13,10 @@ developer working remotely (Pangasinan). The company only does two things: it
                                           3. CHANGELOG.md  →  build-installer -Version x.y
                                           4. Test the upgrade on your own PC
                                           5. Commit, push  →  publish-release
- "Update x.y available" ◀── GitHub Releases ──┘
- Back up and install
- (backup → install → reopen)
+ "A new version is available" ◀── GitHub Releases ──┘
+   (found within 30 min while online)
+ Download  →  Install
+ (verify → backup → install → reopen)
 ```
 
 ## 1. Receive
