@@ -17,6 +17,20 @@ Format for a new version (newest at the top, heading must be `## <version>`):
 - ...
 ```
 
+## 1.3
+
+### Fixed
+- **Dark mode is dark everywhere.** Dropdown lists, date-picker calendars,
+  switches, "Are you sure?" messages and the window's title bar used to follow
+  the Windows setting instead of **Settings → Theme**, so they could stay light
+  in dark mode (or dark in light mode). They now follow the app's theme.
+- Selected rows in **Payroll Runs**, **Approvals**, **Payslips** and
+  **Reports**, report total rows, flagged rows and report warnings no longer
+  show a light background with unreadable text in dark mode.
+- Net pay in a run's employee list is readable in dark mode.
+- Switches that are on keep their white knob after changing the theme, and
+  show it in light mode too.
+
 ## 1.2
 
 ### New
