@@ -751,7 +751,7 @@
                                 HorizontalOptions="Fill"
                                 BackgroundColor="{AppThemeBinding Light={StaticResource BrandSoftLight}, Dark={StaticResource BrandSoftDark}}">
                             <Label FontSize="{markup:Font 11.5}"
-                                   TextColor="{StaticResource Brand}"
+                                   TextColor="{AppThemeBinding Light={StaticResource Brand}, Dark={StaticResource BrandTextDark}}"
                                    Text="{Binding EntryPreview}" />
                         </Border>
 

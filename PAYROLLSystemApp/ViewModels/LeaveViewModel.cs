@@ -413,7 +413,14 @@ public sealed partial class LeaveViewModel : BaseViewModel
     /// property getter cannot do.</para>
     /// </summary>
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasFilePreview))]
     public partial string FilePreview { get; set; }
+
+    /// <summary>
+    /// The preview strip is hidden while there is nothing to say (no employee
+    /// or leave type chosen yet), instead of showing as an empty purple bar.
+    /// </summary>
+    public bool HasFilePreview => !string.IsNullOrWhiteSpace(FilePreview);
 
     partial void OnFileEmployeeChanged(EmployeeOption? value) => _ = RefreshFilePreviewAsync();
 

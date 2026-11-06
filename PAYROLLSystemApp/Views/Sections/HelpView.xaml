@@ -228,7 +228,7 @@
                                            FontSize="{markup:Font 12}"
                                            FontAttributes="Bold"
                                            VerticalOptions="Center"
-                                           TextColor="{StaticResource Brand}" />
+                                           TextColor="{AppThemeBinding Light={StaticResource Brand}, Dark={StaticResource BrandTextDark}}" />
                                     <VerticalStackLayout Grid.Column="1" Spacing="1">
                                         <Label Text="{Binding Title}"
                                                FontSize="{markup:Font 12.5}"

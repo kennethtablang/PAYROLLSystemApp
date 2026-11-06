@@ -17,6 +17,18 @@ Format for a new version (newest at the top, heading must be `## <version>`):
 - ...
 ```
 
+## 1.4
+
+### Fixed
+- **File leave:** the empty purple bar under *Half day* is gone. The bar now
+  appears only once an employee and leave type are chosen, showing how many
+  working days the leave uses and how many remain.
+- **Dark mode:** purple text was too dark to read on dark backgrounds. Tabs
+  (such as *Requests · Balances · Leave types*), role names in **User
+  Accounts**, the badges in **Payroll Setup**, **Employees** and other
+  screens, and *Forgot password?* on the sign-in screen are now a lighter
+  purple in dark mode. Light mode is unchanged.
+
 ## 1.3
 
 ### Fixed

@@ -23,7 +23,7 @@
                     </Border.StrokeShape>
                     <Label Text="◷"
                            FontSize="{markup:Font 18}"
-                           TextColor="{StaticResource Brand}"
+                           TextColor="{AppThemeBinding Light={StaticResource Brand}, Dark={StaticResource BrandTextDark}}"
                            HorizontalOptions="Center"
                            VerticalOptions="Center" />
                 </Border>

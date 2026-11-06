@@ -86,7 +86,7 @@
                             <Label Grid.Column="1"
                                    Style="{StaticResource FieldLabel}"
                                    Text="{Binding PasswordToggleText}"
-                                   TextColor="{StaticResource Brand}">
+                                   TextColor="{AppThemeBinding Light={StaticResource Brand}, Dark={StaticResource BrandTextDark}}">
                                 <Label.GestureRecognizers>
                                     <TapGestureRecognizer Command="{Binding TogglePasswordVisibilityCommand}" />
                                 </Label.GestureRecognizers>

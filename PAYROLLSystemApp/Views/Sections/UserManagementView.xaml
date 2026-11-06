@@ -110,7 +110,7 @@
                                            VerticalOptions="Center"
                                            LineBreakMode="TailTruncation"
                                            Text="{Binding RoleDisplayName}"
-                                           TextColor="{StaticResource Brand}" />
+                                           TextColor="{AppThemeBinding Light={StaticResource Brand}, Dark={StaticResource BrandTextDark}}" />
 
                                     <Label Grid.Column="3"
                                            Style="{StaticResource Muted}"

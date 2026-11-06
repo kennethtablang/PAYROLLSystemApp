@@ -138,7 +138,7 @@
                                                 <Label Text="{Binding Initials}"
                                                        FontSize="{markup:Font 11}"
                                                        FontAttributes="Bold"
-                                                       TextColor="{StaticResource Brand}"
+                                                       TextColor="{AppThemeBinding Light={StaticResource Brand}, Dark={StaticResource BrandTextDark}}"
                                                        HorizontalOptions="Center"
                                                        VerticalOptions="Center" />
                                             </Border>
@@ -854,7 +854,7 @@
                                         <Label Grid.Row="0" Grid.Column="1"
                                                FontSize="{markup:Font 12.5}"
                                                FontAttributes="Bold"
-                                               TextColor="{StaticResource Brand}"
+                                               TextColor="{AppThemeBinding Light={StaticResource Brand}, Dark={StaticResource BrandTextDark}}"
                                                Text="{Binding ChangeDisplay}" />
 
                                         <Label Grid.Row="1" Grid.ColumnSpan="2"

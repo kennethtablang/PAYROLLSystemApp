@@ -20,6 +20,9 @@
     <Color x:Key="BrandHover">#4F46E5</Color>
     <Color x:Key="BrandSoftLight">#EEF0FF</Color>
     <Color x:Key="BrandSoftDark">#272449</Color>
+    <!-- Brand-coloured text in dark mode. Brand itself is ~1.9:1 on BrandSoftDark
+         and ~2.2:1 on SurfaceDark, too faint to read; this is ~6.3:1 and ~6.9:1. -->
+    <Color x:Key="BrandTextDark">#A5A0FF</Color>
 
     <!-- Sidebar (single dark treatment in both themes) -->
     <Color x:Key="SidebarBg">#1E1B33</Color>
@@ -324,7 +327,7 @@
 
     <Style TargetType="Button" x:Key="GhostButton" BasedOn="{StaticResource PrimaryButton}">
         <Setter Property="BackgroundColor" Value="Transparent" />
-        <Setter Property="TextColor" Value="{StaticResource Brand}" />
+        <Setter Property="TextColor" Value="{AppThemeBinding Light={StaticResource Brand}, Dark={StaticResource BrandTextDark}}" />
         <Setter Property="Padding" Value="8,0" />
         <Setter Property="VisualStateManager.VisualStateGroups">
             <VisualStateGroupList>

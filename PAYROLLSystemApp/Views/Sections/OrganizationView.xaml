@@ -108,7 +108,7 @@
                                                     <Label Text="{Binding Code}"
                                                            FontSize="{markup:Font 10.5}"
                                                            FontAttributes="Bold"
-                                                           TextColor="{StaticResource Brand}" />
+                                                           TextColor="{AppThemeBinding Light={StaticResource Brand}, Dark={StaticResource BrandTextDark}}" />
                                                 </Border>
 
                                                 <VerticalStackLayout Grid.Column="1" Spacing="0" VerticalOptions="Center">
@@ -496,7 +496,7 @@
                             HorizontalOptions="Fill"
                             BackgroundColor="{AppThemeBinding Light={StaticResource BrandSoftLight}, Dark={StaticResource BrandSoftDark}}">
                         <Label FontSize="{markup:Font 11.5}"
-                               TextColor="{StaticResource Brand}"
+                               TextColor="{AppThemeBinding Light={StaticResource Brand}, Dark={StaticResource BrandTextDark}}"
                                Text="{Binding SchedulePreview}" />
                     </Border>
                 </VerticalStackLayout>

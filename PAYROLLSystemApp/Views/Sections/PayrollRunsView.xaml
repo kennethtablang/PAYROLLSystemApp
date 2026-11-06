@@ -713,7 +713,7 @@
                             BackgroundColor="{AppThemeBinding Light={StaticResource BrandSoftLight}, Dark={StaticResource BrandSoftDark}}">
                         <Label FontSize="{markup:Font 12}"
                                FontAttributes="Bold"
-                               TextColor="{StaticResource Brand}"
+                               TextColor="{AppThemeBinding Light={StaticResource Brand}, Dark={StaticResource BrandTextDark}}"
                                Text="{Binding PayslipTotals}" />
                     </Border>
                 </VerticalStackLayout>
