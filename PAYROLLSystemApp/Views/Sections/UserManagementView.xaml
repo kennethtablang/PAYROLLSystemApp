@@ -181,6 +181,9 @@
                                     SelectedItem="{Binding CreateRole}"
                                     ItemDisplayBinding="{Binding DisplayName, x:DataType=vm:RoleOption}" />
                         </Border>
+                        <Label Style="{StaticResource Faint}"
+                               Margin="0,4,0,0"
+                               Text="{Binding CreateRole.Description}" />
                     </VerticalStackLayout>
 
                     <VerticalStackLayout Spacing="0">
@@ -223,6 +226,9 @@
                                     SelectedItem="{Binding EditRole}"
                                     ItemDisplayBinding="{Binding DisplayName, x:DataType=vm:RoleOption}" />
                         </Border>
+                        <Label Style="{StaticResource Faint}"
+                               Margin="0,4,0,0"
+                               Text="{Binding EditRole.Description}" />
                     </VerticalStackLayout>
 
                     <Grid ColumnDefinitions="*,Auto" Margin="0,4,0,0">

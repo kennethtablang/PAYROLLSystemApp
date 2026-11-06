@@ -180,11 +180,12 @@ public sealed partial class PayrollDatabase
     }
 
     /// <summary>
-    /// Brings accounts created under the five-role matrix onto the two the
+    /// Brings accounts created under the five-role matrix onto the three the
     /// system now issues (<see cref="UserRole"/>).
     ///
-    /// <para>Administrator was 0 and still is, so those rows are untouched. The
-    /// three roles that no longer exist all become Accounting — but an account
+    /// <para>Administrator was 0 and still is, and Payroll Officer was 2 and is
+    /// again, so those rows are untouched. The two roles that no longer exist
+    /// both become Accounting — but an account
     /// that was <b>Employee</b> is additionally <b>deactivated</b>, because
     /// Employee was self-service and Accounting reads every salary in the
     /// company. Widening a login's reach without anyone deciding to is the one
@@ -197,13 +198,14 @@ public sealed partial class PayrollDatabase
     /// </summary>
     private static async Task MigrateUserRolesAsync(SQLiteAsyncConnection connection)
     {
-        const int formerPayrollOfficer = 2;
         const int formerApprover = 3;
         const int formerEmployee = 4;
 
+        // Name the retired values rather than "anything not issued": a role
+        // added to UserRole later must not be swept into Accounting on launch.
         var stale = await connection.ExecuteScalarAsync<int>(
-            "SELECT COUNT(*) FROM users WHERE Role NOT IN (?, ?)",
-            (int)UserRole.Administrator, (int)UserRole.Accounting).ConfigureAwait(false);
+            "SELECT COUNT(*) FROM users WHERE Role IN (?, ?)",
+            formerApprover, formerEmployee).ConfigureAwait(false);
 
         if (stale == 0)
             return;
@@ -214,8 +216,8 @@ public sealed partial class PayrollDatabase
             "UPDATE users SET IsActive = 0 WHERE Role = ?", formerEmployee).ConfigureAwait(false);
 
         await connection.ExecuteAsync(
-            "UPDATE users SET Role = ? WHERE Role IN (?, ?, ?)",
-            (int)UserRole.Accounting, formerPayrollOfficer, formerApprover, formerEmployee)
+            "UPDATE users SET Role = ? WHERE Role IN (?, ?)",
+            (int)UserRole.Accounting, formerApprover, formerEmployee)
             .ConfigureAwait(false);
 
         await connection.InsertAsync(new AuditEntry
@@ -225,7 +227,7 @@ public sealed partial class PayrollDatabase
             Entity = nameof(User),
             Success = true,
             Details =
-                $"Role matrix collapsed to Administrator and Accounting: {stale} account(s) remapped " +
+                $"Retired roles remapped: {stale} account(s) moved " +
                 $"to Accounting, of which {demoted} former self-service account(s) were deactivated."
         }).ConfigureAwait(false);
     }

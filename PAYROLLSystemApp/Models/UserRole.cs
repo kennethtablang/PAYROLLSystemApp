@@ -1,27 +1,35 @@
 namespace PAYROLLSystemApp.Models;
 
 /// <summary>
-/// The two account types this system issues.
+/// The three account types this system issues.
 ///
-/// <para>REQUIREMENTS.md section 1.5 named five actors, but the company runs
-/// payroll with two people: an <b>administrator</b> who owns the system and
-/// approves what goes out, and an <b>accounting</b> clerk who prepares it.
-/// Roles nobody holds are roles nobody maintains, and an unused role in the
-/// matrix below is a permission grant that is never reviewed.</para>
+/// <para>REQUIREMENTS.md section 1.5 named five actors; the company runs
+/// payroll with three: an <b>administrator</b> who owns the system and
+/// approves what goes out, an <b>accounting</b> clerk who keeps the employee
+/// master and the payroll configuration, and a <b>payroll officer</b> who
+/// encodes the cut-off and computes it. Roles nobody holds are roles nobody
+/// maintains, and an unused role in the matrix below is a permission grant
+/// that is never reviewed.</para>
 ///
 /// <para><b>The stored values are deliberate.</b> <see cref="Administrator"/>
 /// keeps 0, which is what the seeded bootstrap account and every existing
-/// administrator row already carry, so collapsing the list does not rewrite
-/// them. See <c>PayrollDatabase.MigrateUserRolesAsync</c> for what happens to
-/// rows that carried one of the three roles that no longer exist.</para>
+/// administrator row already carry. <see cref="PayrollOfficer"/> takes back
+/// 2, the value the same-named role held in the five-role matrix, so a row
+/// from that era lands in the role of its own name — which is narrower than
+/// Accounting, never wider. See <c>PayrollDatabase.MigrateUserRolesAsync</c>
+/// for what happens to rows that carried 3 or 4, the roles that no longer
+/// exist.</para>
 /// </summary>
 public enum UserRole
 {
     /// <summary>Owns the system: users, audit log, backups, and approval.</summary>
     Administrator = 0,
 
-    /// <summary>Prepares payroll: employees, attendance, leave, runs, reports.</summary>
-    Accounting = 1
+    /// <summary>Keeps the employee master, detachment rates and payroll setup, and prepares payroll.</summary>
+    Accounting = 1,
+
+    /// <summary>Prepares payroll only: timesheets, attendance, leave, runs, payslips, reports.</summary>
+    PayrollOfficer = 2
 }
 
 /// <summary>
@@ -67,12 +75,17 @@ public enum Permission
 /// The single source of truth for role to permission mapping (FR-002).
 /// Kept as data so the matrix can be reviewed without reading control flow.
 ///
-/// <para><b>Accounting prepares; the administrator approves.</b> Accounting
-/// computes a run and reads every report off it, but cannot approve one, cannot
-/// issue accounts, cannot read the audit log and cannot restore a backup. With
-/// only two accounts in the building that separation is the whole of the
-/// segregation of duties, so it is the one line in this matrix worth defending.
-/// </para>
+/// <para><b>Accounting and the payroll officer prepare; the administrator
+/// approves.</b> Neither can approve a run, issue accounts, read the audit log
+/// or restore a backup. That separation is the segregation of duties, so it is
+/// the line in this matrix most worth defending.</para>
+///
+/// <para><b>The payroll officer encodes; Accounting owns what the figures are
+/// priced from.</b> The payroll officer keys timesheets, attendance and leave
+/// and computes the run, but cannot change an employee, a detachment's daily
+/// rate or the payroll configuration — the inputs that decide what a day is
+/// worth. Whoever keys the hours should not also be able to change the rate
+/// they are multiplied by.</para>
 /// </summary>
 public static class RolePermissions
 {
@@ -106,6 +119,16 @@ public static class RolePermissions
                 Permission.ViewReports,
                 Permission.ViewOwnPayslip,
                 Permission.FileLeaveRequest
+            },
+            [UserRole.PayrollOfficer] = new()
+            {
+                Permission.ManageAttendance,
+                Permission.ManageLeave,
+                Permission.RunPayroll,
+                Permission.ViewAllPayslips,
+                Permission.ViewReports,
+                Permission.ViewOwnPayslip,
+                Permission.FileLeaveRequest
             }
         };
 
@@ -119,6 +142,20 @@ public static class RolePermissions
     {
         UserRole.Administrator => "Administrator",
         UserRole.Accounting => "Accounting",
+        UserRole.PayrollOfficer => "Payroll Officer",
         _ => role.ToString()
+    };
+
+    /// <summary>One line for the role picker, so whoever issues an account can see what it reaches.</summary>
+    public static string Describe(UserRole role) => role switch
+    {
+        UserRole.Administrator =>
+            "Everything, including user accounts, the audit log, backups and approving payroll.",
+        UserRole.Accounting =>
+            "Employees, detachments and rates, payroll setup, and preparing payroll. Cannot approve.",
+        UserRole.PayrollOfficer =>
+            "Timesheets, attendance, leave, computing runs, payslips and reports. " +
+            "Cannot change employees, rates or payroll setup, or approve.",
+        _ => string.Empty
     };
 }

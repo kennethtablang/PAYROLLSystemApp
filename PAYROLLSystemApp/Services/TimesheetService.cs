@@ -68,8 +68,9 @@ public interface ITimesheetService
 /// discarded run can never be inherited by the one that replaces it.</para>
 ///
 /// <para>Every write is checked against the caller's permission and audited
-/// (FR-091). Accounting holds <see cref="Permission.RunPayroll"/>, which is
-/// what keying a cut-off's time requires.</para>
+/// (FR-091). Accounting and the payroll officer hold
+/// <see cref="Permission.RunPayroll"/>, which is what keying a cut-off's time
+/// requires.</para>
 /// </summary>
 public sealed class TimesheetService : ITimesheetService
 {

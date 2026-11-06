@@ -81,6 +81,7 @@
                                                 Style="{StaticResource SecondaryButton}"
                                                 VerticalOptions="Center"
                                                 Text="{Binding ActionText}"
+                                                IsVisible="{Binding HasAction}"
                                                 Command="{Binding GoCommand}" />
                                     </Grid>
                                 </DataTemplate>

@@ -16,13 +16,19 @@ public sealed record StatCard(string Caption, string Value, string Detail);
 /// </summary>
 public sealed class AttentionItem
 {
-    public AttentionItem(string title, string detail, bool isUrgent, string actionText, Action go)
+    /// <param name="go">
+    /// Null when the fix is on a screen this role cannot open: the item still
+    /// shows, because the problem still blocks their work, but with no button
+    /// that would lead to an access-denied page.
+    /// </param>
+    public AttentionItem(string title, string detail, bool isUrgent, string actionText, Action? go)
     {
         Title = title;
         Detail = detail;
         IsUrgent = isUrgent;
         ActionText = actionText;
-        GoCommand = new RelayCommand(go);
+        HasAction = go is not null;
+        GoCommand = new RelayCommand(go ?? (() => { }));
     }
 
     public string Title { get; }
@@ -33,6 +39,8 @@ public sealed class AttentionItem
     public bool IsUrgent { get; }
 
     public string ActionText { get; }
+
+    public bool HasAction { get; }
 
     public IRelayCommand GoCommand { get; }
 }
@@ -158,7 +166,7 @@ public sealed partial class DashboardViewModel : BaseViewModel
             var waiting = runs.Count(r => r.Status == PayrollRunStatus.ForApproval);
             var approved = runs.Count(r => r.Status == PayrollRunStatus.Approved);
 
-            Stats.Add(new StatCard("Draft runs", drafts.ToString(), "Being prepared by Accounting"));
+            Stats.Add(new StatCard("Draft runs", drafts.ToString(), "Being prepared, not yet sent for approval"));
             Stats.Add(new StatCard("Awaiting approval", waiting.ToString(),
                 approved == 0 ? "None approved and unposted" : $"{approved} approved, not yet posted"));
 
@@ -265,8 +273,9 @@ public sealed partial class DashboardViewModel : BaseViewModel
         Attention.Add(new AttentionItem(
             $"{missing.Count} detachment(s) with guards but no daily rate",
             string.Join(", ", missing.Take(6)) + (missing.Count > 6 ? ", …" : string.Empty) +
-            " — any run that includes their guards will be blocked.",
-            true, "Post a rate", () => Go(AppSection.Detachments)));
+            " — any run that includes their guards will be blocked." +
+            AskAccountingUnless(AppSection.Detachments, "to post the rate"),
+            true, "Post a rate", GoIfPermitted(AppSection.Detachments)));
     }
 
     private void AddDraftItems(IReadOnlyList<PayrollRun> runs)
@@ -302,15 +311,18 @@ public sealed partial class DashboardViewModel : BaseViewModel
         {
             Attention.Add(new AttentionItem(
                 $"No pay calendar for {today.Year}",
-                "No payroll run can be created until the year's pay periods are generated.",
-                true, "Generate", () => Go(AppSection.PayrollSetup)));
+                "No payroll run can be created until the year's pay periods are generated." +
+                AskAccountingUnless(AppSection.PayrollSetup, "to generate them"),
+                true, "Generate", GoIfPermitted(AppSection.PayrollSetup)));
         }
         else if (today.Month == 12 && (await _config.GetPayPeriodsAsync(today.Year + 1)).Count == 0)
         {
             Attention.Add(new AttentionItem(
                 $"Generate the {today.Year + 1} pay calendar",
-                "Do it before the first January cut-off, and add next year's movable holidays while you are there.",
-                false, "Generate", () => Go(AppSection.PayrollSetup)));
+                Session.Has(AppSections.Get(AppSection.PayrollSetup).RequiredPermission)
+                    ? "Do it before the first January cut-off, and add next year's movable holidays while you are there."
+                    : "Ask Accounting to generate it before the first January cut-off.",
+                false, "Generate", GoIfPermitted(AppSection.PayrollSetup)));
         }
 
         if (today.Month == 1)
@@ -394,6 +406,13 @@ public sealed partial class DashboardViewModel : BaseViewModel
     }
 
     private void Go(AppSection section) => _navigator.NavigateTo(section);
+
+    private Action? GoIfPermitted(AppSection section) =>
+        Session.Has(AppSections.Get(section).RequiredPermission) ? () => Go(section) : null;
+
+    /// <summary>The payroll officer can see a blocker it cannot fix; say who can.</summary>
+    private string AskAccountingUnless(AppSection section, string toDoWhat) =>
+        Session.Has(AppSections.Get(section).RequiredPermission) ? string.Empty : $" Ask Accounting {toDoWhat}.";
 
     private async Task LoadActivityAsync()
     {

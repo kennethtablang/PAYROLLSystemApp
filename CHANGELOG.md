@@ -17,6 +17,16 @@ Format for a new version (newest at the top, heading must be `## <version>`):
 - ...
 ```
 
+## 1.2
+
+### New
+- **Payroll Officer** accounts. An administrator can now choose *Payroll
+  Officer* as the role in **User Accounts**. A Payroll Officer enters
+  timesheets, attendance and leave, computes payroll runs, and opens payslips
+  and reports. They cannot change employees, detachment rates or Payroll
+  Setup, and they cannot approve a run. Accounting and Administrator accounts
+  work the same as before.
+
 ## 1.1
 
 ### New

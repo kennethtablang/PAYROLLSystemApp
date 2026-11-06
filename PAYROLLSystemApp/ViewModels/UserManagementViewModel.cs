@@ -7,7 +7,7 @@ using PAYROLLSystemApp.Services;
 
 namespace PAYROLLSystemApp.ViewModels;
 
-public sealed record RoleOption(UserRole Role, string DisplayName);
+public sealed record RoleOption(UserRole Role, string DisplayName, string Description);
 
 /// <summary>
 /// FR-090, plus the administrator halves of FR-003 (unlock) and FR-005 (reset).
@@ -29,7 +29,7 @@ public sealed partial class UserManagementViewModel : BaseViewModel
         Title = "User accounts";
 
         AvailableRoles = Enum.GetValues<UserRole>()
-            .Select(r => new RoleOption(r, RolePermissions.DisplayName(r)))
+            .Select(r => new RoleOption(r, RolePermissions.DisplayName(r), RolePermissions.Describe(r)))
             .ToList();
 
         SearchText = string.Empty;

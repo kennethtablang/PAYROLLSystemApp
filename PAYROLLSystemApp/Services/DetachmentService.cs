@@ -61,7 +61,8 @@ public interface IDetachmentService
 ///
 /// <para>Every write is checked against the caller's permission and audited
 /// (FR-091). Accounting holds <see cref="Permission.ManageEmployees"/>, which is
-/// what maintaining a rate table requires.</para>
+/// what maintaining a rate table requires. The payroll officer deliberately does
+/// not: they key the days a rate is multiplied by, so they must not set it.</para>
 /// </summary>
 public sealed class DetachmentService : IDetachmentService
 {
