@@ -30,6 +30,15 @@ Format for a new version (newest at the top, heading must be `## <version>`):
 - Net pay in a run's employee list is readable in dark mode.
 - Switches that are on keep their white knob after changing the theme, and
   show it in light mode too.
+- **New employee / Edit employee:** the date boxes (birth date, date hired,
+  regularised) were cut off and looked split in two, and the birth date and
+  regularised boxes sat lower than the fields beside them. The on/off switch
+  for those two dates now sits beside the box. The **Notes** box shows its full
+  height instead of one clipped line.
+- The same date-box fix applies to every date and time field in the app, and
+  the **Details** box under **Help & Updates → Report a problem** shows its
+  full height.
+- Forms no longer leave an empty gap under a field that has no error.
 
 ## 1.2
 

@@ -150,7 +150,7 @@
 
                     <VerticalStackLayout Spacing="0">
                         <Label Style="{StaticResource FieldLabel}" Text="DETAILS" />
-                        <Border Style="{StaticResource FieldFrame}">
+                        <Border Style="{StaticResource FieldFrameMultiline}">
                             <Editor Text="{Binding RequestDetails}"
                                     MaxLength="4000"
                                     HeightRequest="{markup:Scaled 130}"

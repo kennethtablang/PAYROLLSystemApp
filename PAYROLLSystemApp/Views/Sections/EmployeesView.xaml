@@ -315,21 +315,23 @@
                         <!-- The birth date is optional, so it is switched on
                              rather than defaulting to a date nobody entered. -->
                         <VerticalStackLayout Grid.Column="1" Spacing="0">
-                            <HorizontalStackLayout Spacing="6">
-                                <Label Style="{StaticResource FieldLabel}"
-                                       Text="BIRTH DATE"
-                                       LineBreakMode="NoWrap"
-                                       VerticalOptions="Center" />
-                                <Switch IsToggled="{Binding FormHasBirthDate}"
+                            <Label Style="{StaticResource FieldLabel}" Text="BIRTH DATE" />
+                            <!-- Fixed sizes: WinUI's switch asks for ~154 px wide and is taller
+                                 than a field, so an Auto column left the date no room and the
+                                 row sat lower than the fields beside it. -->
+                            <Grid ColumnDefinitions="*,46" ColumnSpacing="8" HeightRequest="{markup:Scaled 34}">
+                                <Border Grid.Column="0" Style="{StaticResource FieldFrame}">
+                                    <DatePicker Date="{Binding FormBirthDate}"
+                                                Format="dd MMM yyyy"
+                                                IsEnabled="{Binding FormHasBirthDate}" />
+                                </Border>
+                                <Switch Grid.Column="1"
+                                        IsToggled="{Binding FormHasBirthDate}"
                                         WidthRequest="46"
                                         VerticalOptions="Center"
-                                        OnColor="{StaticResource Brand}" />
-                            </HorizontalStackLayout>
-                            <Border Style="{StaticResource FieldFrame}">
-                                <DatePicker Date="{Binding FormBirthDate}"
-                                            Format="dd MMM yyyy"
-                                            IsEnabled="{Binding FormHasBirthDate}" />
-                            </Border>
+                                        OnColor="{StaticResource Brand}"
+                                        ToolTipProperties.Text="Switch on to enter the date" />
+                            </Grid>
                             <Label Style="{StaticResource ErrorText}"
                                    Margin="0,3,0,0"
                                    Text="{Binding ErrBirthDate}" />
@@ -391,21 +393,23 @@
                         </VerticalStackLayout>
 
                         <VerticalStackLayout Grid.Column="2" Spacing="0">
-                            <HorizontalStackLayout Spacing="6">
-                                <Label Style="{StaticResource FieldLabel}"
-                                       Text="REGULARISED"
-                                       LineBreakMode="NoWrap"
-                                       VerticalOptions="Center" />
-                                <Switch IsToggled="{Binding FormIsRegularized}"
+                            <Label Style="{StaticResource FieldLabel}" Text="REGULARISED" />
+                            <!-- Fixed sizes: WinUI's switch asks for ~154 px wide and is taller
+                                 than a field, so an Auto column left the date no room and the
+                                 row sat lower than the fields beside it. -->
+                            <Grid ColumnDefinitions="*,46" ColumnSpacing="8" HeightRequest="{markup:Scaled 34}">
+                                <Border Grid.Column="0" Style="{StaticResource FieldFrame}">
+                                    <DatePicker Date="{Binding FormRegularizationDate}"
+                                                Format="dd MMM yyyy"
+                                                IsEnabled="{Binding FormIsRegularized}" />
+                                </Border>
+                                <Switch Grid.Column="1"
+                                        IsToggled="{Binding FormIsRegularized}"
                                         WidthRequest="46"
                                         VerticalOptions="Center"
-                                        OnColor="{StaticResource Brand}" />
-                            </HorizontalStackLayout>
-                            <Border Style="{StaticResource FieldFrame}">
-                                <DatePicker Date="{Binding FormRegularizationDate}"
-                                            Format="dd MMM yyyy"
-                                            IsEnabled="{Binding FormIsRegularized}" />
-                            </Border>
+                                        OnColor="{StaticResource Brand}"
+                                        ToolTipProperties.Text="Switch on to enter the date" />
+                            </Grid>
                             <Label Style="{StaticResource ErrorText}"
                                    Margin="0,3,0,0"
                                    Text="{Binding ErrRegularization}" />
@@ -636,7 +640,7 @@
                     </VerticalStackLayout>
 
                     <VerticalStackLayout Spacing="0">
-                        <Border Style="{StaticResource FieldFrame}">
+                        <Border Style="{StaticResource FieldFrameMultiline}">
                             <Editor Text="{Binding FormNotes}"
                                     MaxLength="{Binding NotesMaxLength}"
                                     AutoSize="Disabled"

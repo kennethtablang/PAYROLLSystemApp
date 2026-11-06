@@ -154,9 +154,18 @@
         <Setter Property="VerticalOptions" Value="Center" />
     </Style>
 
+    <!-- Takes no room until there is an error, so a form row does not carry an empty line. -->
     <Style TargetType="Label" x:Key="ErrorText">
         <Setter Property="FontSize" Value="{markup:Font 11.5}" />
         <Setter Property="TextColor" Value="{StaticResource Danger}" />
+        <Style.Triggers>
+            <Trigger TargetType="Label" Property="Text" Value="">
+                <Setter Property="IsVisible" Value="False" />
+            </Trigger>
+            <Trigger TargetType="Label" Property="Text" Value="{x:Null}">
+                <Setter Property="IsVisible" Value="False" />
+            </Trigger>
+        </Style.Triggers>
     </Style>
 
     <!-- ============================ INPUTS ============================ -->
@@ -188,6 +197,33 @@
         <Setter Property="TitleColor" Value="{AppThemeBinding Light={StaticResource FaintLight}, Dark={StaticResource FaintDark}}" />
     </Style>
 
+    <!--
+        Date and time pickers fit the field frame like Entry and Picker do. The
+        template default asks for a 44 px minimum height inside the 34 px frame,
+        so the frame cut the picker's text off.
+    -->
+    <Style TargetType="DatePicker">
+        <Setter Property="FontFamily" Value="OpenSansRegular" />
+        <Setter Property="FontSize" Value="{markup:Font 13}" />
+        <Setter Property="HeightRequest" Value="{markup:Scaled 24}" />
+        <Setter Property="MinimumHeightRequest" Value="0" />
+        <Setter Property="MinimumWidthRequest" Value="0" />
+        <Setter Property="VerticalOptions" Value="Center" />
+        <Setter Property="BackgroundColor" Value="Transparent" />
+        <Setter Property="TextColor" Value="{AppThemeBinding Light={StaticResource TextLight}, Dark={StaticResource TextDark}}" />
+    </Style>
+
+    <Style TargetType="TimePicker">
+        <Setter Property="FontFamily" Value="OpenSansRegular" />
+        <Setter Property="FontSize" Value="{markup:Font 13}" />
+        <Setter Property="HeightRequest" Value="{markup:Scaled 24}" />
+        <Setter Property="MinimumHeightRequest" Value="0" />
+        <Setter Property="MinimumWidthRequest" Value="0" />
+        <Setter Property="VerticalOptions" Value="Center" />
+        <Setter Property="BackgroundColor" Value="Transparent" />
+        <Setter Property="TextColor" Value="{AppThemeBinding Light={StaticResource TextLight}, Dark={StaticResource TextDark}}" />
+    </Style>
+
     <Style TargetType="Border" x:Key="FieldFrame">
         <Setter Property="controls:FieldFrame.HighlightOnFocus" Value="True" />
         <Setter Property="StrokeThickness" Value="1" />
@@ -198,6 +234,14 @@
         <Setter Property="StrokeShape">
             <RoundRectangle CornerRadius="6" />
         </Setter>
+    </Style>
+
+    <!--
+        For a multi-line Editor. FieldFrame is fixed at one line (34), which cut a
+        170 px notes box down to a single clipped line with no bottom edge.
+    -->
+    <Style TargetType="Border" x:Key="FieldFrameMultiline" BasedOn="{StaticResource FieldFrame}">
+        <Setter Property="HeightRequest" Value="-1" />
     </Style>
 
     <!-- ============================ BUTTONS ============================ -->

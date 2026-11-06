@@ -19,6 +19,8 @@ public static class FieldChrome
         EntryHandler.Mapper.AppendToMapping(nameof(FieldChrome), (handler, _) => Strip(handler.PlatformView));
         EditorHandler.Mapper.AppendToMapping(nameof(FieldChrome), (handler, _) => Strip(handler.PlatformView));
         PickerHandler.Mapper.AppendToMapping(nameof(FieldChrome), (handler, _) => Strip(handler.PlatformView));
+        DatePickerHandler.Mapper.AppendToMapping(nameof(FieldChrome), (handler, _) => Strip(handler.PlatformView));
+        TimePickerHandler.Mapper.AppendToMapping(nameof(FieldChrome), (handler, _) => Strip(handler.PlatformView));
     }
 
 #if WINDOWS
@@ -50,6 +52,30 @@ public static class FieldChrome
                 textBox.Resources["TextControlBorderThemeThickness"] = none;
                 textBox.Resources["TextControlBorderThemeThicknessFocused"] = none;
                 Neutralise(textBox.Resources, "TextControl");
+                break;
+
+            // Without this the date picker drew its own bordered box inside the
+            // frame, only part of the frame's width, and taller than the frame,
+            // so the field looked split in two and its text was cut. Properties
+            // only, as for ComboBox: overriding these pickers' brushes through
+            // Resources crashes WinUI at start-up (0xc000027b in combase).
+            case Microsoft.UI.Xaml.Controls.CalendarDatePicker datePicker:
+                datePicker.BorderThickness = none;
+                datePicker.Background = transparent;
+                datePicker.Padding = none;
+                datePicker.MinHeight = 0;
+                datePicker.HorizontalAlignment = Microsoft.UI.Xaml.HorizontalAlignment.Stretch;
+                datePicker.VerticalAlignment = Microsoft.UI.Xaml.VerticalAlignment.Center;
+                break;
+
+            case Microsoft.UI.Xaml.Controls.TimePicker timePicker:
+                timePicker.BorderThickness = none;
+                timePicker.Background = transparent;
+                timePicker.Padding = none;
+                timePicker.MinHeight = 0;
+                timePicker.MinWidth = 0;
+                timePicker.HorizontalAlignment = Microsoft.UI.Xaml.HorizontalAlignment.Stretch;
+                timePicker.VerticalAlignment = Microsoft.UI.Xaml.VerticalAlignment.Center;
                 break;
 
             // ComboBox is deliberately handled with properties only. Overriding
