@@ -14,7 +14,7 @@
 ; alone so an uninstall or reinstall never loses payroll data.
 
 #define AppName "Payroll Management System"
-#define AppVersion "1.2"
+#define AppVersion "1.3"
 #define AppPublisher "Payroll MS"
 #define AppExe "PAYROLLSystemApp.exe"
 
