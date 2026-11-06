@@ -396,6 +396,24 @@ public sealed partial class EmployeeDirectoryViewModel : BaseViewModel
     public partial string FormBankAccount { get; set; }
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(NotesCount))]
+    public partial string FormNotes { get; set; }
+
+    public int NotesMaxLength => Employee.NotesMaxLength;
+
+    /// <summary>"120 words · 700 of 3,000 characters", under the notes box.</summary>
+    public string NotesCount
+    {
+        get
+        {
+            var notes = FormNotes ?? string.Empty;
+            var words = notes.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries).Length;
+            return $"{words:N0} {(words == 1 ? "word" : "words")} · " +
+                   $"{notes.Length:N0} of {Employee.NotesMaxLength:N0} characters";
+        }
+    }
+
+    [ObservableProperty]
     public partial bool FormIsActive { get; set; }
 
     // Per-field messages, placed beside the input that caused them (NFR-023).
@@ -716,6 +734,7 @@ public sealed partial class EmployeeDirectoryViewModel : BaseViewModel
 
         FormBankName = employee.BankName;
         FormBankAccount = employee.BankAccountNumber;
+        FormNotes = employee.Notes ?? string.Empty;
         FormIsActive = employee.IsActive;
 
         ShowRateReason = false;
@@ -806,6 +825,7 @@ public sealed partial class EmployeeDirectoryViewModel : BaseViewModel
 
         employee.BankName = FormBankName;
         employee.BankAccountNumber = FormBankAccount;
+        employee.Notes = FormNotes;
         employee.IsActive = _target is null || FormIsActive;
 
         var result = await _employees.SaveAsync(employee, performedBy, FormRateReason);
@@ -1180,6 +1200,7 @@ public sealed partial class EmployeeDirectoryViewModel : BaseViewModel
 
         FormBankName = string.Empty;
         FormBankAccount = string.Empty;
+        FormNotes = string.Empty;
         FormIsActive = true;
 
         ClearFieldErrors();
@@ -1252,7 +1273,11 @@ public sealed partial class EmployeeDirectoryViewModel : BaseViewModel
         ExemptFromPagIbig = source.ExemptFromPagIbig,
         BankName = source.BankName,
         BankAccountNumber = source.BankAccountNumber,
+        Notes = source.Notes,
         IsActive = source.IsActive,
+        IsArchived = source.IsArchived,
+        ArchivedUtc = source.ArchivedUtc,
+        ArchivedReason = source.ArchivedReason,
         CreatedUtc = source.CreatedUtc,
         UpdatedUtc = source.UpdatedUtc
     };

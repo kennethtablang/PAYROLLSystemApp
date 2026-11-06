@@ -314,6 +314,16 @@ public sealed class EmployeeService : IEmployeeService
         employee.SeparationReason = existing.SeparationReason;
         employee.CreatedUtc = existing.CreatedUtc;
 
+        // Archiving is the same: an edit made to an archived record from the
+        // Archived filter must not quietly restore it to every list.
+        employee.IsArchived = existing.IsArchived;
+        employee.ArchivedUtc = existing.ArchivedUtc;
+        employee.ArchivedReason = existing.ArchivedReason;
+
+        // The audit entry says the notes changed, not what they say: they can
+        // hold anything, and the audit log is read by people the record is not.
+        var notesChanged = (existing.Notes ?? string.Empty) != employee.Notes;
+
         var rateChanged =
             existing.BasicRate != employee.BasicRate ||
             existing.PayType != employee.PayType ||
@@ -323,7 +333,8 @@ public sealed class EmployeeService : IEmployeeService
 
         await _audit.WriteAsync(AuditActions.EmployeeUpdated, nameof(Employee), employee.Id, true,
             $"Updated employee {employee.EmployeeNumber} — {employee.FullName}." +
-            (rateChanged ? " Compensation changed; see the salary rate history." : string.Empty),
+            (rateChanged ? " Compensation changed; see the salary rate history." : string.Empty) +
+            (notesChanged ? " Notes changed." : string.Empty),
             performedBy.Username, performedBy.Id).ConfigureAwait(false);
 
         if (rateChanged)
@@ -550,6 +561,9 @@ public sealed class EmployeeService : IEmployeeService
         employee.BankAccountNumber = Tidy(employee.BankAccountNumber);
         employee.SeparationReason = Tidy(employee.SeparationReason);
 
+        // Trimmed at the ends only: the line breaks inside are the user's.
+        employee.Notes = Tidy(employee.Notes);
+
         // Digits only, so the same person cannot be entered twice by typing the
         // separators differently. See GovernmentId.
         employee.SssNumber = GovernmentId.Digits(employee.SssNumber);
@@ -602,6 +616,10 @@ public sealed class EmployeeService : IEmployeeService
 
         if (employee.Email.Length > 0 && !IsPlausibleEmail(employee.Email))
             errors.Add(new FieldError(nameof(Employee.Email), "Enter a valid e-mail address."));
+
+        if (employee.Notes.Length > Employee.NotesMaxLength)
+            errors.Add(new FieldError(nameof(Employee.Notes),
+                $"Notes are limited to {Employee.NotesMaxLength:N0} characters; these are {employee.Notes.Length:N0}."));
 
         if (employee.BasicRate < 0)
             errors.Add(new FieldError(nameof(Employee.BasicRate), "The rate cannot be negative."));

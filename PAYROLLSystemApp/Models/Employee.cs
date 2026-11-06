@@ -188,6 +188,19 @@ public class Employee
 
     // ------------------------------------------------------------ record
 
+    /// <summary>
+    /// Free-form notes for whatever the masterfile has no field for yet.
+    ///
+    /// <para>Sized for a few hundred words: <see cref="NotesMaxLength"/>
+    /// characters is about 400 words of English or Filipino, comfortably past
+    /// the 200 to 300 the company asked for. Line breaks are kept. Never
+    /// printed on a payslip or a report.</para>
+    /// </summary>
+    [MaxLength(NotesMaxLength)]
+    public string Notes { get; set; } = string.Empty;
+
+    public const int NotesMaxLength = 3000;
+
     /// <summary>FR-017: false hides the employee from new runs but keeps the history.</summary>
     public bool IsActive { get; set; } = true;
 

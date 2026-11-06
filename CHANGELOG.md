@@ -26,6 +26,14 @@ Format for a new version (newest at the top, heading must be `## <version>`):
   and reports. They cannot change employees, detachment rates or Payroll
   Setup, and they cannot approve a run. Accounting and Administrator accounts
   work the same as before.
+- **Notes** box at the bottom of each employee's record, for anything the
+  record has no field for yet. It holds about 400 words, keeps line breaks,
+  and shows a word count as you type. Notes are never printed on payslips or
+  reports.
+
+### Fixed
+- Editing an archived employee (from the **Archived** filter) no longer
+  restores them to the lists by accident.
 
 ## 1.1
 

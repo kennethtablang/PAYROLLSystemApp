@@ -590,6 +590,7 @@ public sealed class EmployeeImportService : IEmployeeImportService
         ExemptFromPagIbig = source.ExemptFromPagIbig,
         BankName = source.BankName,
         BankAccountNumber = source.BankAccountNumber,
+        Notes = source.Notes,
         IsActive = source.IsActive,
         IsArchived = source.IsArchived,
         ArchivedUtc = source.ArchivedUtc,

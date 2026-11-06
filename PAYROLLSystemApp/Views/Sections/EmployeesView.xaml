@@ -626,6 +626,29 @@
                                 OnColor="{StaticResource Brand}" />
                     </Grid>
 
+                    <BoxView Style="{StaticResource Divider}" />
+
+                    <!-- ======================== Notes ======================== -->
+                    <VerticalStackLayout Spacing="1">
+                        <Label Style="{StaticResource SectionHeading}" Text="Notes" />
+                        <Label Style="{StaticResource Faint}"
+                               Text="Anything this record has no field for yet. Kept with the employee, never printed on a payslip or report." />
+                    </VerticalStackLayout>
+
+                    <VerticalStackLayout Spacing="0">
+                        <Border Style="{StaticResource FieldFrame}">
+                            <Editor Text="{Binding FormNotes}"
+                                    MaxLength="{Binding NotesMaxLength}"
+                                    AutoSize="Disabled"
+                                    HeightRequest="{markup:Scaled 170}"
+                                    Placeholder="e.g. Previous employer and clearance status, medical restrictions, agreed schedule exceptions, documents still to submit…" />
+                        </Border>
+                        <Label Style="{StaticResource Faint}"
+                               Margin="0,4,0,0"
+                               HorizontalTextAlignment="End"
+                               Text="{Binding NotesCount}" />
+                    </VerticalStackLayout>
+
                 </VerticalStackLayout>
             </controls:ModalHost.Body>
         </controls:ModalHost>
