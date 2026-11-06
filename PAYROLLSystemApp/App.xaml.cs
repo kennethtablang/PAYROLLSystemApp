@@ -42,6 +42,11 @@ namespace PAYROLLSystemApp
                 MinimumHeight = 620
             };
 
+            // The native window only exists once the handler is attached; the
+            // theme applied in the constructor could not reach it yet.
+            var window = _window;
+            window.HandlerChanged += (_, _) => Handlers.NativeTheme.Apply(window, UserAppTheme);
+
             return _window;
         }
 

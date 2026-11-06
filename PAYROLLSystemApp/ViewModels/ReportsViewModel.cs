@@ -26,10 +26,8 @@ public sealed partial class ReportChoice : ObservableObject
     public string RequirementRef => Definition.RequirementRef;
 
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(RowColor))]
     public partial bool IsSelected { get; set; }
 
-    public Color RowColor => IsSelected ? Color.FromArgb("#EEF0FF") : Colors.Transparent;
 }
 
 /// <summary>One rendered cell. Width and alignment come from the column.</summary>
@@ -95,12 +93,6 @@ public sealed class ReportRowView
     public bool IsTotal { get; }
 
     public bool IsFlagged { get; }
-
-    public Color Background => IsTotal
-        ? Color.FromArgb("#EEF0FF")
-        : IsFlagged
-            ? Color.FromArgb("#FDF3E4")
-            : Colors.Transparent;
 }
 
 /// <summary>One of the report's statements about itself, coloured by severity.</summary>
@@ -124,18 +116,13 @@ public sealed class ReportNoteView
 
     public bool IsBlocking => Severity == ReportNoteSeverity.Blocking;
 
+    public bool IsWarning => Severity == ReportNoteSeverity.Warning;
+
     public Color TextColor => Severity switch
     {
         ReportNoteSeverity.Blocking => Color.FromArgb("#B91C1C"),
         ReportNoteSeverity.Warning => Color.FromArgb("#B45309"),
         _ => Color.FromArgb("#6B7085")
-    };
-
-    public Color Background => Severity switch
-    {
-        ReportNoteSeverity.Blocking => Color.FromArgb("#FDECEC"),
-        ReportNoteSeverity.Warning => Color.FromArgb("#FDF3E4"),
-        _ => Colors.Transparent
     };
 }
 

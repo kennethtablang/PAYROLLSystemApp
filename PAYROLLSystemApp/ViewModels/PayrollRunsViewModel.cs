@@ -44,13 +44,9 @@ public sealed partial class PayrollRunRow : ObservableObject
         ? "1 payslip needs review"
         : $"{Run.ExceptionCount} payslips need review";
 
+    /// <summary>The row template tints a selected row with the theme's BrandSoft colour.</summary>
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(RowColor))]
     public partial bool IsSelected { get; set; }
-
-    public Color RowColor => IsSelected
-        ? Color.FromArgb("#EEF0FF")
-        : Colors.Transparent;
 
     public Color StatusColor => Run.Status switch
     {
@@ -89,9 +85,8 @@ public sealed class PayslipRow
 
     public string ReviewNote => Payslip.ReviewNote;
 
-    public Color NetColor => Payslip.NetPay < 0m
-        ? Color.FromArgb("#B91C1C")
-        : Color.FromArgb("#1E2130");
+    /// <summary>Shown in red; otherwise in the theme's normal text colour.</summary>
+    public bool IsNegative => Payslip.NetPay < 0m;
 }
 
 /// <summary>An employee offered for a new run, with a tick box.</summary>

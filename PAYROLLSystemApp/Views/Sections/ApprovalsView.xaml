@@ -92,7 +92,12 @@
                         <CollectionView ItemsSource="{Binding Queue}" SelectionMode="None">
                             <CollectionView.ItemTemplate>
                                 <DataTemplate x:DataType="vm:PayrollRunRow">
-                                    <Grid BackgroundColor="{Binding RowColor}">
+                                    <Grid>
+                                        <Grid.Triggers>
+                                            <DataTrigger TargetType="Grid" Binding="{Binding IsSelected}" Value="True">
+                                                <Setter Property="BackgroundColor" Value="{AppThemeBinding Light={StaticResource BrandSoftLight}, Dark={StaticResource BrandSoftDark}}" />
+                                            </DataTrigger>
+                                        </Grid.Triggers>
                                         <Grid.GestureRecognizers>
                                             <TapGestureRecognizer
                                                 Command="{Binding Source={RelativeSource AncestorType={x:Type vm:ApprovalsViewModel}}, Path=SelectRunRowCommand}"
@@ -218,8 +223,14 @@
                                                    FontSize="{markup:Font 12.5}"
                                                    FontAttributes="Bold"
                                                    VerticalOptions="Center"
-                                                   TextColor="{Binding NetColor}"
-                                                   Text="{Binding NetDisplay}" />
+                                                   TextColor="{AppThemeBinding Light={StaticResource TextLight}, Dark={StaticResource TextDark}}"
+                                                   Text="{Binding NetDisplay}">
+                                            <Label.Triggers>
+                                                <DataTrigger TargetType="Label" Binding="{Binding IsNegative}" Value="True">
+                                                    <Setter Property="TextColor" Value="{StaticResource Danger}" />
+                                                </DataTrigger>
+                                            </Label.Triggers>
+                                            </Label>
 
                                             <Button Grid.Column="4"
                                                     Style="{StaticResource RowAction}"

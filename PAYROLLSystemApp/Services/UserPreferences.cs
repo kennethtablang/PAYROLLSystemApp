@@ -133,6 +133,9 @@ public sealed class UserPreferences : IUserPreferences
             ThemeChoice.Dark => AppTheme.Dark,
             _ => AppTheme.Unspecified
         };
+
+        // UserAppTheme alone leaves the native Windows controls on the Windows setting.
+        Handlers.NativeTheme.Apply(app);
     }
 
     public bool OpenAfterExport

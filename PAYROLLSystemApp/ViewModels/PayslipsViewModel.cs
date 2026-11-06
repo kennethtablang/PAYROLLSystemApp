@@ -37,10 +37,8 @@ public sealed partial class PayslipHistoryRow : ObservableObject
     public string Detail => $"{Item.Run.TypeDisplay} · {Item.Run.ReferenceNumber} · paid {PayDateDisplay}";
 
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(RowColor))]
     public partial bool IsSelected { get; set; }
 
-    public Color RowColor => IsSelected ? Color.FromArgb("#EEF0FF") : Colors.Transparent;
 }
 
 /// <summary>

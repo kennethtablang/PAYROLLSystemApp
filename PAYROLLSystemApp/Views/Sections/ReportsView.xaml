@@ -33,7 +33,12 @@
                 <CollectionView ItemsSource="{Binding Reports}" SelectionMode="None">
                     <CollectionView.ItemTemplate>
                         <DataTemplate x:DataType="vm:ReportChoice">
-                            <Grid BackgroundColor="{Binding RowColor}">
+                            <Grid>
+                                <Grid.Triggers>
+                                    <DataTrigger TargetType="Grid" Binding="{Binding IsSelected}" Value="True">
+                                        <Setter Property="BackgroundColor" Value="{AppThemeBinding Light={StaticResource BrandSoftLight}, Dark={StaticResource BrandSoftDark}}" />
+                                    </DataTrigger>
+                                </Grid.Triggers>
                                 <Grid.GestureRecognizers>
                                     <TapGestureRecognizer
                                         Command="{Binding Source={RelativeSource AncestorType={x:Type vm:ReportsViewModel}}, Path=SelectReportCommand}"
@@ -191,10 +196,18 @@
                 <VerticalStackLayout Grid.Row="3" Spacing="4" BindableLayout.ItemsSource="{Binding Notes}">
                     <BindableLayout.ItemTemplate>
                         <DataTemplate x:DataType="vm:ReportNoteView">
-                            <Border BackgroundColor="{Binding Background}"
+                            <Border BackgroundColor="Transparent"
                                     Stroke="Transparent"
                                     StrokeThickness="0"
                                     Padding="8,5">
+                                <Border.Triggers>
+                                    <DataTrigger TargetType="Border" Binding="{Binding IsWarning}" Value="True">
+                                        <Setter Property="BackgroundColor" Value="{AppThemeBinding Light={StaticResource WarningSoftLight}, Dark={StaticResource WarningSoftDark}}" />
+                                    </DataTrigger>
+                                    <DataTrigger TargetType="Border" Binding="{Binding IsBlocking}" Value="True">
+                                        <Setter Property="BackgroundColor" Value="{AppThemeBinding Light={StaticResource DangerSoftLight}, Dark={StaticResource DangerSoftDark}}" />
+                                    </DataTrigger>
+                                </Border.Triggers>
                                 <Label FontSize="{markup:Font 11.5}"
                                        LineBreakMode="WordWrap"
                                        TextColor="{Binding TextColor}"
@@ -244,7 +257,15 @@
                                 <CollectionView Grid.Row="1" ItemsSource="{Binding Rows}" SelectionMode="None">
                                     <CollectionView.ItemTemplate>
                                         <DataTemplate x:DataType="vm:ReportRowView">
-                                            <Grid BackgroundColor="{Binding Background}">
+                                            <Grid>
+                                                <Grid.Triggers>
+                                                    <DataTrigger TargetType="Grid" Binding="{Binding IsFlagged}" Value="True">
+                                                        <Setter Property="BackgroundColor" Value="{AppThemeBinding Light={StaticResource WarningSoftLight}, Dark={StaticResource WarningSoftDark}}" />
+                                                    </DataTrigger>
+                                                    <DataTrigger TargetType="Grid" Binding="{Binding IsTotal}" Value="True">
+                                                        <Setter Property="BackgroundColor" Value="{AppThemeBinding Light={StaticResource BrandSoftLight}, Dark={StaticResource BrandSoftDark}}" />
+                                                    </DataTrigger>
+                                                </Grid.Triggers>
                                                 <HorizontalStackLayout Padding="12,6"
                                                                        BindableLayout.ItemsSource="{Binding Cells}">
                                                     <BindableLayout.ItemTemplate>
